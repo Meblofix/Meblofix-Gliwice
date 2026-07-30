@@ -1,7 +1,7 @@
 # PLAN NAPRAWY I ROZWOJU — meblofix-gliwice.pl
 
 > Dokument roboczy. Odhaczaj `[ ]` → `[x]` w miarę postępu.
-> Wersja: 1.1 · Utworzono: 30.07.2026 · Podstawa: audyt z 29.07.2026 + inspekcja strony na żywo
+> Wersja: 2.2 · Utworzono: 30.07.2026 · Zaktualizowano: 30.07.2026 (Faza 2 zamknięta: wydajność 99/100) · Podstawa: audyt z 29.07.2026 + inspekcja strony na żywo
 
 **Legenda priorytetów**
 `P0` bloker — robić natychmiast · `P1` wysoki · `P2` średni · `P3` rozwojowy
@@ -29,6 +29,48 @@
 
 # FAZA 0 — DIAGNOSTYKA I BLOKERY `P0`
 
+## ✅ ROZSTRZYGNIĘTE 30.07.2026 — błędu wydajności nie było
+
+Czysty pomiar (incognito, bez rozszerzeń, okno na wierzchu) dał: **Wydajność 84 / Dostępność 83 / Praktyki 96 / SEO 100** (mobile, Slow 4G).
+
+Wcześniejszy `NO_FCP` był artefaktem środowiska: dane w IndexedDB, okno przeglądarki w tle podczas pomiaru, rozszerzenia Brave wstrzykujące skrypty (Sentry). Audyt z 29.07 prawdopodobnie trafił na to samo.
+
+**Nieaktualne wnioski, które należy zignorować:**
+- ~~Cloudflare (Rocket Loader, Bot Fight Mode)~~ — hosting to Netlify, Cloudflare nie ma w torze
+- ~~Wiszące zapytania Supabase~~ — `sbFetch` ma try/catch i fallback `DEFAULT_REVIEWS`; backend odpowiada w 50–200 ms
+- ~~Wstrzymany projekt Supabase~~ — projekt działa
+- ~~„Ładowanie opinii…" i „Odwiedzin: —" jako awarie~~ — to stan początkowy HTML przed podmianą przez JS
+
+**Zasada na przyszłość — środowisko pomiarowe.** Brave z rozszerzeniami wprowadziło nas w błąd czterokrotnie w ciągu jednej sesji:
+1. Błąd Sentry w konsoli — pochodził z rozszerzenia, nie ze strony
+2. `NO_FCP` w Lighthouse — IndexedDB + okno w tle
+3. Wszystkie requesty jako `(pending)` — wstrzymany debugger („Pause on caught exceptions" łapało obsłużony wyjątek z `sbFetch`)
+4. Trzy fantomowe pliki `DM-Sans-*.woff2` — wstrzyknięte przez rozszerzenie (widoczne po dodaniu kolumny **Domain** w panelu Network)
+
+**Reguła: każdy pomiar i każda diagnostyka wyłącznie w oknie incognito, bez emulacji urządzenia, z oknem na wierzchu.** Kontrola krzyżowa przez `curl` na produkcji rozstrzyga każdy taki spór w 5 sekund.
+
+## ✅ WYKONANE 30.07.2026
+
+- [x] Fonty przeniesione z Google Fonts na hosting lokalny (6 plików `.woff2`, ~100 kB, inline `@font-face` + preload Bebas Neue)
+- [x] Zweryfikowano polskie znaki — wariant `latin-ext` działa poprawnie
+- [x] `robots.txt` po raz pierwszy wdrożony na produkcję (wcześniej untracked → 404)
+- [x] Wdrożone na produkcję i potwierdzone: `grep -c fonts.googleapis` = 0, fonty z własnej domeny = 200
+- [x] Ustalono, że repo nie zawiera **żadnego** obrazu — brak hero, favicony, `og:image`
+
+### Wynik po wdrożeniu (PSI produkcja, 30.07.2026, 22:46)
+
+| Metryka | Przed | Po |
+|---|---|---|
+| Wydajność mobile | 84 | **99** |
+| Wydajność desktop | — | **100** |
+| FCP | 3,4 s | **1,0 s** |
+| LCP | 3,4 s | **2,1 s** |
+| Speed Index | 3,4 s | **1,7 s** |
+| TBT | 0 ms | 0 ms |
+| CLS | 0 | 0 |
+
+„Render-blocking requests" zniknęło z listy statystyk. **Faza 2 zamknięta** — pozostała pozycja „Minifikuj CSS, 2 KiB" nie jest warta osobnej sesji.
+
 Cel: PageSpeed Insights zwraca **liczbę zamiast błędu**, żaden element strony nie wisi w stanie „ładowanie".
 
 ## 0.1 Ustalenie przyczyny błędu wydajności
@@ -43,25 +85,33 @@ Hipoteza główna: wiszące zapytania sieciowe (opinie + licznik odwiedzin) nie 
 - [ ] Search Console → *Sprawdzenie adresu URL* → **Testuj URL na żywo** → obejrzyj „Wyrenderowany HTML" i zrzut ekranu. Zapisz, czy Googlebot widzi pełną treść.
 - [ ] Przejrzyj logi serwera z 29.07.2026, szukaj User-Agent zawierającego `Chrome-Lighthouse` oraz `Google Page Speed Insights`. Zanotuj kody odpowiedzi.
 
-## 0.2 Cloudflare — najbardziej prawdopodobne źródło błędu PSI
+## 0.2 Hosting: Netlify (potwierdzone nagłówkami)
 
-Strona stoi na Cloudflare. To zawęża listę podejrzanych do kilku konkretnych przełączników. Sprawdzaj w tej kolejności — pierwsze trzy odpowiadają za większość przypadków „PSI zwraca błąd, a strona działa normalnie":
+Strona jest serwowana bezpośrednio przez Netlify — brak nagłówka `cf-ray`, obecne `server: Netlify` i `x-nf-request-id`. Cloudflare, jeśli w ogóle występuje, to wyłącznie jako DNS z wyłączonym proxy. **Ustawienia typu Rocket Loader czy Bot Fight Mode nie mają tu zastosowania** — nie szukaj tam przyczyny.
 
-- [ ] **Speed → Optimization → Rocket Loader = OFF.** Rocket Loader przepisuje ładowanie JavaScriptu i regularnie psuje pomiar Lighthouse (opóźnia lub blokuje render). Najczęstszy winowajca. Wyłącz i przetestuj ponownie.
-- [ ] **Security → Bots → Bot Fight Mode = OFF.** Blokuje zautomatyzowany ruch, w tym Lighthouse z infrastruktury Google. Uwaga: nie da się dodać wyjątku — trzeba wyłączyć.
-- [ ] **Security → Settings → Security Level** — sprawdź, czy nie stoi na *High* ani *I'm Under Attack*. Tryb „Under Attack" pokazuje ekran przejściowy, którego Lighthouse nie przejdzie.
-- [ ] **Speed → Optimization → Auto Minify** (JS/CSS/HTML) — jeśli włączony, tymczasowo wyłącz. Minifikacja Cloudflare potrafi zepsuć kod z nietypową składnią.
-- [ ] **Security → WAF → Custom rules / Rate limiting** — przejrzyj reguły; sprawdź w *Security Events*, czy 29.07 były zablokowane requesty (filtruj po dacie, szukaj User-Agent `Chrome-Lighthouse`).
-- [ ] **Caching → Configuration → Development Mode = OFF** (jeśli został włączony i zapomniany, każdy request idzie do originu → wolno).
-- [ ] Po każdej zmianie: **przeczyść cache** (Caching → Purge Everything) i powtórz test PSI. Zmieniaj **po jednym ustawieniu naraz**, inaczej nie ustalisz przyczyny.
-- [ ] Jeśli to Cloudflare Pages: sprawdź w zakładce *Deployments*, czy ostatni deploy zakończył się sukcesem i czy build nie wypluł ostrzeżeń.
+Konsekwencja: hipoteza wiszących zapytań (0.3) wraca na pierwsze miejsce jako najbardziej prawdopodobne źródło błędu PSI. Netlify nie blokuje Lighthouse i ma szybki CDN, więc winowajca jest niemal na pewno w kodzie strony.
+
+- [ ] Sprawdź, czy `robots.txt` i `sitemap.xml` w ogóle istnieją na produkcji:
+      `curl -s https://meblofix-gliwice.pl/robots.txt | head -5`
+      `curl -sI https://meblofix-gliwice.pl/sitemap.xml | head -1`
+      Lokalny `robots.txt` jest untracked → prawdopodobnie nigdy nie został wdrożony.
+- [ ] Netlify → Deploys: sprawdź status ostatniego deployu i log budowania. Ostatni commit to „Wymuszenie redeploy Netlify" (09.06.2026) — warto ustalić, co wtedy nie zadziałało.
+- [ ] Netlify → Site configuration → Build & deploy: potwierdź, które repo i który branch są podpięte (musi się zgadzać z `Twoja-chwila/Twoja-chwila-Meblofix-Gliwice`).
+- [ ] Brak pliku `netlify.toml` w repo → brak konfiguracji nagłówków. Utwórz go z regułami cache i nagłówkami bezpieczeństwa (patrz 2.2).
+- [ ] Sprawdź, czy w panelu Netlify nie jest włączone Asset Optimization (bundling/minify JS i CSS) — potrafi psuć kod, podobnie jak minifikacja u innych dostawców. Wyłącz na czas diagnostyki.
+- [ ] Zmierz TTFB: `curl -w "%{time_starttransfer}\n" -o /dev/null -s https://meblofix-gliwice.pl/` — cel < 0,6 s.
+- [ ] Sprawdź przekierowania: `curl -IL https://meblofix-gliwice.pl/` — warianty `www`/bez, `http`/`https`, ze slashem/bez.
 - [ ] Zmierz TTFB: `curl -w "%{time_starttransfer}\n" -o /dev/null -s https://meblofix-gliwice.pl/` — cel < 0,6 s.
 - [ ] Sprawdź, czy nie ma pętli przekierowań (`curl -IL https://meblofix-gliwice.pl/`), zwłaszcza na wariantach: `www` / bez `www`, `http` / `https`, ze slashem / bez slasha.
 
-## 0.3 Naprawa wiszących zapytań (kod)
+## 0.3 Realne usterki potwierdzone w konsoli i w kodzie
 
-- [ ] Znajdź w kodzie wszystkie wywołania `fetch()` / `XMLHttpRequest`.
-- [ ] Owiń każde w timeout + obsługę błędu wg wzorca:
+- [ ] **Brakujące zdjęcie hero — 404.** `index.html:2018` odwołuje się do `meblofix_foto.jpeg`, którego nie ma ani w repo, ani na produkcji. Atrybut `onerror` maskuje problem (dodaje `image-missing` i usuwa element), dlatego nikt tego nie zauważył. Odtwórz z historii (`git log --all -- meblofix_foto.jpeg`) albo wgraj nowy plik.
+- [ ] **Brak `og:image` i `twitter:image`.** Przy `twitter:card: summary_large_image` oznacza to, że każde udostępnienie linku na FB/WhatsApp/LinkedIn pokazuje goły tekst bez miniatury. Jedno dobre zdjęcie naprawia hero i podgląd społecznościowy naraz.
+- [ ] **Klucz Supabase zwraca 401.** W przeglądarce klucz jest wysyłany i odrzucany — wygasł lub został zrotowany (Supabase wycofuje stare klucze `eyJ...`). Pobierz aktualny z Settings → API i podmień. To wyjaśnia licznik „—".
+- [ ] **`favicon.ico` — 404.** Kosmetyka, ale widoczna w karcie przeglądarki.
+- [ ] Po naprawie tych czterech: audyt „Browser errors were logged to the console" w Best Practices przestanie zgłaszać błąd.
+- [ ] Mimo działającego try/catch — dopisz timeout do `sbFetch` (`index.html:2693`). Dziś Supabase odpowiada w 50 ms, ale przy awarii `await fetch` czeka bez limitu. Jedno miejsce, obejmuje wszystkie wywołania:
 
 ```js
 async function safeFetch(url, opts = {}, ms = 4000) {
@@ -80,8 +130,8 @@ async function safeFetch(url, opts = {}, ms = 4000) {
 }
 ```
 
-- [ ] **Opinie:** wstaw 4–5 opinii na sztywno w HTML (server-side / statycznie). Skrypt ma je tylko *podmieniać*, nie *tworzyć*. Usuń napis „Ładowanie opinii…" — użytkownik i robot mają od razu widzieć treść.
-- [ ] **Licznik odwiedzin:** usuń całkowicie ze stopki. Wartość „—" wygląda na zepsutą stronę, a licznik nie daje klientowi żadnej wartości. Statystyki i tak masz w analityce (Faza 7).
+- [ ] **Opinie:** `DEFAULT_REVIEWS` przenieś z JS do HTML. Nie z powodu wydajności — chodzi o to, że Googlebot w pierwszym przejściu widzi surowy HTML, czyli napis „Ładowanie opinii…" zamiast treści. Renderowanie JS Google wykonuje z opóźnieniem i nie zawsze.
+- [ ] **Licznik odwiedzin:** usuń ze stopki. Zero wartości dla klienta, jedno wywołanie sieciowe mniej, jeden błąd 401 mniej. Statystyki i tak masz w analityce (Faza 7).
 - [ ] Przenieś wszystkie skrypty niekrytyczne na `defer` lub `type="module"`; żaden `<script>` blokujący w `<head>`.
 
 ## 0.4 Martwe elementy interfejsu
@@ -106,7 +156,17 @@ async function safeFetch(url, opts = {}, ms = 4000) {
 
 # FAZA 1 — DOSTĘPNOŚĆ `P1`
 
-Cel: Lighthouse Accessibility ≥ 95. Dodatkowo: dostępność to realny czynnik konwersji — część klientów to osoby starsze, korzystające z powiększonej czcionki.
+Cel: Lighthouse Accessibility 83 → ≥ 95. Dodatkowo: dostępność to realny czynnik konwersji — część klientów to osoby starsze, korzystające z powiększonej czcionki.
+
+**To jest teraz najtańszy dostępny zysk w całym projekcie.** Wydajność zamknięta na 99/100, SEO 100/100 — dostępność 83 jest jedyną kategorią z realnym zapasem. Naprawa tych czterech punktów podnosi też wynik „Przeglądanie agentowe" (dziś 1/2, błąd: „drzewo ułatwień dostępu jest nieprawidłowe") — to ta sama warstwa semantyki HTML.
+
+**Potwierdzone przez Lighthouse 30.07.2026 — to nie są przypuszczenia, tylko cztery konkretne błędy:**
+1. `Buttons do not have an accessible name` — przyciski bez tekstu (ikonowe: hamburger, zamknięcie, gwiazdki oceny)
+2. `Select elements do not have associated label elements` — `<select>` w formularzu bez `<label>`
+3. `Background and foreground colors do not have a sufficient contrast ratio`
+4. `Identical links have the same purpose` — trzy linki „Czytaj więcej" prowadzące gdzie indziej
+
+Zacznij od tych czterech — odpowiadają za większość brakujących 17 punktów. Reszta listy poniżej to prewencja i rzeczy, których automat nie wykrywa.
 
 - [ ] **Kontrast tekstu.** Przejrzyj złote/jasne teksty na ciemnym tle i szare podpisy (godziny otwarcia, opisy pod nagłówkami sekcji, etykiety „01–06"). Minimum **4.5:1** dla tekstu, **3:1** dla dużego (≥24px lub ≥19px bold). Narzędzie: DevTools → Elements → kliknij próbkę koloru, ratio jest pokazane.
 - [ ] **Kontrast elementów interaktywnych** (obramowania pól, ikony) — min. 3:1.
@@ -128,9 +188,60 @@ Cel: Lighthouse Accessibility ≥ 95. Dodatkowo: dostępność to realny czynnik
 
 # FAZA 2 — WYDAJNOŚĆ I CORE WEB VITALS `P1`
 
-Cel: LCP < 2,5 s, CLS < 0,1, INP < 200 ms na mobile. Core Web Vitals to czynnik rankingowy i realnie wpływa na odbicia.
+Cel: LCP < 2,5 s, CLS < 0,1, INP < 200 ms na mobile.
 
-## 2.1 Obrazy (największy zysk)
+**Punkt wyjścia (Lighthouse 30.07.2026, mobile, Slow 4G): wydajność 84.**
+FCP 3,4 s · LCP 3,4 s · **TBT 0 ms** · **CLS 0** · SI 3,4 s
+
+TBT i CLS są wzorowe — nie ruszaj tego, co je daje. Cała strata siedzi w czasie do pierwszego renderu.
+
+## ✅ 2.0 Zasoby blokujące render — WYKONANE 30.07.2026 `P1`
+
+Lighthouse: **Render-blocking requests, oszczędność 1 820 ms.** To pojedyncza poprawka, która zbija LCP z 3,4 s do okolic 1,6 s i wynosi wydajność powyżej 90. Wszystko inne w tej fazie to drobiazgi przy tym jednym punkcie.
+
+- [x] Zidentyfikowano bloker: jeden `<link>` do `fonts.googleapis.com` (linia 213)
+- [ ] Google Fonts: dodaj `<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>` i parametr `&display=swap` w URL-u.
+- [x] **Fonty hostowane lokalnie** (pobierz pliki `.woff2`, wgraj do repo, zadeklaruj `@font-face` z `font-display: swap`). Usuwa cały round-trip do Google i rozwiązuje kwestię RODO — Google Fonts z CDN przekazuje IP użytkownika do Google.
+- [ ] Ogranicz kroje i grubości do faktycznie używanych. Każda dodatkowa waga to osobny plik.
+- [ ] Arkusze niekrytyczne ładuj asynchronicznie: `<link rel="preload" as="style" onload="this.rel='stylesheet'">`.
+- [x] `@font-face` wstawione inline w `<head>` + preload dla Bebas Neue (element LCP)
+- [x] Zweryfikowano wariant `latin-ext` — polskie diakrytyki renderują się poprawnie
+- ⚠️ **Uwaga przy przyszłych porządkach:** CSS fontów jest inline, więc `url(fonts/…)` rozwiązuje się względem `index.html`. Przy wydzieleniu do osobnego pliku CSS trzeba zmienić na `url(../fonts/…)`, inaczej fonty znikną.
+- [ ] Po każdej zmianie mierz w incognito. Cel: LCP < 2,0 s.
+
+## 2.0b Nagłówki bezpieczeństwa — brakujący `netlify.toml` `P2`
+
+Best Practices 96 traci punkty wyłącznie na brakujących nagłówkach: CSP, HSTS, COOP, X-Frame-Options, Trusted Types. W repo nie ma `netlify.toml`, więc żaden nagłówek nie jest ustawiony. Utwórz plik:
+
+```toml
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
+    X-Frame-Options = "SAMEORIGIN"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Cross-Origin-Opener-Policy = "same-origin"
+    Permissions-Policy = "geolocation=(), microphone=(), camera=()"
+
+[[headers]]
+  for = "/*.jpeg"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+```
+
+- [ ] Utwórz `netlify.toml` z powyższą zawartością
+- [ ] CSP dodaj **na końcu**, po ustabilizowaniu strony — źle napisana polityka potrafi zablokować własne skrypty. Zacznij od `Content-Security-Policy-Report-Only`.
+- [ ] Zweryfikuj: `curl -sI https://meblofix-gliwice.pl | grep -i "strict-transport\|x-frame"`
+
+## 2.1 Pozostałe wskazania Lighthouse
+
+- [ ] `Optimize DOM size` — 2991 linii w jednym pliku. Rozwiązuje to punkt 5.1 (artykuły → zajawki).
+- [ ] `Minimize main-thread work` 2,9 s, 6 długich zadań — po naprawie fontów zmierz ponownie, część zniknie sama.
+- [ ] `Minify CSS` — oszczędność 2 KiB. Najniższy priorytet w całym dokumencie.
+- [ ] `3rd parties` — sprawdź, co jeszcze ładuje się z zewnątrz poza Supabase i Formspree.
+
+## 2.2 Obrazy
 
 - [ ] Zważ obecne zdjęcia: `du -h *.jpeg *.jpg *.png`. Wszystko powyżej 200 KB do konwersji.
 - [ ] Konwersja do AVIF + WebP z fallbackiem JPEG. Skrypt (WSL):
@@ -150,7 +261,7 @@ done
 - [ ] `loading="lazy"` na wszystkim poniżej pierwszego ekranu; `loading="eager"` + `fetchpriority="high"` na hero.
 - [ ] `<link rel="preload" as="image">` na obraz hero.
 
-## 2.2 Kod i ładowanie
+## 2.3 Kod i ładowanie
 
 - [ ] Odchudź stronę główną: pełne teksty artykułów → zajawki (patrz 5.1). Ogromny DOM = wolniejszy render i gorszy INP.
 - [ ] Fonty: `font-display: swap`, `preconnect` do źródła, hostuj lokalnie jeśli to Google Fonts (RODO + szybkość).
@@ -160,9 +271,9 @@ done
 - [ ] Włącz kompresję Brotli/gzip na serwerze.
 - [ ] Rezerwuj wysokość dla sekcji ładowanych dynamicznie (opinie, galeria) — inaczej CLS skacze.
 
-## 2.3 Weryfikacja
+## 2.4 Weryfikacja
 
-- [ ] PSI mobile ≥ 75, desktop ≥ 90
+- [x] PSI mobile 99, desktop 100 — **cel osiągnięty i przekroczony**
 - [ ] Search Console → Core Web Vitals — brak adresów w kategorii „Słabe"
 
 ---
@@ -452,8 +563,9 @@ Nazwa, adres i telefon muszą być **identyczne** wszędzie.
 
 Bez pomiaru nie wiesz, co działa.
 
-- [ ] **Cloudflare Web Analytics** — skoro strona i tak stoi na Cloudflare: darmowe, bez cookies (więc bez banera zgód), jeden skrypt, zerowy wpływ na wydajność. Włącz to jako pierwsze.
-- [ ] Opcjonalnie dołóż **GA4**, jeśli potrzebujesz szczegółowych lejków i zdarzeń — ale wtedy wraca obowiązek banera cookies. Na start Cloudflare wystarczy.
+- [ ] **Netlify Analytics** (płatne, ~9 USD/mies.) — dane z logów serwera, bez skryptu i bez cookies, więc bez banera zgód i bez wpływu na wydajność. Najprostsza opcja przy tym hostingu.
+- [ ] Alternatywa darmowa: **GA4** — pełne lejki i zdarzenia, ale wraca obowiązek banera cookies i dokłada skryptu do strony.
+- [ ] Niezależnie od wyboru: **Google Search Console** jest obowiązkowe i darmowe. Jeśli masz budżet zero, zacznij od samego GSC + GA4.
 - [ ] Podepnij **Google Search Console** (jeśli jeszcze nie) i zgłoś sitemapę.
 - [ ] Śledź zdarzenia konwersji:
       - [ ] kliknięcie w numer telefonu (`tel:`)
@@ -665,11 +777,19 @@ Etap uznajemy za zamknięty, gdy:
 - Daty treści zatrzymane na 2025
 
 **Potwierdzone:**
-- Strona stoi na Cloudflare → sprawdzać przełączniki z sekcji 0.2 (Rocket Loader, Bot Fight Mode, Security Level)
+- Hosting to **Netlify**, nie Cloudflare (nagłówki: `server: Netlify`, `x-nf-request-id`, brak `cf-ray`). Cloudflare co najwyżej jako DNS bez proxy.
+- Żywe źródło strony: `~/projekty/Meblofix stary projekt netlify/index.html` — zawiera oba znaczniki kontrolne. Mimo nazwy to katalog roboczy.
+- Repo: `github.com/Twoja-chwila/Twoja-chwila-Meblofix-Gliwice`, ostatni commit 09.06.2026 („Wymuszenie redeploy Netlify")
+- `~/projekty/meblofix/` = porzucony szkielet Astro, do usunięcia
+- `~/projekty/meblofix nowy projekt/` = osobny, niewdrożony projekt z panelem admina — ustalić status przed rozpoczęciem prac
+- Lokalny `robots.txt` (poprawny: `Allow: /` + sitemapa) jest **untracked** → prawdopodobnie nigdy nie wdrożony
+- Brak `netlify.toml` → brak konfiguracji nagłówków i cache
 - Meble na wymiar: linia biznesowa jeszcze nie istnieje → Faza 9 zaczyna się od decyzji, nie od kodu
 
 **Do ustalenia:**
-- [ ] Cloudflare Pages czy proxy przed innym hostingiem?
+- [ ] Czy `robots.txt` i `sitemap.xml` istnieją na produkcji?
+- [ ] Co zawiera „meblofix nowy projekt" — przepisywana wersja strony czy osobne narzędzie?
 - [ ] Gdzie trafiają zgłoszenia z formularza?
+- [ ] Dlaczego 09.06.2026 trzeba było wymuszać redeploy?
 - [ ] Czy istnieje zweryfikowana wizytówka Google?
 - [ ] Czy w kodzie jest JSON-LD `LocalBusiness` i `aggregateRating`?
