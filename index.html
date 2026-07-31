@@ -330,6 +330,11 @@
     --card: #181818;
     --orange: #E8440A;
     --orange-light: #FF5C1A;
+    /* Tło pod biały tekst — --orange daje z bielą tylko 3,99:1 (próg WCAG AA: 4,5:1).
+       --orange-btn = 5,36:1, --orange-btn-hover = 6,71:1. --orange zostaje bez zmian
+       jako kolor tekstu/ikon/obramowań na ciemnym tle (tam ma 4,87–4,96:1). */
+    --orange-btn: #C43806;
+    --orange-btn-hover: #A93105;
     --orange-dim: rgba(232,68,10,0.12);
     --cream: #F2EDE4;
     --gray: #888;
@@ -422,7 +427,7 @@
   .nav-links a:hover::after { width: 100%; }
 
   .nav-cta {
-    background: var(--orange);
+    background: var(--orange-btn);
     color: var(--white);
     padding: 0.6rem 1.6rem;
     font-family: 'DM Sans', sans-serif;
@@ -434,7 +439,7 @@
     border-radius: 2px;
   }
 
-  .nav-cta:hover { background: var(--orange-light); transform: translateY(-1px); }
+  .nav-cta:hover { background: var(--orange-btn-hover); transform: translateY(-1px); }
 
   /* ─── HERO ─── */
   .hero {
@@ -593,7 +598,7 @@
   }
 
   .btn-primary {
-    background: var(--orange);
+    background: var(--orange-btn);
     color: var(--white);
     padding: 1rem 2.4rem;
     font-family: 'DM Sans', sans-serif;
@@ -609,7 +614,7 @@
   }
 
   .btn-primary:hover {
-    background: var(--orange-light);
+    background: var(--orange-btn-hover);
     transform: translateY(-2px);
     box-shadow: 0 8px 30px rgba(232,68,10,0.35);
   }
@@ -674,7 +679,7 @@
 
   /* ─── TICKER ─── */
   .ticker {
-    background: var(--orange);
+    background: var(--orange-btn);
     padding: 0.85rem 0;
     overflow: hidden;
     cursor: default;
@@ -697,7 +702,7 @@
   }
 
   .ticker-sep {
-    color: rgba(255,255,255,0.4);
+    color: rgba(255,255,255,0.9);
     padding: 0;
     letter-spacing: 0;
   }
@@ -833,7 +838,7 @@
     font-family: 'Bebas Neue', sans-serif;
     font-size: 1.4rem;
     letter-spacing: 0.12em;
-    color: rgba(242,237,228,0.3);
+    color: rgba(242,237,228,0.55);
     transition: color 0.25s;
     cursor: default;
     user-select: none;
@@ -1012,7 +1017,7 @@
   .price-badge {
     position: absolute;
     top: -1px; right: 2rem;
-    background: var(--orange);
+    background: var(--orange-btn);
     color: var(--white);
     font-size: 0.62rem;
     letter-spacing: 0.12em;
@@ -1266,7 +1271,7 @@
   .form select option { background: #1a1a1a; }
 
   .form-btn {
-    background: var(--orange);
+    background: var(--orange-btn);
     color: var(--white);
     border: none;
     padding: 1.1rem;
@@ -1281,7 +1286,7 @@
   }
 
   .form-btn:hover {
-    background: var(--orange-light);
+    background: var(--orange-btn-hover);
     transform: translateY(-1px);
     box-shadow: 0 6px 24px rgba(232,68,10,0.3);
   }
@@ -1352,7 +1357,7 @@
 
   /* ─── PHONE CTA STRIP ─── */
   .phone-strip {
-    background: linear-gradient(135deg, var(--orange) 0%, #c43200 100%);
+    background: linear-gradient(135deg, var(--orange-btn) 0%, var(--orange-btn-hover) 100%);
     padding: 2rem 5rem;
     display: flex;
     justify-content: space-between;
@@ -1371,7 +1376,7 @@
 
   .phone-strip-sub {
     font-size: 0.85rem;
-    color: rgba(255,255,255,0.75);
+    color: rgba(255,255,255,0.92);
     font-weight: 300;
     margin-top: 0.2rem;
   }
@@ -1572,7 +1577,7 @@
   .blog-card-cat {
     position: absolute;
     top: 1rem; left: 1rem;
-    background: var(--orange);
+    background: var(--orange-btn);
     color: white;
     font-size: 0.6rem;
     letter-spacing: 0.15em;
@@ -1884,7 +1889,7 @@
   .review-badge-new {
     position: absolute;
     top: 1rem; right: 1rem;
-    background: var(--orange);
+    background: var(--orange-btn);
     color: white;
     font-size: 0.58rem;
     letter-spacing: 0.12em;
@@ -1992,7 +1997,7 @@
   }
 
   .add-review-btn {
-    background: var(--orange);
+    background: var(--orange-btn);
     color: white;
     border: none;
     padding: 0.85rem 1.6rem;
@@ -2007,7 +2012,7 @@
     height: fit-content;
   }
 
-  .add-review-btn:hover { background: var(--orange-light); transform: translateY(-1px); }
+  .add-review-btn:hover { background: var(--orange-btn-hover); transform: translateY(-1px); }
 
   @keyframes reviewPop {
     from { opacity: 0; transform: translateY(16px) scale(0.97); }
@@ -2114,11 +2119,11 @@
 
     <a href="tel:+48784878197" style="
       display:flex;align-items:center;justify-content:center;gap:0.6rem;
-      background:#E8440A;color:white;text-decoration:none;
+      background:#C43806;color:white;text-decoration:none;
       padding:1rem 2rem;border-radius:4px;font-weight:600;font-size:1rem;
       letter-spacing:0.04em;transition:background 0.2s,transform 0.15s;
       margin-bottom:0.8rem;
-    " onmouseenter="this.style.background='#FF5C1A'" onmouseleave="this.style.background='#E8440A'">
+    " onmouseenter="this.style.background='#A93105'" onmouseleave="this.style.background='#C43806'">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13.63a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 3h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 10.6a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.73 18l.19-1.08z"/></svg>
       Zadzwoń teraz
     </a>
