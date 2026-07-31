@@ -796,6 +796,25 @@
     font-weight: 300;
   }
 
+  /* Link do galerii — tylko w kafelkach majacych >=1 pasujaca realizacje.
+     --orange na kryjacym tle .service-card (--black) = 4,87:1 */
+  .service-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 1rem;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 500;
+    color: var(--orange);
+    text-decoration: none;
+    transition: gap 0.2s;
+  }
+  .service-link:hover { gap: 0.7rem; }
+  .service-link:focus-visible { outline: 2px solid var(--orange); outline-offset: 3px; }
+  .service-link svg { width: 11px; height: 11px; }
+
   /* ─── MARKI ─── */
   .brands-section {
     padding: 4rem 5rem;
@@ -2352,6 +2371,7 @@
       </svg>
       <div class="service-name">Sypialnia</div>
       <div class="service-desc">Łóżka, szafy, komody, szafy przesuwne, stoliki nocne. Wszystkie modele, wszystkie sklepy.</div>
+      <a class="service-link" href="#realizacje" data-pomieszczenie="sypialnia" aria-label="Zobacz realizacje z kategorii sypialnia — 1 realizacja">Zobacz realizacje (1) <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M5 12h14M12 5l7 7-7 7"/></svg></a>
     </div>
 
     <div class="service-card">
@@ -2361,6 +2381,7 @@
       </svg>
       <div class="service-name">Kuchnia</div>
       <div class="service-desc">Szafki dolne i górne, zabudowy kuchenne, wieszanie szafek na ścianie, montaż AGD.</div>
+      <a class="service-link" href="#realizacje" data-pomieszczenie="kuchnia" aria-label="Zobacz realizacje z kategorii kuchnia — 2 realizacje">Zobacz realizacje (2) <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M5 12h14M12 5l7 7-7 7"/></svg></a>
     </div>
 
     <div class="service-card">
@@ -2370,6 +2391,7 @@
       </svg>
       <div class="service-name">Pokój dziecięcy</div>
       <div class="service-desc">Łóżka piętrowe, biurka, regały, fotele obrotowe. Meble, które muszą wytrzymać więcej niż przeciętne.</div>
+      <a class="service-link" href="#realizacje" data-pomieszczenie="pokoj-dzieciecy" aria-label="Zobacz realizacje z kategorii pokój dziecięcy — 1 realizacja">Zobacz realizacje (1) <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M5 12h14M12 5l7 7-7 7"/></svg></a>
     </div>
 
     <div class="service-card">
