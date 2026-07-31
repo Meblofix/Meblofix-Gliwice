@@ -906,7 +906,9 @@
     align-items: center;
     justify-content: center;
     font-size: 0.65rem;
-    color: var(--orange);
+    /* Znak "✓" to tekst, nie ikona — obowiazuje prog 4,5:1. Na tle
+       skomponowanym do #2c1811 --orange ma 4,22:1, --orange-light 5,46:1. */
+    color: var(--orange-light);
     flex-shrink: 0;
     margin-top: 1px;
     border-radius: 2px;
@@ -1116,7 +1118,9 @@
   .area-tag {
     background: rgba(232,68,10,0.08);
     border: 1px solid rgba(232,68,10,0.22);
-    color: var(--orange);
+    /* Tlo elementu komponuje sie z tlem sekcji do #231611 — na nim --orange
+       ma tylko 4,41:1. --orange-light daje 5,69:1 (hover 5,26:1). */
+    color: var(--orange-light);
     font-size: 0.72rem;
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -1869,7 +1873,9 @@
     justify-content: center;
     font-family: 'Bebas Neue', sans-serif;
     font-size: 0.9rem;
-    color: var(--orange);
+    /* Trzy warstwy: sekcja #121212 + karta rgba(255,255,255,.025) + kolko
+       --orange-dim => #311d16. Na nim --orange ma 3,99:1, --orange-light 5,16:1. */
+    color: var(--orange-light);
     flex-shrink: 0;
   }
 
