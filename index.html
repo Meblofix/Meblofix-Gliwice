@@ -1993,8 +1993,140 @@
   }
 
   /* ─── RESPONSIVE ─── */
+  /* ─── REALIZACJE ─── */
+  .works-section {
+    padding: 7rem 5rem;
+    background: var(--deep);
+  }
+
+  .works-intro {
+    font-size: 1rem;
+    color: var(--mid);
+    font-weight: 300;
+    line-height: 1.8;
+    max-width: 560px;
+    margin-bottom: 2rem;
+  }
+
+  .works-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-bottom: 1rem;
+  }
+
+  .works-filter {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.78rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--cream);
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    padding: 0.55rem 1.1rem;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s, color 0.2s;
+  }
+  /* --gray na warstwie #1b1b1b (sekcja + rgba(255,255,255,.04)) = 4,86:1 */
+  .works-filter span { color: var(--gray); margin-left: 0.35rem; }
+  .works-filter:hover { border-color: var(--border-orange); }
+  .works-filter:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
+  .works-filter.is-active {
+    background: var(--orange-btn);
+    border-color: var(--orange-btn);
+    color: var(--white);
+  }
+  /* biel .92 na kryjacym #C43806 = 4,76:1; przy .85 byloby 4,27 */
+  .works-filter.is-active span { color: rgba(255,255,255,0.92); }
+
+  .works-status {
+    font-size: 0.78rem;
+    color: var(--gray);
+    letter-spacing: 0.04em;
+    margin-bottom: 2.5rem;
+  }
+
+  .works-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .work-card { display: block; }
+  /* .work-card{display:block} nadpisaloby domyslne [hidden] z UA */
+  .work-card[hidden] { display: none; }
+
+  .work-card-btn {
+    display: flex;
+    flex-direction: column;
+    height: 100%;          /* rowna wysokosc kart w rzedzie przy lamiacych sie tytulach */
+    width: 100%;
+    padding: 0;
+    text-align: left;
+    background: rgba(255,255,255,0.015);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: border-color 0.3s, transform 0.25s;
+  }
+  .work-card-btn:hover { border-color: var(--border-orange); transform: translateY(-3px); }
+  .work-card-btn:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
+
+  .work-thumb {
+    display: block;
+    position: relative;
+    aspect-ratio: 3 / 4;   /* stala proporcja kafelka => CLS zostaje 0 */
+    background: linear-gradient(135deg, #1a1a1a 0%, #242424 100%);
+    overflow: hidden;
+  }
+  .work-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .work-badge {
+    position: absolute;
+    top: 0.8rem; left: 0.8rem;
+    background: var(--orange-btn);
+    color: var(--white);
+    font-size: 0.6rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-weight: 600;
+    padding: 0.25rem 0.7rem;
+    border-radius: 2px;
+  }
+
+  .work-meta { display: block; padding: 1.3rem 1.4rem 1.5rem; }
+  .work-title {
+    display: block;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.35rem;
+    letter-spacing: 0.03em;
+    color: var(--cream);
+    line-height: 1.15;
+    margin-bottom: 0.5rem;
+  }
+  .work-city, .work-count {
+    display: inline-block;
+    font-size: 0.75rem;
+    color: var(--gray);
+    letter-spacing: 0.05em;
+  }
+  .work-city::after { content: '·'; margin: 0 0.45rem; }
+
   @media (max-width: 900px) {
     nav { padding: 1.2rem 1.5rem; }
+    .works-section { padding-left: 1.5rem; padding-right: 1.5rem; }
+    .works-grid { grid-template-columns: 1fr; }
     .nav-links { display: none; }
     .hero-inner,
     .section,
@@ -2342,6 +2474,111 @@
       <div class="price-desc">Większe zlecenia, całe mieszkania, przeprowadzki — wyceniam bezpłatnie po opisie lub zdjęciach.</div>
     </div>
   </div>
+</section>
+
+<!-- REALIZACJE -->
+<section class="works-section" id="realizacje">
+  <h2 class="section-title">Realizacje</h2>
+  <p class="works-intro">Zdjęcia z moich zleceń — montaż mebli sieciowych i meble wykonane na wymiar. Bez zdjęć stockowych i bez cudzych realizacji.</p>
+
+  <div class="works-filters" role="group" aria-label="Filtruj realizacje">
+      <button type="button" class="works-filter is-active"
+              aria-pressed="true" data-filter="wszystkie">Wszystkie <span>5</span></button>
+      <button type="button" class="works-filter"
+              aria-pressed="false" data-filter="sieciowe">Montaż mebli sieciowych <span>3</span></button>
+      <button type="button" class="works-filter"
+              aria-pressed="false" data-filter="na-wymiar">Meble na wymiar <span>2</span></button>
+  </div>
+
+  <p class="works-status" role="status" aria-live="polite">Pokazuję 5 z 5 realizacji</p>
+
+  <ul class="works-grid">
+      <li class="work-card" data-kat="na-wymiar">
+        <button type="button" class="work-card-btn" data-id="zabudowa-wneki-jastrzebie" aria-label="Zabudowa wnęki na wymiar, Jastrzębie-Zdrój — otwórz galerię, 5 zdjęć">
+          <span class="work-thumb">
+            <picture>
+              <source type="image/webp" srcset="img/realizacje/na-wymiar/zabudowa-wneki-po-400.webp 300w, img/realizacje/na-wymiar/zabudowa-wneki-po-800.webp 600w, img/realizacje/na-wymiar/zabudowa-wneki-po-1200.webp 900w, img/realizacje/na-wymiar/zabudowa-wneki-po-1600.webp 1200w" sizes="(max-width: 900px) calc(100vw - 3rem), calc((100vw - 13rem) / 3)">
+              <img src="img/realizacje/na-wymiar/zabudowa-wneki-po-800.jpg" srcset="img/realizacje/na-wymiar/zabudowa-wneki-po-400.jpg 300w, img/realizacje/na-wymiar/zabudowa-wneki-po-800.jpg 600w, img/realizacje/na-wymiar/zabudowa-wneki-po-1200.jpg 900w, img/realizacje/na-wymiar/zabudowa-wneki-po-1600.jpg 1200w" sizes="(max-width: 900px) calc(100vw - 3rem), calc((100vw - 13rem) / 3)"
+                   alt="" width="1200" height="1600" loading="lazy" decoding="async">
+            </picture>
+            <span class="work-badge">Meble na wymiar</span>
+          </span>
+          <span class="work-meta">
+            <span class="work-title">Zabudowa wnęki na wymiar</span>
+            <span class="work-city">Jastrzębie-Zdrój</span>
+            <span class="work-count">5 zdjęć</span>
+          </span>
+        </button>
+      </li>
+      <li class="work-card" data-kat="sieciowe">
+        <button type="button" class="work-card-btn" data-id="kuchnia-kedzierzyn" aria-label="Montaż kuchni na ścianie z wystającymi kafelkami, Kędzierzyn-Koźle — otwórz galerię, 3 zdjęcia">
+          <span class="work-thumb">
+            <picture>
+              <source type="image/webp" srcset="img/realizacje/sieciowe/kuchnia-inny-producent-400.webp 225w, img/realizacje/sieciowe/kuchnia-inny-producent-800.webp 405w" sizes="(max-width: 900px) calc(100vw - 3rem), calc((100vw - 13rem) / 3)">
+              <img src="img/realizacje/sieciowe/kuchnia-inny-producent-800.jpg" srcset="img/realizacje/sieciowe/kuchnia-inny-producent-400.jpg 225w, img/realizacje/sieciowe/kuchnia-inny-producent-800.jpg 405w" sizes="(max-width: 900px) calc(100vw - 3rem), calc((100vw - 13rem) / 3)"
+                   alt="" width="405" height="720" loading="lazy" decoding="async">
+            </picture>
+            <span class="work-badge">Montaż mebli sieciowych</span>
+          </span>
+          <span class="work-meta">
+            <span class="work-title">Montaż kuchni na ścianie z wystającymi kafelkami</span>
+            <span class="work-city">Kędzierzyn-Koźle</span>
+            <span class="work-count">3 zdjęcia</span>
+          </span>
+        </button>
+      </li>
+      <li class="work-card" data-kat="sieciowe">
+        <button type="button" class="work-card-btn" data-id="kuchnia-ikea-pogrzebien" aria-label="Montaż kuchni IKEA bez gotowego projektu, Pogrzebień — otwórz galerię, 10 zdjęć">
+          <span class="work-thumb">
+            <picture>
+              <source type="image/webp" srcset="img/realizacje/sieciowe/kuchnia-ikea-po-3-400.webp 300w, img/realizacje/sieciowe/kuchnia-ikea-po-3-800.webp 600w, img/realizacje/sieciowe/kuchnia-ikea-po-3-1200.webp 900w, img/realizacje/sieciowe/kuchnia-ikea-po-3-1600.webp 1200w" sizes="(max-width: 900px) calc(100vw - 3rem), calc((100vw - 13rem) / 3)">
+              <img src="img/realizacje/sieciowe/kuchnia-ikea-po-3-800.jpg" srcset="img/realizacje/sieciowe/kuchnia-ikea-po-3-400.jpg 300w, img/realizacje/sieciowe/kuchnia-ikea-po-3-800.jpg 600w, img/realizacje/sieciowe/kuchnia-ikea-po-3-1200.jpg 900w, img/realizacje/sieciowe/kuchnia-ikea-po-3-1600.jpg 1200w" sizes="(max-width: 900px) calc(100vw - 3rem), calc((100vw - 13rem) / 3)"
+                   alt="" width="1200" height="1600" loading="lazy" decoding="async">
+            </picture>
+            <span class="work-badge">Montaż mebli sieciowych</span>
+          </span>
+          <span class="work-meta">
+            <span class="work-title">Montaż kuchni IKEA bez gotowego projektu</span>
+            <span class="work-city">Pogrzebień</span>
+            <span class="work-count">10 zdjęć</span>
+          </span>
+        </button>
+      </li>
+      <li class="work-card" data-kat="na-wymiar">
+        <button type="button" class="work-card-btn" data-id="zabudowa-i-lozko-gliwice" aria-label="Zabudowa i łóżko na wymiar, Gliwice — otwórz galerię, 2 zdjęcia">
+          <span class="work-thumb">
+            <picture>
+              <source type="image/webp" srcset="img/realizacje/na-wymiar/zabudowa-i-lozko-400.webp 300w, img/realizacje/na-wymiar/zabudowa-i-lozko-800.webp 600w, img/realizacje/na-wymiar/zabudowa-i-lozko-1200.webp 900w, img/realizacje/na-wymiar/zabudowa-i-lozko-1600.webp 1200w" sizes="(max-width: 900px) calc(100vw - 3rem), calc((100vw - 13rem) / 3)">
+              <img src="img/realizacje/na-wymiar/zabudowa-i-lozko-800.jpg" srcset="img/realizacje/na-wymiar/zabudowa-i-lozko-400.jpg 300w, img/realizacje/na-wymiar/zabudowa-i-lozko-800.jpg 600w, img/realizacje/na-wymiar/zabudowa-i-lozko-1200.jpg 900w, img/realizacje/na-wymiar/zabudowa-i-lozko-1600.jpg 1200w" sizes="(max-width: 900px) calc(100vw - 3rem), calc((100vw - 13rem) / 3)"
+                   alt="" width="1200" height="1600" loading="lazy" decoding="async">
+            </picture>
+            <span class="work-badge">Meble na wymiar</span>
+          </span>
+          <span class="work-meta">
+            <span class="work-title">Zabudowa i łóżko na wymiar</span>
+            <span class="work-city">Gliwice</span>
+            <span class="work-count">2 zdjęcia</span>
+          </span>
+        </button>
+      </li>
+      <li class="work-card" data-kat="sieciowe">
+        <button type="button" class="work-card-btn" data-id="pokoj-dzieciecy-zabrze" aria-label="Łóżko i szafka w pokoju dziecięcym, Zabrze — otwórz galerię, 2 zdjęcia">
+          <span class="work-thumb">
+            <picture>
+              <source type="image/webp" srcset="img/realizacje/sieciowe/lozko-dla-dziecka-400.webp 300w, img/realizacje/sieciowe/lozko-dla-dziecka-800.webp 600w, img/realizacje/sieciowe/lozko-dla-dziecka-1200.webp 900w, img/realizacje/sieciowe/lozko-dla-dziecka-1600.webp 1200w" sizes="(max-width: 900px) calc(100vw - 3rem), calc((100vw - 13rem) / 3)">
+              <img src="img/realizacje/sieciowe/lozko-dla-dziecka-800.jpg" srcset="img/realizacje/sieciowe/lozko-dla-dziecka-400.jpg 300w, img/realizacje/sieciowe/lozko-dla-dziecka-800.jpg 600w, img/realizacje/sieciowe/lozko-dla-dziecka-1200.jpg 900w, img/realizacje/sieciowe/lozko-dla-dziecka-1600.jpg 1200w" sizes="(max-width: 900px) calc(100vw - 3rem), calc((100vw - 13rem) / 3)"
+                   alt="" width="1200" height="1600" loading="lazy" decoding="async">
+            </picture>
+            <span class="work-badge">Montaż mebli sieciowych</span>
+          </span>
+          <span class="work-meta">
+            <span class="work-title">Łóżko i szafka w pokoju dziecięcym</span>
+            <span class="work-city">Zabrze</span>
+            <span class="work-count">2 zdjęcia</span>
+          </span>
+        </button>
+      </li>
+  </ul>
 </section>
 
 <!-- OPINIE -->
