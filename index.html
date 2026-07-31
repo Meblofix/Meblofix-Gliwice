@@ -2103,6 +2103,44 @@
     margin-bottom: 2.5rem;
   }
 
+  /* ─── PRZED / PO ─── */
+  .ba { margin: 3.5rem 0 0; }
+  .ba-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.2rem;
+    letter-spacing: 0.05em;
+    color: var(--cream);
+    margin-bottom: 1rem;
+  }
+  .ba-pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;   /* zawsze obok siebie — porownanie wymaga sasiedztwa */
+    gap: 1rem;
+    max-width: 880px;
+  }
+  .ba-item {
+    position: relative;
+    aspect-ratio: 3 / 4;              /* wspolna wysokosc obu kadrow, CLS zostaje 0 */
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    background: linear-gradient(135deg, #1a1a1a 0%, #242424 100%);
+  }
+  .ba-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .ba-label {
+    position: absolute;
+    top: 0.7rem; left: 0.7rem;
+    z-index: 1;
+    background: var(--orange-btn);
+    color: var(--white);
+    font-size: 0.62rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-weight: 600;
+    padding: 0.28rem 0.75rem;
+    border-radius: 2px;
+  }
+
   /* ─── LIGHTBOX GALERII ─── */
   .lb-overlay {
     position: fixed;
@@ -2761,6 +2799,28 @@
         </button>
       </li>
   </ul>
+  <figure class="ba">
+    <figcaption class="ba-title">Przed i po — zabudowa wnęki na wymiar, Jastrzębie-Zdrój</figcaption>
+    <div class="ba-pair">
+      <div class="ba-item">
+        <span class="ba-label">Przed</span>
+        <picture>
+          <source type="image/webp" srcset="img/realizacje/na-wymiar/zabudowa-wneki-przed-400.webp 185w, img/realizacje/na-wymiar/zabudowa-wneki-przed-800.webp 369w, img/realizacje/na-wymiar/zabudowa-wneki-przed-1200.webp 554w, img/realizacje/na-wymiar/zabudowa-wneki-przed-1600.webp 738w" sizes="(max-width: 900px) 45vw, 420px">
+          <img src="img/realizacje/na-wymiar/zabudowa-wneki-przed-800.jpg" srcset="img/realizacje/na-wymiar/zabudowa-wneki-przed-400.jpg 185w, img/realizacje/na-wymiar/zabudowa-wneki-przed-800.jpg 369w, img/realizacje/na-wymiar/zabudowa-wneki-przed-1200.jpg 554w, img/realizacje/na-wymiar/zabudowa-wneki-przed-1600.jpg 738w" sizes="(max-width: 900px) 45vw, 420px"
+               alt="Pusta wnęka przed zabudową — Jastrzębie-Zdrój" width="738" height="1600" loading="lazy" decoding="async">
+        </picture>
+      </div>
+      <div class="ba-item">
+        <span class="ba-label">Po</span>
+        <picture>
+          <source type="image/webp" srcset="img/realizacje/na-wymiar/zabudowa-wneki-po-400.webp 300w, img/realizacje/na-wymiar/zabudowa-wneki-po-800.webp 600w, img/realizacje/na-wymiar/zabudowa-wneki-po-1200.webp 900w, img/realizacje/na-wymiar/zabudowa-wneki-po-1600.webp 1200w" sizes="(max-width: 900px) 45vw, 420px">
+          <img src="img/realizacje/na-wymiar/zabudowa-wneki-po-800.jpg" srcset="img/realizacje/na-wymiar/zabudowa-wneki-po-400.jpg 300w, img/realizacje/na-wymiar/zabudowa-wneki-po-800.jpg 600w, img/realizacje/na-wymiar/zabudowa-wneki-po-1200.jpg 900w, img/realizacje/na-wymiar/zabudowa-wneki-po-1600.jpg 1200w" sizes="(max-width: 900px) 45vw, 420px"
+               alt="Gotowa zabudowa wnęki na wymiar — Jastrzębie-Zdrój" width="1200" height="1600" loading="lazy" decoding="async">
+        </picture>
+      </div>
+    </div>
+  </figure>
+
 </section>
 
 <!-- LIGHTBOX GALERII -->
