@@ -2059,11 +2059,58 @@
   /* biel .92 na kryjacym #C43806 = 4,76:1; przy .85 byloby 4,27 */
   .works-filter.is-active span { color: rgba(255,255,255,0.92); }
 
+  /* Znacznik filtra pomieszczenia — warstwa wejsciowa z kafelkow uslug,
+     nie staly element interfejsu. Tlo #231611 (sekcja + rgba(232,68,10,.08)),
+     na nim --orange daloby 4,41:1, wiec --orange-light = 5,48:1 */
+  .works-chip-wrap { display: contents; }
+  .works-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(232,68,10,0.08);
+    border: 1px solid rgba(232,68,10,0.35);
+    color: var(--orange-light);
+    font-size: 0.78rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 0.55rem 0.7rem 0.55rem 1.1rem;
+    border-radius: 2px;
+  }
+  .works-chip-x {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px; height: 20px;
+    padding: 0;
+    background: rgba(232,68,10,0.18);
+    border: none;
+    border-radius: 50%;
+    color: var(--orange-light);
+    font-size: 0.95rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  /* Na mocniejszym tle hover --orange-light spada do 3,63:1,
+     wiec tekst przechodzi na --cream (9,62:1) */
+  .works-chip-x:hover { background: rgba(232,68,10,0.35); color: var(--cream); }
+  .works-chip-x:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
+
   .works-status {
     font-size: 0.78rem;
     color: var(--gray);
     letter-spacing: 0.04em;
     margin-bottom: 2.5rem;
+  }
+
+  /* --mid na --deep = 8,04:1 */
+  .works-empty {
+    font-size: 0.9rem;
+    color: var(--mid);
+    font-weight: 300;
+    line-height: 1.7;
+    max-width: 460px;
+    padding: 2rem 0 1rem;
   }
 
   .works-grid {
@@ -2510,12 +2557,15 @@
               aria-pressed="false" data-filter="sieciowe">Montaż mebli sieciowych <span>3</span></button>
       <button type="button" class="works-filter"
               aria-pressed="false" data-filter="na-wymiar">Meble na wymiar <span>2</span></button>
+    <span class="works-chip-wrap"></span>
   </div>
 
   <p class="works-status" role="status" aria-live="polite">Pokazuję 5 z 5 realizacji</p>
 
+  <p class="works-empty" hidden>Żadna realizacja nie spełnia obu warunków naraz. Usuń znacznik pomieszczenia albo wybierz inną kategorię.</p>
+
   <ul class="works-grid">
-      <li class="work-card" data-kat="na-wymiar">
+      <li class="work-card" data-kat="na-wymiar" data-pomieszczenie="przedpokoj">
         <button type="button" class="work-card-btn" data-id="zabudowa-wneki-jastrzebie" aria-label="Zabudowa wnęki na wymiar, Jastrzębie-Zdrój — otwórz galerię, 5 zdjęć">
           <span class="work-thumb">
             <picture>
@@ -2532,7 +2582,7 @@
           </span>
         </button>
       </li>
-      <li class="work-card" data-kat="sieciowe">
+      <li class="work-card" data-kat="sieciowe" data-pomieszczenie="kuchnia">
         <button type="button" class="work-card-btn" data-id="kuchnia-kedzierzyn" aria-label="Montaż kuchni na ścianie z wystającymi kafelkami, Kędzierzyn-Koźle — otwórz galerię, 3 zdjęcia">
           <span class="work-thumb">
             <picture>
@@ -2549,7 +2599,7 @@
           </span>
         </button>
       </li>
-      <li class="work-card" data-kat="sieciowe">
+      <li class="work-card" data-kat="sieciowe" data-pomieszczenie="kuchnia">
         <button type="button" class="work-card-btn" data-id="kuchnia-ikea-pogrzebien" aria-label="Montaż kuchni IKEA bez gotowego projektu, Pogrzebień — otwórz galerię, 10 zdjęć">
           <span class="work-thumb">
             <picture>
@@ -2566,7 +2616,7 @@
           </span>
         </button>
       </li>
-      <li class="work-card" data-kat="na-wymiar">
+      <li class="work-card" data-kat="na-wymiar" data-pomieszczenie="sypialnia">
         <button type="button" class="work-card-btn" data-id="zabudowa-i-lozko-gliwice" aria-label="Zabudowa i łóżko na wymiar, Gliwice — otwórz galerię, 2 zdjęcia">
           <span class="work-thumb">
             <picture>
@@ -2583,7 +2633,7 @@
           </span>
         </button>
       </li>
-      <li class="work-card" data-kat="sieciowe">
+      <li class="work-card" data-kat="sieciowe" data-pomieszczenie="pokoj-dzieciecy">
         <button type="button" class="work-card-btn" data-id="pokoj-dzieciecy-zabrze" aria-label="Łóżko i szafka w pokoju dziecięcym, Zabrze — otwórz galerię, 2 zdjęcia">
           <span class="work-thumb">
             <picture>
@@ -3235,6 +3285,87 @@
       });
     }
   });
+
+  // ─── GALERIA: filtry ───
+  (function () {
+    const sec = document.getElementById('realizacje');
+    if (!sec) return;
+    const cards    = Array.from(sec.querySelectorAll('.work-card'));
+    const btns     = Array.from(sec.querySelectorAll('.works-filter'));
+    const chipWrap = sec.querySelector('.works-chip-wrap');
+    const statusEl = sec.querySelector('.works-status');
+    const emptyEl  = sec.querySelector('.works-empty');
+
+    // Nazwy do wyswietlenia — klucze w danych sa bez polskich znakow
+    const NAZWY = {
+      'kuchnia': 'kuchnia', 'sypialnia': 'sypialnia',
+      'pokoj-dzieciecy': 'pokój dziecięcy', 'przedpokoj': 'przedpokój',
+      'lazienka': 'łazienka'
+    };
+    const odmiana = n => n === 1 ? 'realizacja' : (n >= 2 && n <= 4 ? 'realizacje' : 'realizacji');
+
+    let kategoria = 'wszystkie';
+    let pomieszczenie = null;
+
+    function odswiez() {
+      let widoczne = 0;
+      cards.forEach(c => {
+        const ok = (kategoria === 'wszystkie' || c.dataset.kat === kategoria)
+                && (!pomieszczenie || c.dataset.pomieszczenie === pomieszczenie);
+        c.hidden = !ok;
+        if (ok) widoczne++;
+      });
+
+      btns.forEach(b => {
+        const on = b.dataset.filter === kategoria;
+        b.classList.toggle('is-active', on);
+        b.setAttribute('aria-pressed', String(on));
+      });
+
+      chipWrap.textContent = '';
+      if (pomieszczenie) {
+        const etykieta = NAZWY[pomieszczenie] || pomieszczenie;
+        const chip = document.createElement('span');
+        chip.className = 'works-chip';
+        chip.append(etykieta);
+        const x = document.createElement('button');
+        x.type = 'button';
+        x.className = 'works-chip-x';
+        x.setAttribute('aria-label', 'Usuń filtr: ' + etykieta);
+        x.textContent = '×';
+        x.addEventListener('click', () => {
+          pomieszczenie = null;
+          odswiez();
+          btns[0].focus();     // focus nie moze zginac razem z usunietym przyciskiem
+        });
+        chip.append(x);
+        chipWrap.append(chip);
+      }
+
+      statusEl.textContent = pomieszczenie
+        ? `Pokazuję ${widoczne} ${odmiana(widoczne)}: ${NAZWY[pomieszczenie] || pomieszczenie}`
+        : `Pokazuję ${widoczne} z ${cards.length} realizacji`;
+
+      emptyEl.hidden = widoczne > 0;   // pusta siatka bez slowa wyglada na awarie
+    }
+
+    btns.forEach(b => b.addEventListener('click', () => {
+      kategoria = b.dataset.filter;
+      odswiez();
+    }));
+
+    // Wejscie z kafelka uslug: ustawia pomieszczenie i zdejmuje zawezenie kategorii.
+    // Bez preventDefault — kotwica ma dzialac tak samo przy wylaczonym JS.
+    document.querySelectorAll('.service-link[data-pomieszczenie]').forEach(a => {
+      a.addEventListener('click', () => {
+        pomieszczenie = a.dataset.pomieszczenie;
+        kategoria = 'wszystkie';
+        odswiez();
+      });
+    });
+
+    odswiez();
+  })();
 
   // Scroll reveal dla kart
   const observer = new IntersectionObserver((entries) => {
