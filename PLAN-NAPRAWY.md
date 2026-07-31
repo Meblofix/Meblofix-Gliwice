@@ -1,7 +1,7 @@
 # PLAN NAPRAWY I ROZWOJU — meblofix-gliwice.pl
 
 > Dokument roboczy. Odhaczaj `[ ]` → `[x]` w miarę postępu.
-> Wersja: 2.3 · Utworzono: 30.07.2026 · Zaktualizowano: 31.07.2026 (Faza 1: cztery błędy Lighthouse naprawione, wynik do zmierzenia po deployu) · Podstawa: audyt z 29.07.2026 + inspekcja strony na żywo
+> Wersja: 2.4 · Utworzono: 30.07.2026 · Zaktualizowano: 31.07.2026 (Faza 1: dostępność 83 → 96, agentowe 2/2; jedna dogrywka kontrastu czeka na deploy) · Podstawa: audyt z 29.07.2026 + inspekcja strony na żywo
 
 **Legenda priorytetów**
 `P0` bloker — robić natychmiast · `P1` wysoki · `P2` średni · `P3` rozwojowy
@@ -156,9 +156,11 @@ async function safeFetch(url, opts = {}, ms = 4000) {
 
 # FAZA 1 — DOSTĘPNOŚĆ `P1`
 
+## ✅ CEL OSIĄGNIĘTY 31.07.2026 — dostępność 83 → 96, agentowe 1/2 → 2/2
+
 Cel: Lighthouse Accessibility 83 → ≥ 95. Dodatkowo: dostępność to realny czynnik konwersji — część klientów to osoby starsze, korzystające z powiększonej czcionki.
 
-**To jest teraz najtańszy dostępny zysk w całym projekcie.** Wydajność zamknięta na 99/100, SEO 100/100 — dostępność 83 jest jedyną kategorią z realnym zapasem. Naprawa tych czterech punktów podnosi też wynik „Przeglądanie agentowe" (dziś 1/2, błąd: „drzewo ułatwień dostępu jest nieprawidłowe") — to ta sama warstwa semantyki HTML.
+Cztery błędy z audytu naprawione, wynik potwierdzony pomiarem na produkcji (tabela niżej). **Faza nie jest jednak wyczerpana** — punkty bez odhaczenia na końcu sekcji to nadal realna robota, w tym dwa poważne znaleziska: brak menu mobilnego i niewidoczne obramowania pól formularza.
 
 ## ✅ CZTERY BŁĘDY LIGHTHOUSE — NAPRAWIONE 31.07.2026
 
@@ -186,11 +188,38 @@ Poprawione też: `.ticker-sep` (1,69 → 4,62:1), `.phone-strip-sub` (2,82 → 4
 
 Z tej sekcji **usunięto akapit z listą fraz rozdzielonych pipe'ami** („montażysta mebli Gliwice | montaż mebli Śląsk | …"), wyciszony do 2,20:1. To upychanie słów kluczowych, nie treść — rozjaśnienie wyeksponowałoby użytkownikom coś, czego nikt nie ma czytać. Ten sam gatunek co `meta keywords` z punktu 5.2. Komentarz sekcji („widoczny dla Google, dyskretny wizualnie") opisuje teraz zawartość, nie intencję pod robota.
 
-⚠️ **Wynik Lighthouse jeszcze niezmierzony** — zmiany są lokalne, nie wypchnięte. Kontrasty policzone z kodu wg WCAG 2.1, najniższy po zmianach 4,62:1. Po deployu zmierzyć w incognito zgodnie z regułą z Fazy 0.
+### Wynik po wdrożeniu (PSI produkcja, 31.07.2026, 11:27, incognito)
+
+| Metryka | Przed | Po |
+|---|---|---|
+| **Dostępność mobile** | 83 | **96** |
+| **Dostępność desktop** | — | **96** |
+| Wydajność mobile | 99 | 98 |
+| Wydajność desktop | 100 | 100 |
+| Praktyki | 96 | 96 |
+| SEO | 100 | 100 |
+| **Przeglądanie agentowe** | 1/2 | **2/2** |
+
+**Cel osiągnięty** — próg z nagłówka fazy to ≥ 95. Błąd „drzewo ułatwień dostępu jest nieprawidłowe" zniknął, zgodnie z przewidywaniem: to była ta sama warstwa semantyki HTML.
+
+### Dogrywka — jedno zgłoszenie kontrastu zostało
+
+Pomiar wykazał, że przy pierwszym przejściu przeoczyłem dwa teksty (commit `dd976be`, **wymaga ponownego deployu i pomiaru**):
+
+| Element | Było | Jest | Próg |
+|---|---|---|---|
+| `.service-num` — etykiety „01"–„06" | 1,52:1 | 4,87:1 | 4,5 (13,6 px) |
+| `.promise-quote-mark` — znak cytatu | 1,21:1 | 3,77:1 | 3,0 (48 px) |
+
+Etykiety „01–06" plan wymieniał **wprost** w punkcie o kontraście poniżej — przeoczenie po mojej stronie: szukałem lokalizacji zawężonym wzorcem i te deklaracje wypadły z listy. Poprawione dopiero po pełnym przemiataniu wszystkich deklaracji `color:` w pliku; po nim żaden węzeł tekstowy nie jest poniżej progu.
+
+**Wniosek na przyszłość:** przy audycie kontrastu nie wystarczy zebrać unikalne *wartości* kolorów — trzeba zebrać wszystkie ich *wystąpienia*. Ta sama wartość potrafi siedzieć w kilku miejscach, z których część przechodzi, a część nie.
+
+Znane, świadomie zostawione: `.star-picker svg` w stanie nieaktywnym ma 1,50:1, ale to ikona (audyt kontrastu obejmuje tylko tekst), a `setStars(5)` na starcie zamalowuje wszystkie gwiazdki na złoto — ten kolor pojawia się dopiero przy ocenie < 5.
 
 Reszta listy poniżej to prewencja i rzeczy, których automat nie wykrywa.
 
-- [x] **Kontrast tekstu.** Przejrzane **wszystkie** pary kolor/tło w pliku — nie na oko, tylko policzone wg WCAG 2.1. Każdy tekst ma dziś ≥ 4,5:1 (duży ≥ 3:1).
+- [x] **Kontrast tekstu.** Przemiecione **wszystkie** deklaracje `color:` w pliku — nie na oko, tylko policzone wg WCAG 2.1. Po commicie `dd976be` żaden węzeł tekstowy nie jest poniżej progu (4,5:1, duży 3:1). Uwzględnione też etykiety „01–06", wymienione w tym punkcie od początku.
 - [ ] **Kontrast elementów interaktywnych** (obramowania pól, ikony) — min. 3:1. ⚠️ **Nie zrobione.** `--border: rgba(255,255,255,0.08)` na ciemnym tle to **1,20:1** — obramowania pól formularza są praktycznie niewidoczne. Osobne zadanie, dotyka wielu miejsc naraz.
 - [ ] **Etykiety formularza.** Każde pole: `<label for="...">` albo `aria-label`. Placeholder ≠ etykieta. ⚠️ **Częściowo:** poprawiony tylko `<select>` (to on wywalał audyt). Pozostałe pola — imię, telefon, e-mail, miasto, opis zlecenia oraz formularz opinii — nadal stoją na samych placeholderach. Audytu nie wywalają (placeholder liczy się jako nazwa zastępcza), ale znikają, gdy użytkownik zacznie pisać.
 - [ ] **Autouzupełnianie:** `autocomplete="name"`, `"tel"`, `"email"` — realnie skraca wypełnianie na telefonie.
