@@ -1342,23 +1342,6 @@
   }
   .footer-right a:hover { color: var(--cream); }
 
-  /* ─── VISIT COUNTER ─── */
-  .visit-counter {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    font-size: 0.75rem;
-    color: var(--gray);
-    background: rgba(255,255,255,0.04);
-    border: 1px solid var(--border);
-    padding: 0.45rem 1rem;
-    border-radius: 2px;
-    letter-spacing: 0.04em;
-    white-space: nowrap;
-  }
-  .visit-counter svg { width: 13px; height: 13px; color: var(--orange); flex-shrink: 0; }
-  .visit-counter strong { color: var(--cream); font-weight: 600; font-size: 0.82rem; }
-
   /* ─── PHONE CTA STRIP ─── */
   .phone-strip {
     background: linear-gradient(135deg, var(--orange-btn) 0%, var(--orange-btn-hover) 100%);
@@ -1757,11 +1740,6 @@
     line-height: 1.9;
     font-weight: 300;
     margin-bottom: 0.3rem;
-  }
-
-  @keyframes countPop {
-    0% { transform: scale(1.4); color: var(--orange); }
-    100% { transform: scale(1); color: var(--cream); }
   }
 
   /* ─── OPINIE ─── */
@@ -2793,10 +2771,6 @@
   <div class="logo" style="font-size:1.3rem;">Meblo<span>Fix</span><sub>Gliwice</sub></div>
   <div style="display:flex;flex-direction:column;align-items:center;gap:0.6rem;">
     <div>© 2025 MebloFix Gliwice · Montaż mebli IKEA, Agata, BRW · Śląsk</div>
-    <div class="visit-counter" id="visitCounter">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-      Odwiedzin: <strong id="visitCount">—</strong>
-    </div>
   </div>
   <div class="footer-right">
     <a href="#uslugi">Usługi</a>
@@ -2952,43 +2926,6 @@
 
   loadReviews();
 
-  // ─── LICZNIK ODWIEDZIN ─── (Supabase RPC lub tabela visits)
-  async function trackVisit() {
-    const countEl = document.getElementById('visitCount');
-    const BASE = 10000;
-    try {
-      // Pobierz aktualny licznik
-      let rows = await sbFetch('visits?select=count&limit=1');
-      let current = (rows && rows.length) ? (rows[0].count || 0) : 0;
-
-      // Zwiększ o 1
-      if (rows && rows.length) {
-        await sbFetch('visits?id=eq.' + rows[0].id, {
-          method: 'PATCH',
-          prefer: 'return=minimal',
-          body: JSON.stringify({ count: current + 1 })
-        });
-      } else {
-        await sbFetch('visits', {
-          method: 'POST',
-          prefer: 'return=minimal',
-          body: JSON.stringify({ count: 1 })
-        });
-        current = 0;
-      }
-
-      const display = BASE + current + 1;
-      countEl.textContent = display.toLocaleString('pl-PL');
-      countEl.style.animation = 'none';
-      countEl.offsetHeight;
-      countEl.style.animation = 'countPop 0.4s ease';
-    } catch(e) {
-      // Jeśli tabela visits nie istnieje — pokaż statyczny numer
-      countEl.textContent = BASE.toLocaleString('pl-PL') + '+';
-    }
-  }
-
-  trackVisit();
   function toggleFaq(questionEl) {
     const item = questionEl.parentElement;
     const isOpen = item.classList.contains('open');
