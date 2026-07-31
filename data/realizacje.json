@@ -1,0 +1,97 @@
+{
+  "kategorie": {
+    "sieciowe": "Montaż mebli sieciowych",
+    "na-wymiar": "Meble na wymiar"
+  },
+  "realizacje": [
+    {
+      "id": "zabudowa-wneki-jastrzebie",
+      "tytul": "Zabudowa wnęki na wymiar",
+      "kategoria": "na-wymiar",
+      "miasto": "Jastrzębie-Zdrój",
+      "marka": null,
+      "data": "2026-07",
+      "czas": null,
+      "opis": "Wnęka zabudowana na wymiar — od pustej przestrzeni do gotowego mebla dopasowanego do wymiarów pomieszczenia. Przesuń suwak na zdjęciu, żeby zobaczyć stan przed montażem.",
+      "okladka": "zabudowa-wneki-po",
+      "przed_po": { "przed": "zabudowa-wneki-przed", "po": "zabudowa-wneki-po" },
+      "zdjecia": [
+        { "plik": "zabudowa-wneki-przed", "alt": "Pusta wnęka przed zabudową — Jastrzębie-Zdrój" },
+        { "plik": "zabudowa-wneki-po", "alt": "Gotowa zabudowa wnęki na wymiar — Jastrzębie-Zdrój" },
+        { "plik": "zabudowa-wneki-po-2", "alt": "Zabudowa wnęki na wymiar, ujęcie 2 — Jastrzębie-Zdrój" },
+        { "plik": "zabudowa-wneki-po-3", "alt": "Zabudowa wnęki na wymiar, ujęcie 3 — Jastrzębie-Zdrój" },
+        { "plik": "zabudowa-wneki-po-4", "alt": "Zabudowa wnęki na wymiar, ujęcie 4 — Jastrzębie-Zdrój" }
+      ]
+    },
+    {
+      "id": "kuchnia-kedzierzyn",
+      "tytul": "Montaż kuchni na ścianie z wystającymi kafelkami",
+      "kategoria": "sieciowe",
+      "miasto": "Kędzierzyn-Koźle",
+      "marka": null,
+      "data": "2026-05",
+      "czas": "12 godzin",
+      "opis": "Kuchnia kupiona przez internet, montaż w mieszkaniu ze starą glazurą. Kafelki wystawały ze ściany o 3 cm, więc szafki górne nie miały jak przylegać — nadłożyłem płytę wiórową i wykonałem dystans na zawieszkach, żeby fronty ustawiły się w jednej linii. Do tego ściana sypała się przy wierceniu, więc standardowe mocowanie nie miało się czego trzymać. Z zewnątrz nie widać po tym śladu — i o to właśnie chodzi.",
+      "okladka": "kuchnia-inny-producent",
+      "zdjecia": [
+        { "plik": "kuchnia-inny-producent", "alt": "Zamontowana kuchnia z szafkami górnymi na dystansie — Kędzierzyn-Koźle" },
+        { "plik": "kuchnia-inny-producent-2", "alt": "Zabudowa kuchenna z frontami w jednej linii mimo nierównej ściany" },
+        { "plik": "kuchnia-inny-producent-3", "alt": "Montaż kuchni w Kędzierzynie-Koźlu, ujęcie 3" }
+      ]
+    },
+    {
+      "id": "kuchnia-ikea-pogrzebien",
+      "tytul": "Montaż kuchni IKEA bez gotowego projektu",
+      "kategoria": "sieciowe",
+      "miasto": "Pogrzebień",
+      "marka": "IKEA",
+      "data": "2026-01",
+      "czas": null,
+      "opis": "Montaż bez projektu z planera IKEA — klient miał tylko zdjęcia w telefonie i ogólny pomysł na rozmieszczenie. Rozkład szafek, kolejność montażu i dopasowanie do wymiarów pomieszczenia ustalałem na miejscu. Nie obyło się bez przeróbek: brakowało kilku elementów, a zawiasy w paczce były pomylone. Finalnie wszystko udało się poskładać, a efekt jest dopasowany do pomieszczenia, a nie do planu, który powstał przy biurku.",
+      "okladka": "kuchnia-ikea-po-3",
+      "zdjecia": [
+        { "plik": "kuchnia-ikea-po-3", "alt": "Zamontowana kuchnia IKEA — Pogrzebień" },
+        { "plik": "kuchnia-ikea-po-4", "alt": "Kuchnia IKEA po montażu, ujęcie 2 — Pogrzebień" },
+        { "plik": "kuchnia-ikea-po-5", "alt": "Kuchnia IKEA po montażu, ujęcie 3 — Pogrzebień" },
+        { "plik": "kuchnia-ikea-po-6", "alt": "Kuchnia IKEA po montażu, ujęcie 4 — Pogrzebień" },
+        { "plik": "kuchnia-ikea-po-7", "alt": "Kuchnia IKEA po montażu, ujęcie 5 — Pogrzebień" },
+        { "plik": "kuchnia-ikea-po-8", "alt": "Kuchnia IKEA po montażu, ujęcie 6 — Pogrzebień" },
+        { "plik": "kuchnia-ikea-po-9", "alt": "Kuchnia IKEA po montażu, ujęcie 7 — Pogrzebień" },
+        { "plik": "kuchnia-ikea-po-11", "alt": "Kuchnia IKEA po montażu, ujęcie 8 — Pogrzebień" },
+        { "plik": "kuchnia-ikea-po-12", "alt": "Kuchnia IKEA po montażu, ujęcie 9 — Pogrzebień" },
+        { "plik": "kuchnia-ikea-po-13", "alt": "Kuchnia IKEA po montażu, ujęcie 10 — Pogrzebień" }
+      ]
+    },
+    {
+      "id": "zabudowa-i-lozko-gliwice",
+      "tytul": "Zabudowa i łóżko na wymiar",
+      "kategoria": "na-wymiar",
+      "miasto": "Gliwice",
+      "marka": null,
+      "data": "2026-04",
+      "czas": null,
+      "opis": "Zabudowa i łóżko wykonane na wymiar w jednym pomieszczeniu, dopasowane do dostępnej przestrzeni.",
+      "okladka": "zabudowa-i-lozko",
+      "zdjecia": [
+        { "plik": "zabudowa-i-lozko", "alt": "Zabudowa i łóżko na wymiar — Gliwice" },
+        { "plik": "zabudowa-i-lozko-2", "alt": "Zabudowa i łóżko na wymiar, ujęcie 2 — Gliwice" }
+      ]
+    },
+    {
+      "id": "pokoj-dzieciecy-zabrze",
+      "tytul": "Łóżko i szafka w pokoju dziecięcym",
+      "kategoria": "sieciowe",
+      "miasto": "Zabrze",
+      "marka": "IKEA",
+      "data": "2026-04",
+      "czas": "ok. 3 godziny",
+      "opis": "Jedno zlecenie, jeden pokój: łóżko dziecięce i szafka. Około trzech godzin montażu razem z rozpakowaniem i uprzątnięciem kartonów.",
+      "okladka": "lozko-dla-dziecka",
+      "zdjecia": [
+        { "plik": "lozko-dla-dziecka", "alt": "Zmontowane łóżko dziecięce — Zabrze" },
+
+        { "plik": "szafka-ikea-otwarta", "alt": "Szafka IKEA z otwartymi drzwiami — Zabrze" }
+      ]
+    }
+  ]
+}
