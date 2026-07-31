@@ -2103,6 +2103,112 @@
     margin-bottom: 2.5rem;
   }
 
+  /* ─── LIGHTBOX GALERII ─── */
+  .lb-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 300;
+    background: rgba(0,0,0,0.92);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1.5rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+  }
+  .lb-overlay.open { opacity: 1; pointer-events: auto; }
+
+  .lb-box {
+    display: grid;
+    grid-template-rows: 1fr auto;
+    gap: 1.2rem;
+    max-width: 1100px;
+    width: 100%;
+    max-height: 100%;
+  }
+
+  .lb-stage {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+  }
+  .lb-stage img {
+    max-width: 100%;
+    max-height: 72vh;
+    width: auto; height: auto;
+    object-fit: contain;
+    border-radius: 3px;
+  }
+
+  .lb-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 44px; height: 44px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(13,13,13,0.75);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    color: var(--cream);
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .lb-nav:hover { background: var(--orange-btn); border-color: var(--orange-btn); }
+  .lb-nav:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
+  .lb-prev { left: 0.5rem; }
+  .lb-next { right: 0.5rem; }
+  .lb-nav svg { width: 18px; height: 18px; }
+  .lb-nav[disabled] { opacity: 0.3; cursor: default; }
+  .lb-nav[disabled]:hover { background: rgba(13,13,13,0.75); border-color: var(--border); }
+
+  .lb-close {
+    position: absolute;
+    top: 1rem; right: 1rem;
+    width: 40px; height: 40px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    color: var(--cream);
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .lb-close:hover { background: var(--orange-btn); border-color: var(--orange-btn); }
+  .lb-close:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
+  .lb-close svg { width: 16px; height: 16px; }
+
+  .lb-info { color: var(--cream); }
+  .lb-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.5rem;
+    letter-spacing: 0.03em;
+    margin-bottom: 0.4rem;
+  }
+  /* --gray na rgba(0,0,0,.92) nad dowolnym tlem = ponad 5:1 */
+  .lb-meta {
+    font-size: 0.75rem;
+    color: var(--gray);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 0.7rem;
+  }
+  .lb-desc {
+    font-size: 0.88rem;
+    color: var(--mid);
+    font-weight: 300;
+    line-height: 1.75;
+    max-width: 780px;
+  }
+  .lb-counter {
+    font-size: 0.75rem;
+    color: var(--gray);
+    letter-spacing: 0.08em;
+    margin-top: 0.8rem;
+  }
+
   /* --mid na --deep = 8,04:1 */
   .works-empty {
     font-size: 0.9rem;
@@ -2193,6 +2299,10 @@
     nav { padding: 1.2rem 1.5rem; }
     .works-section { padding-left: 1.5rem; padding-right: 1.5rem; }
     .works-grid { grid-template-columns: 1fr; }
+    .lb-overlay { padding: 1rem 0.75rem; }
+    .lb-stage img { max-height: 58vh; }
+    .lb-nav { width: 38px; height: 38px; }
+    .lb-title { font-size: 1.25rem; }
     .nav-links { display: none; }
     .hero-inner,
     .section,
@@ -2652,6 +2762,29 @@
       </li>
   </ul>
 </section>
+
+<!-- LIGHTBOX GALERII -->
+<div class="lb-overlay" id="lightbox" role="dialog" aria-modal="true" aria-labelledby="lb-title" aria-hidden="true" inert>
+  <button type="button" class="lb-close" aria-label="Zamknij galerię"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true" focusable="false"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+  <div class="lb-box">
+    <div class="lb-stage">
+      <button type="button" class="lb-nav lb-prev" aria-label="Poprzednie zdjęcie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <picture>
+        <source id="lb-source" type="image/webp">
+        <img id="lb-img" alt="">
+      </picture>
+      <button type="button" class="lb-nav lb-next" aria-label="Następne zdjęcie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 18l6-6-6-6"/></svg></button>
+    </div>
+    <div class="lb-info">
+      <div class="lb-title" id="lb-title"></div>
+      <div class="lb-meta" id="lb-meta"></div>
+      <p class="lb-desc" id="lb-desc"></p>
+      <div class="lb-counter" id="lb-counter" role="status" aria-live="polite"></div>
+    </div>
+  </div>
+</div>
+
+<script type="application/json" id="works-data">{"zabudowa-wneki-jastrzebie":{"tytul":"Zabudowa wnęki na wymiar","miasto":"Jastrzębie-Zdrój","opis":"Wnęka zabudowana na wymiar — od pustej przestrzeni do gotowego mebla dopasowanego do wymiarów pomieszczenia. Przesuń suwak na zdjęciu, żeby zobaczyć stan przed montażem.","kategoria":"Meble na wymiar","marka":null,"czas":null,"zdjecia":[{"alt":"Pusta wnęka przed zabudową — Jastrzębie-Zdrój","w":738,"h":1600,"jpg":"img/realizacje/na-wymiar/zabudowa-wneki-przed-400.jpg 185w, img/realizacje/na-wymiar/zabudowa-wneki-przed-800.jpg 369w, img/realizacje/na-wymiar/zabudowa-wneki-przed-1200.jpg 554w, img/realizacje/na-wymiar/zabudowa-wneki-przed-1600.jpg 738w","webp":"img/realizacje/na-wymiar/zabudowa-wneki-przed-400.webp 185w, img/realizacje/na-wymiar/zabudowa-wneki-przed-800.webp 369w, img/realizacje/na-wymiar/zabudowa-wneki-przed-1200.webp 554w, img/realizacje/na-wymiar/zabudowa-wneki-przed-1600.webp 738w","src":"img/realizacje/na-wymiar/zabudowa-wneki-przed-1200.jpg"},{"alt":"Gotowa zabudowa wnęki na wymiar — Jastrzębie-Zdrój","w":1200,"h":1600,"jpg":"img/realizacje/na-wymiar/zabudowa-wneki-po-400.jpg 300w, img/realizacje/na-wymiar/zabudowa-wneki-po-800.jpg 600w, img/realizacje/na-wymiar/zabudowa-wneki-po-1200.jpg 900w, img/realizacje/na-wymiar/zabudowa-wneki-po-1600.jpg 1200w","webp":"img/realizacje/na-wymiar/zabudowa-wneki-po-400.webp 300w, img/realizacje/na-wymiar/zabudowa-wneki-po-800.webp 600w, img/realizacje/na-wymiar/zabudowa-wneki-po-1200.webp 900w, img/realizacje/na-wymiar/zabudowa-wneki-po-1600.webp 1200w","src":"img/realizacje/na-wymiar/zabudowa-wneki-po-1200.jpg"},{"alt":"Zabudowa wnęki na wymiar, ujęcie 2 — Jastrzębie-Zdrój","w":1200,"h":1600,"jpg":"img/realizacje/na-wymiar/zabudowa-wneki-po-2-400.jpg 300w, img/realizacje/na-wymiar/zabudowa-wneki-po-2-800.jpg 600w, img/realizacje/na-wymiar/zabudowa-wneki-po-2-1200.jpg 900w, img/realizacje/na-wymiar/zabudowa-wneki-po-2-1600.jpg 1200w","webp":"img/realizacje/na-wymiar/zabudowa-wneki-po-2-400.webp 300w, img/realizacje/na-wymiar/zabudowa-wneki-po-2-800.webp 600w, img/realizacje/na-wymiar/zabudowa-wneki-po-2-1200.webp 900w, img/realizacje/na-wymiar/zabudowa-wneki-po-2-1600.webp 1200w","src":"img/realizacje/na-wymiar/zabudowa-wneki-po-2-1200.jpg"},{"alt":"Zabudowa wnęki na wymiar, ujęcie 3 — Jastrzębie-Zdrój","w":1200,"h":1600,"jpg":"img/realizacje/na-wymiar/zabudowa-wneki-po-3-400.jpg 300w, img/realizacje/na-wymiar/zabudowa-wneki-po-3-800.jpg 600w, img/realizacje/na-wymiar/zabudowa-wneki-po-3-1200.jpg 900w, img/realizacje/na-wymiar/zabudowa-wneki-po-3-1600.jpg 1200w","webp":"img/realizacje/na-wymiar/zabudowa-wneki-po-3-400.webp 300w, img/realizacje/na-wymiar/zabudowa-wneki-po-3-800.webp 600w, img/realizacje/na-wymiar/zabudowa-wneki-po-3-1200.webp 900w, img/realizacje/na-wymiar/zabudowa-wneki-po-3-1600.webp 1200w","src":"img/realizacje/na-wymiar/zabudowa-wneki-po-3-1200.jpg"},{"alt":"Zabudowa wnęki na wymiar, ujęcie 4 — Jastrzębie-Zdrój","w":1200,"h":1600,"jpg":"img/realizacje/na-wymiar/zabudowa-wneki-po-4-400.jpg 300w, img/realizacje/na-wymiar/zabudowa-wneki-po-4-800.jpg 600w, img/realizacje/na-wymiar/zabudowa-wneki-po-4-1200.jpg 900w, img/realizacje/na-wymiar/zabudowa-wneki-po-4-1600.jpg 1200w","webp":"img/realizacje/na-wymiar/zabudowa-wneki-po-4-400.webp 300w, img/realizacje/na-wymiar/zabudowa-wneki-po-4-800.webp 600w, img/realizacje/na-wymiar/zabudowa-wneki-po-4-1200.webp 900w, img/realizacje/na-wymiar/zabudowa-wneki-po-4-1600.webp 1200w","src":"img/realizacje/na-wymiar/zabudowa-wneki-po-4-1200.jpg"}]},"kuchnia-kedzierzyn":{"tytul":"Montaż kuchni na ścianie z wystającymi kafelkami","miasto":"Kędzierzyn-Koźle","opis":"Kuchnia kupiona przez internet, montaż w mieszkaniu ze starą glazurą. Kafelki wystawały ze ściany o 3 cm, więc szafki górne nie miały jak przylegać — nadłożyłem płytę wiórową i wykonałem dystans na zawieszkach, żeby fronty ustawiły się w jednej linii. Do tego ściana sypała się przy wierceniu, więc standardowe mocowanie nie miało się czego trzymać. Z zewnątrz nie widać po tym śladu — i o to właśnie chodzi.","kategoria":"Montaż mebli sieciowych","marka":null,"czas":"12 godzin","zdjecia":[{"alt":"Zamontowana kuchnia z szafkami górnymi na dystansie — Kędzierzyn-Koźle","w":405,"h":720,"jpg":"img/realizacje/sieciowe/kuchnia-inny-producent-400.jpg 225w, img/realizacje/sieciowe/kuchnia-inny-producent-800.jpg 405w","webp":"img/realizacje/sieciowe/kuchnia-inny-producent-400.webp 225w, img/realizacje/sieciowe/kuchnia-inny-producent-800.webp 405w","src":"img/realizacje/sieciowe/kuchnia-inny-producent-1200.jpg"},{"alt":"Zabudowa kuchenna z frontami w jednej linii mimo nierównej ściany","w":405,"h":720,"jpg":"img/realizacje/sieciowe/kuchnia-inny-producent-2-400.jpg 225w, img/realizacje/sieciowe/kuchnia-inny-producent-2-800.jpg 405w","webp":"img/realizacje/sieciowe/kuchnia-inny-producent-2-400.webp 225w, img/realizacje/sieciowe/kuchnia-inny-producent-2-800.webp 405w","src":"img/realizacje/sieciowe/kuchnia-inny-producent-2-1200.jpg"},{"alt":"Montaż kuchni w Kędzierzynie-Koźlu, ujęcie 3","w":1278,"h":720,"jpg":"img/realizacje/sieciowe/kuchnia-inny-producent-3-400.jpg 400w, img/realizacje/sieciowe/kuchnia-inny-producent-3-800.jpg 800w, img/realizacje/sieciowe/kuchnia-inny-producent-3-1200.jpg 1200w, img/realizacje/sieciowe/kuchnia-inny-producent-3-1600.jpg 1278w","webp":"img/realizacje/sieciowe/kuchnia-inny-producent-3-400.webp 400w, img/realizacje/sieciowe/kuchnia-inny-producent-3-800.webp 800w, img/realizacje/sieciowe/kuchnia-inny-producent-3-1200.webp 1200w, img/realizacje/sieciowe/kuchnia-inny-producent-3-1600.webp 1278w","src":"img/realizacje/sieciowe/kuchnia-inny-producent-3-1200.jpg"}]},"kuchnia-ikea-pogrzebien":{"tytul":"Montaż kuchni IKEA bez gotowego projektu","miasto":"Pogrzebień","opis":"Montaż bez projektu z planera IKEA — klient miał tylko zdjęcia w telefonie i ogólny pomysł na rozmieszczenie. Rozkład szafek, kolejność montażu i dopasowanie do wymiarów pomieszczenia ustalałem na miejscu. Nie obyło się bez przeróbek: brakowało kilku elementów, a zawiasy w paczce były pomylone. Finalnie wszystko udało się poskładać, a efekt jest dopasowany do pomieszczenia, a nie do planu, który powstał przy biurku.","kategoria":"Montaż mebli sieciowych","marka":"IKEA","czas":null,"zdjecia":[{"alt":"Zamontowana kuchnia IKEA — Pogrzebień","w":1200,"h":1600,"jpg":"img/realizacje/sieciowe/kuchnia-ikea-po-3-400.jpg 300w, img/realizacje/sieciowe/kuchnia-ikea-po-3-800.jpg 600w, img/realizacje/sieciowe/kuchnia-ikea-po-3-1200.jpg 900w, img/realizacje/sieciowe/kuchnia-ikea-po-3-1600.jpg 1200w","webp":"img/realizacje/sieciowe/kuchnia-ikea-po-3-400.webp 300w, img/realizacje/sieciowe/kuchnia-ikea-po-3-800.webp 600w, img/realizacje/sieciowe/kuchnia-ikea-po-3-1200.webp 900w, img/realizacje/sieciowe/kuchnia-ikea-po-3-1600.webp 1200w","src":"img/realizacje/sieciowe/kuchnia-ikea-po-3-1200.jpg"},{"alt":"Kuchnia IKEA po montażu, ujęcie 2 — Pogrzebień","w":1200,"h":1600,"jpg":"img/realizacje/sieciowe/kuchnia-ikea-po-4-400.jpg 300w, img/realizacje/sieciowe/kuchnia-ikea-po-4-800.jpg 600w, img/realizacje/sieciowe/kuchnia-ikea-po-4-1200.jpg 900w, img/realizacje/sieciowe/kuchnia-ikea-po-4-1600.jpg 1200w","webp":"img/realizacje/sieciowe/kuchnia-ikea-po-4-400.webp 300w, img/realizacje/sieciowe/kuchnia-ikea-po-4-800.webp 600w, img/realizacje/sieciowe/kuchnia-ikea-po-4-1200.webp 900w, img/realizacje/sieciowe/kuchnia-ikea-po-4-1600.webp 1200w","src":"img/realizacje/sieciowe/kuchnia-ikea-po-4-1200.jpg"},{"alt":"Kuchnia IKEA po montażu, ujęcie 3 — Pogrzebień","w":1200,"h":1600,"jpg":"img/realizacje/sieciowe/kuchnia-ikea-po-5-400.jpg 300w, img/realizacje/sieciowe/kuchnia-ikea-po-5-800.jpg 600w, img/realizacje/sieciowe/kuchnia-ikea-po-5-1200.jpg 900w, img/realizacje/sieciowe/kuchnia-ikea-po-5-1600.jpg 1200w","webp":"img/realizacje/sieciowe/kuchnia-ikea-po-5-400.webp 300w, img/realizacje/sieciowe/kuchnia-ikea-po-5-800.webp 600w, img/realizacje/sieciowe/kuchnia-ikea-po-5-1200.webp 900w, img/realizacje/sieciowe/kuchnia-ikea-po-5-1600.webp 1200w","src":"img/realizacje/sieciowe/kuchnia-ikea-po-5-1200.jpg"},{"alt":"Kuchnia IKEA po montażu, ujęcie 4 — Pogrzebień","w":1200,"h":1600,"jpg":"img/realizacje/sieciowe/kuchnia-ikea-po-6-400.jpg 300w, img/realizacje/sieciowe/kuchnia-ikea-po-6-800.jpg 600w, img/realizacje/sieciowe/kuchnia-ikea-po-6-1200.jpg 900w, img/realizacje/sieciowe/kuchnia-ikea-po-6-1600.jpg 1200w","webp":"img/realizacje/sieciowe/kuchnia-ikea-po-6-400.webp 300w, img/realizacje/sieciowe/kuchnia-ikea-po-6-800.webp 600w, img/realizacje/sieciowe/kuchnia-ikea-po-6-1200.webp 900w, img/realizacje/sieciowe/kuchnia-ikea-po-6-1600.webp 1200w","src":"img/realizacje/sieciowe/kuchnia-ikea-po-6-1200.jpg"},{"alt":"Kuchnia IKEA po montażu, ujęcie 5 — Pogrzebień","w":1200,"h":1600,"jpg":"img/realizacje/sieciowe/kuchnia-ikea-po-7-400.jpg 300w, img/realizacje/sieciowe/kuchnia-ikea-po-7-800.jpg 600w, img/realizacje/sieciowe/kuchnia-ikea-po-7-1200.jpg 900w, img/realizacje/sieciowe/kuchnia-ikea-po-7-1600.jpg 1200w","webp":"img/realizacje/sieciowe/kuchnia-ikea-po-7-400.webp 300w, img/realizacje/sieciowe/kuchnia-ikea-po-7-800.webp 600w, img/realizacje/sieciowe/kuchnia-ikea-po-7-1200.webp 900w, img/realizacje/sieciowe/kuchnia-ikea-po-7-1600.webp 1200w","src":"img/realizacje/sieciowe/kuchnia-ikea-po-7-1200.jpg"},{"alt":"Kuchnia IKEA po montażu, ujęcie 6 — Pogrzebień","w":1600,"h":1200,"jpg":"img/realizacje/sieciowe/kuchnia-ikea-po-8-400.jpg 400w, img/realizacje/sieciowe/kuchnia-ikea-po-8-800.jpg 800w, img/realizacje/sieciowe/kuchnia-ikea-po-8-1200.jpg 1200w, img/realizacje/sieciowe/kuchnia-ikea-po-8-1600.jpg 1600w","webp":"img/realizacje/sieciowe/kuchnia-ikea-po-8-400.webp 400w, img/realizacje/sieciowe/kuchnia-ikea-po-8-800.webp 800w, img/realizacje/sieciowe/kuchnia-ikea-po-8-1200.webp 1200w, img/realizacje/sieciowe/kuchnia-ikea-po-8-1600.webp 1600w","src":"img/realizacje/sieciowe/kuchnia-ikea-po-8-1200.jpg"},{"alt":"Kuchnia IKEA po montażu, ujęcie 7 — Pogrzebień","w":1600,"h":1200,"jpg":"img/realizacje/sieciowe/kuchnia-ikea-po-9-400.jpg 400w, img/realizacje/sieciowe/kuchnia-ikea-po-9-800.jpg 800w, img/realizacje/sieciowe/kuchnia-ikea-po-9-1200.jpg 1200w, img/realizacje/sieciowe/kuchnia-ikea-po-9-1600.jpg 1600w","webp":"img/realizacje/sieciowe/kuchnia-ikea-po-9-400.webp 400w, img/realizacje/sieciowe/kuchnia-ikea-po-9-800.webp 800w, img/realizacje/sieciowe/kuchnia-ikea-po-9-1200.webp 1200w, img/realizacje/sieciowe/kuchnia-ikea-po-9-1600.webp 1600w","src":"img/realizacje/sieciowe/kuchnia-ikea-po-9-1200.jpg"},{"alt":"Kuchnia IKEA po montażu, ujęcie 8 — Pogrzebień","w":1600,"h":1200,"jpg":"img/realizacje/sieciowe/kuchnia-ikea-po-11-400.jpg 400w, img/realizacje/sieciowe/kuchnia-ikea-po-11-800.jpg 800w, img/realizacje/sieciowe/kuchnia-ikea-po-11-1200.jpg 1200w, img/realizacje/sieciowe/kuchnia-ikea-po-11-1600.jpg 1600w","webp":"img/realizacje/sieciowe/kuchnia-ikea-po-11-400.webp 400w, img/realizacje/sieciowe/kuchnia-ikea-po-11-800.webp 800w, img/realizacje/sieciowe/kuchnia-ikea-po-11-1200.webp 1200w, img/realizacje/sieciowe/kuchnia-ikea-po-11-1600.webp 1600w","src":"img/realizacje/sieciowe/kuchnia-ikea-po-11-1200.jpg"},{"alt":"Kuchnia IKEA po montażu, ujęcie 9 — Pogrzebień","w":1200,"h":1600,"jpg":"img/realizacje/sieciowe/kuchnia-ikea-po-12-400.jpg 300w, img/realizacje/sieciowe/kuchnia-ikea-po-12-800.jpg 600w, img/realizacje/sieciowe/kuchnia-ikea-po-12-1200.jpg 900w, img/realizacje/sieciowe/kuchnia-ikea-po-12-1600.jpg 1200w","webp":"img/realizacje/sieciowe/kuchnia-ikea-po-12-400.webp 300w, img/realizacje/sieciowe/kuchnia-ikea-po-12-800.webp 600w, img/realizacje/sieciowe/kuchnia-ikea-po-12-1200.webp 900w, img/realizacje/sieciowe/kuchnia-ikea-po-12-1600.webp 1200w","src":"img/realizacje/sieciowe/kuchnia-ikea-po-12-1200.jpg"},{"alt":"Kuchnia IKEA po montażu, ujęcie 10 — Pogrzebień","w":1200,"h":1600,"jpg":"img/realizacje/sieciowe/kuchnia-ikea-po-13-400.jpg 300w, img/realizacje/sieciowe/kuchnia-ikea-po-13-800.jpg 600w, img/realizacje/sieciowe/kuchnia-ikea-po-13-1200.jpg 900w, img/realizacje/sieciowe/kuchnia-ikea-po-13-1600.jpg 1200w","webp":"img/realizacje/sieciowe/kuchnia-ikea-po-13-400.webp 300w, img/realizacje/sieciowe/kuchnia-ikea-po-13-800.webp 600w, img/realizacje/sieciowe/kuchnia-ikea-po-13-1200.webp 900w, img/realizacje/sieciowe/kuchnia-ikea-po-13-1600.webp 1200w","src":"img/realizacje/sieciowe/kuchnia-ikea-po-13-1200.jpg"}]},"zabudowa-i-lozko-gliwice":{"tytul":"Zabudowa i łóżko na wymiar","miasto":"Gliwice","opis":"Zabudowa i łóżko wykonane na wymiar w jednym pomieszczeniu, dopasowane do dostępnej przestrzeni.","kategoria":"Meble na wymiar","marka":null,"czas":null,"zdjecia":[{"alt":"Zabudowa i łóżko na wymiar — Gliwice","w":1200,"h":1600,"jpg":"img/realizacje/na-wymiar/zabudowa-i-lozko-400.jpg 300w, img/realizacje/na-wymiar/zabudowa-i-lozko-800.jpg 600w, img/realizacje/na-wymiar/zabudowa-i-lozko-1200.jpg 900w, img/realizacje/na-wymiar/zabudowa-i-lozko-1600.jpg 1200w","webp":"img/realizacje/na-wymiar/zabudowa-i-lozko-400.webp 300w, img/realizacje/na-wymiar/zabudowa-i-lozko-800.webp 600w, img/realizacje/na-wymiar/zabudowa-i-lozko-1200.webp 900w, img/realizacje/na-wymiar/zabudowa-i-lozko-1600.webp 1200w","src":"img/realizacje/na-wymiar/zabudowa-i-lozko-1200.jpg"},{"alt":"Zabudowa i łóżko na wymiar, ujęcie 2 — Gliwice","w":1600,"h":1272,"jpg":"img/realizacje/na-wymiar/zabudowa-i-lozko-2-400.jpg 400w, img/realizacje/na-wymiar/zabudowa-i-lozko-2-800.jpg 800w, img/realizacje/na-wymiar/zabudowa-i-lozko-2-1200.jpg 1200w, img/realizacje/na-wymiar/zabudowa-i-lozko-2-1600.jpg 1600w","webp":"img/realizacje/na-wymiar/zabudowa-i-lozko-2-400.webp 400w, img/realizacje/na-wymiar/zabudowa-i-lozko-2-800.webp 800w, img/realizacje/na-wymiar/zabudowa-i-lozko-2-1200.webp 1200w, img/realizacje/na-wymiar/zabudowa-i-lozko-2-1600.webp 1600w","src":"img/realizacje/na-wymiar/zabudowa-i-lozko-2-1200.jpg"}]},"pokoj-dzieciecy-zabrze":{"tytul":"Łóżko i szafka w pokoju dziecięcym","miasto":"Zabrze","opis":"Jedno zlecenie, jeden pokój: łóżko dziecięce i szafka. Około trzech godzin montażu razem z rozpakowaniem i uprzątnięciem kartonów.","kategoria":"Montaż mebli sieciowych","marka":"IKEA","czas":"ok. 3 godziny","zdjecia":[{"alt":"Zmontowane łóżko dziecięce — Zabrze","w":1200,"h":1600,"jpg":"img/realizacje/sieciowe/lozko-dla-dziecka-400.jpg 300w, img/realizacje/sieciowe/lozko-dla-dziecka-800.jpg 600w, img/realizacje/sieciowe/lozko-dla-dziecka-1200.jpg 900w, img/realizacje/sieciowe/lozko-dla-dziecka-1600.jpg 1200w","webp":"img/realizacje/sieciowe/lozko-dla-dziecka-400.webp 300w, img/realizacje/sieciowe/lozko-dla-dziecka-800.webp 600w, img/realizacje/sieciowe/lozko-dla-dziecka-1200.webp 900w, img/realizacje/sieciowe/lozko-dla-dziecka-1600.webp 1200w","src":"img/realizacje/sieciowe/lozko-dla-dziecka-1200.jpg"},{"alt":"Szafka IKEA z otwartymi drzwiami — Zabrze","w":1200,"h":1600,"jpg":"img/realizacje/sieciowe/szafka-ikea-otwarta-400.jpg 300w, img/realizacje/sieciowe/szafka-ikea-otwarta-800.jpg 600w, img/realizacje/sieciowe/szafka-ikea-otwarta-1200.jpg 900w, img/realizacje/sieciowe/szafka-ikea-otwarta-1600.jpg 1200w","webp":"img/realizacje/sieciowe/szafka-ikea-otwarta-400.webp 300w, img/realizacje/sieciowe/szafka-ikea-otwarta-800.webp 600w, img/realizacje/sieciowe/szafka-ikea-otwarta-1200.webp 900w, img/realizacje/sieciowe/szafka-ikea-otwarta-1600.webp 1200w","src":"img/realizacje/sieciowe/szafka-ikea-otwarta-1200.jpg"}]}}</script>
 
 <!-- OPINIE -->
 <section class="reviews-section" id="opinie">
@@ -3365,6 +3498,106 @@
     });
 
     odswiez();
+  })();
+
+  // ─── GALERIA: lightbox ───
+  (function () {
+    const lb = document.getElementById('lightbox');
+    const dataEl = document.getElementById('works-data');
+    if (!lb || !dataEl) return;
+
+    const DANE     = JSON.parse(dataEl.textContent);
+    const source   = document.getElementById('lb-source');
+    const img      = document.getElementById('lb-img');
+    const elTytul  = document.getElementById('lb-title');
+    const elMeta   = document.getElementById('lb-meta');
+    const elOpis   = document.getElementById('lb-desc');
+    const elLicz   = document.getElementById('lb-counter');
+    const btnClose = lb.querySelector('.lb-close');
+    const btnPrev  = lb.querySelector('.lb-prev');
+    const btnNext  = lb.querySelector('.lb-next');
+
+    let realizacja = null;
+    let idx = 0;
+    let wyzwalacz = null;   // przycisk, ktory otworzyl — tam wraca focus
+
+    const SIZES = '(max-width: 900px) 100vw, 1100px';
+
+    function pokaz(i) {
+      const z = realizacja.zdjecia[i];
+      idx = i;
+      source.srcset = z.webp;
+      source.sizes  = SIZES;
+      img.srcset    = z.jpg;
+      img.sizes     = SIZES;
+      img.src       = z.src;          // ustawiane dopiero teraz — stad leniwe ladowanie
+      img.alt       = z.alt;
+      img.width     = z.w;
+      img.height    = z.h;
+      elLicz.textContent = `Zdjęcie ${i + 1} z ${realizacja.zdjecia.length}`;
+      btnPrev.disabled = i === 0;
+      btnNext.disabled = i === realizacja.zdjecia.length - 1;
+
+      // podpowiedz przegladarce nastepne zdjecie, ale bez wstrzymywania biezacego
+      const nast = realizacja.zdjecia[i + 1];
+      if (nast) { const p = new Image(); p.src = nast.src; }
+    }
+
+    function otworz(id, wyzw) {
+      realizacja = DANE[id];
+      if (!realizacja) return;
+      wyzwalacz = wyzw || null;
+
+      elTytul.textContent = realizacja.tytul;
+      const meta = [realizacja.kategoria, realizacja.miasto];
+      if (realizacja.marka) meta.push(realizacja.marka);
+      if (realizacja.czas)  meta.push(realizacja.czas);
+      elMeta.textContent = meta.join(' · ');
+      elOpis.textContent = realizacja.opis;
+
+      pokaz(0);
+      lb.removeAttribute('inert');
+      lb.setAttribute('aria-hidden', 'false');
+      lb.classList.add('open');
+      document.body.style.overflow = 'hidden';
+      btnClose.focus();
+    }
+
+    function zamknij() {
+      lb.classList.remove('open');
+      lb.setAttribute('inert', '');
+      lb.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+      if (wyzwalacz) wyzwalacz.focus();   // focus nie moze zostac na schowanym elemencie
+      wyzwalacz = null;
+    }
+
+    function skok(krok) {
+      const i = idx + krok;
+      if (i >= 0 && i < realizacja.zdjecia.length) pokaz(i);
+    }
+
+    document.querySelectorAll('.work-card-btn').forEach(b => {
+      b.addEventListener('click', () => otworz(b.dataset.id, b));
+    });
+
+    btnClose.addEventListener('click', zamknij);
+    btnPrev.addEventListener('click', () => skok(-1));
+    btnNext.addEventListener('click', () => skok(1));
+    lb.addEventListener('click', e => { if (e.target === lb) zamknij(); });
+
+    lb.addEventListener('keydown', e => {
+      if (e.key === 'Escape')     { e.preventDefault(); zamknij(); return; }
+      if (e.key === 'ArrowLeft')  { e.preventDefault(); skok(-1);  return; }
+      if (e.key === 'ArrowRight') { e.preventDefault(); skok(1);   return; }
+      if (e.key !== 'Tab') return;
+
+      // Pulapka focusu — tylko przyciski faktycznie dostepne w tej chwili
+      const f = [btnClose, btnPrev, btnNext].filter(b => !b.disabled);
+      const first = f[0], last = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    });
   })();
 
   // Scroll reveal dla kart
