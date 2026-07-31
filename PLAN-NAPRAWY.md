@@ -1,7 +1,7 @@
 # PLAN NAPRAWY I ROZWOJU — meblofix-gliwice.pl
 
 > Dokument roboczy. Odhaczaj `[ ]` → `[x]` w miarę postępu.
-> Wersja: 2.2 · Utworzono: 30.07.2026 · Zaktualizowano: 30.07.2026 (Faza 2 zamknięta: wydajność 99/100) · Podstawa: audyt z 29.07.2026 + inspekcja strony na żywo
+> Wersja: 2.3 · Utworzono: 30.07.2026 · Zaktualizowano: 31.07.2026 (Faza 1: cztery błędy Lighthouse naprawione, wynik do zmierzenia po deployu) · Podstawa: audyt z 29.07.2026 + inspekcja strony na żywo
 
 **Legenda priorytetów**
 `P0` bloker — robić natychmiast · `P1` wysoki · `P2` średni · `P3` rozwojowy
@@ -160,28 +160,51 @@ Cel: Lighthouse Accessibility 83 → ≥ 95. Dodatkowo: dostępność to realny 
 
 **To jest teraz najtańszy dostępny zysk w całym projekcie.** Wydajność zamknięta na 99/100, SEO 100/100 — dostępność 83 jest jedyną kategorią z realnym zapasem. Naprawa tych czterech punktów podnosi też wynik „Przeglądanie agentowe" (dziś 1/2, błąd: „drzewo ułatwień dostępu jest nieprawidłowe") — to ta sama warstwa semantyki HTML.
 
-**Potwierdzone przez Lighthouse 30.07.2026 — to nie są przypuszczenia, tylko cztery konkretne błędy:**
-1. `Buttons do not have an accessible name` — przyciski bez tekstu (ikonowe: hamburger, zamknięcie, gwiazdki oceny)
-2. `Select elements do not have associated label elements` — `<select>` w formularzu bez `<label>`
-3. `Background and foreground colors do not have a sufficient contrast ratio`
-4. `Identical links have the same purpose` — trzy linki „Czytaj więcej" prowadzące gdzie indziej
+## ✅ CZTERY BŁĘDY LIGHTHOUSE — NAPRAWIONE 31.07.2026
 
-Zacznij od tych czterech — odpowiadają za większość brakujących 17 punktów. Reszta listy poniżej to prewencja i rzeczy, których automat nie wykrywa.
+| # | Błąd | Gdzie było | Commit |
+|---|---|---|---|
+| 1 | `Buttons do not have an accessible name` | 3× `.blog-modal-close` — sam `<svg>`, zero tekstu | `88db9bf` |
+| 2 | `Select elements do not have associated label elements` | `<select name="rodzaj_mebli">` w formularzu kontaktowym | `4f57fec` |
+| 3 | `Background and foreground colors do not have a sufficient contrast ratio` | 17 miejsc, patrz niżej | `6adc7f9`, `f821c43` |
+| 4 | `Identical links have the same purpose` | 3× „Czytaj cały artykuł" pod różne adresy | `e36f4d8` |
 
-- [ ] **Kontrast tekstu.** Przejrzyj złote/jasne teksty na ciemnym tle i szare podpisy (godziny otwarcia, opisy pod nagłówkami sekcji, etykiety „01–06"). Minimum **4.5:1** dla tekstu, **3:1** dla dużego (≥24px lub ≥19px bold). Narzędzie: DevTools → Elements → kliknij próbkę koloru, ratio jest pokazane.
-- [ ] **Kontrast elementów interaktywnych** (obramowania pól, ikony) — min. 3:1.
-- [ ] **Etykiety formularza.** Każde pole: `<label for="...">` albo `aria-label`. Placeholder ≠ etykieta.
+**Sprostowanie do opisu błędu 1:** hamburger nie istnieje (patrz „Menu mobilne" niżej), a gwiazdki oceny nie były `<button>`, tylko `<svg onclick>` — dlatego audyt ich nie łapał. Naprawione osobno w `f531645`: opinii nie dało się wysłać bez myszy.
+
+**Sprostowanie do opisu błędu 4:** „Czytaj więcej" to `<span>`, nie link — audyt go nie widział. Flagowane były trzy `<a>` o tekście „Czytaj cały artykuł".
+
+### Punkt 3 w szczegółach
+
+Przyczyna główna: **biały tekst na `--orange` (#E8440A) daje 3,99:1 przy progu 4,5:1** — dotyczyło to wszystkich CTA i plakietek. Zamiast rozjaśniać tekst wprowadzono osobne tło pod biały tekst; `--orange` został bez zmian, bo jako kolor tekstu/ikon na ciemnym tle ma 4,87–4,96:1 i przechodzi.
+
+```css
+--orange-btn:       #C43806;  /* z bielą 5,36:1 */
+--orange-btn-hover: #A93105;  /* z bielą 6,71:1 — hover ciemnieje, nie jaśnieje */
+```
+
+Poprawione też: `.ticker-sep` (1,69 → 4,62:1), `.phone-strip-sub` (2,82 → 4,76:1), `.brand-item` (2,42 → 5,52:1) oraz sekcja opisowa na dole strony — nagłówki 2,90 → 4,96:1, akapity 3,93 → 5,58:1.
+
+Z tej sekcji **usunięto akapit z listą fraz rozdzielonych pipe'ami** („montażysta mebli Gliwice | montaż mebli Śląsk | …"), wyciszony do 2,20:1. To upychanie słów kluczowych, nie treść — rozjaśnienie wyeksponowałoby użytkownikom coś, czego nikt nie ma czytać. Ten sam gatunek co `meta keywords` z punktu 5.2. Komentarz sekcji („widoczny dla Google, dyskretny wizualnie") opisuje teraz zawartość, nie intencję pod robota.
+
+⚠️ **Wynik Lighthouse jeszcze niezmierzony** — zmiany są lokalne, nie wypchnięte. Kontrasty policzone z kodu wg WCAG 2.1, najniższy po zmianach 4,62:1. Po deployu zmierzyć w incognito zgodnie z regułą z Fazy 0.
+
+Reszta listy poniżej to prewencja i rzeczy, których automat nie wykrywa.
+
+- [x] **Kontrast tekstu.** Przejrzane **wszystkie** pary kolor/tło w pliku — nie na oko, tylko policzone wg WCAG 2.1. Każdy tekst ma dziś ≥ 4,5:1 (duży ≥ 3:1).
+- [ ] **Kontrast elementów interaktywnych** (obramowania pól, ikony) — min. 3:1. ⚠️ **Nie zrobione.** `--border: rgba(255,255,255,0.08)` na ciemnym tle to **1,20:1** — obramowania pól formularza są praktycznie niewidoczne. Osobne zadanie, dotyka wielu miejsc naraz.
+- [ ] **Etykiety formularza.** Każde pole: `<label for="...">` albo `aria-label`. Placeholder ≠ etykieta. ⚠️ **Częściowo:** poprawiony tylko `<select>` (to on wywalał audyt). Pozostałe pola — imię, telefon, e-mail, miasto, opis zlecenia oraz formularz opinii — nadal stoją na samych placeholderach. Audytu nie wywalają (placeholder liczy się jako nazwa zastępcza), ale znikają, gdy użytkownik zacznie pisać.
 - [ ] **Autouzupełnianie:** `autocomplete="name"`, `"tel"`, `"email"` — realnie skraca wypełnianie na telefonie.
 - [ ] **FAQ (akordeon).** Nagłówki jako `<button aria-expanded="false" aria-controls="faq-1">`, treść jako `<div id="faq-1" role="region">`. Obsługa klawiatury: Enter/Spacja.
-- [ ] **Powtarzalne linki.** „Czytaj więcej" ×3 → `aria-label="Czytaj cały artykuł: Jak usunąć rysy z mebli"`.
+- [x] **Powtarzalne linki.** Trzy `<a>` „Czytaj cały artykuł" dostały `aria-label` z tytułem artykułu. Widoczny tekst bez zmian.
 - [ ] **Atrybuty alt.** Zdjęcia treściowe: opisowy alt (jednocześnie SEO obrazkowe). Dekoracyjne: `alt=""`.
 - [ ] **Wymiary obrazów.** `width` i `height` na każdym `<img>` — kasuje CLS.
-- [ ] **Widoczny focus.** Nie usuwaj outline; zdefiniuj własny `:focus-visible` w kolorze marki, min. 2px.
+- [ ] **Widoczny focus.** Nie usuwaj outline; zdefiniuj własny `:focus-visible` w kolorze marki, min. 2px. ⚠️ **Częściowo:** zdefiniowany tylko dla gwiazdek oceny (`.star-picker button`). Reszta strony jedzie na domyślnym outline przeglądarki — brakuje jednej globalnej reguły.
 - [ ] **Skip link** „Przejdź do treści" jako pierwszy element `<body>`, ukryty do momentu focusa.
 - [ ] **Hierarchia nagłówków.** Jeden `<h1>` na stronę, brak przeskoków (h2 → h4).
-- [ ] **`lang="pl"`** na `<html>` — sprawdź, czy jest.
-- [ ] **Menu mobilne.** Przycisk hamburgera: `aria-label="Menu"`, `aria-expanded`, focus trap przy otwartym, Esc zamyka.
-- [ ] Test nawigacji **samą klawiaturą** (Tab przez całą stronę) — czy da się dojść do telefonu i formularza.
+- [x] **`lang="pl"`** na `<html>` — sprawdzone, jest (`index.html:2`). Bez zmian.
+- [ ] **Menu mobilne.** ⚠️ **Znalezisko 31.07.2026: menu mobilnego nie ma w ogóle.** Nie chodzi o brakujące `aria-label` na hamburgerze — hamburger nie istnieje. Poniżej breakpointa `.nav-links { display: none; }` i nic w zamian, więc na telefonie znika cała nawigacja (Usługi, Cennik, Opinie, FAQ, Blog, Kontakt). Zostaje tylko przycisk „Zadzwoń". To nie jest wyłącznie problem dostępności — to utrata nawigacji dla większości ruchu. Do zbudowania od zera: przycisk `aria-label="Menu"` + `aria-expanded`, focus trap, Esc zamyka.
+- [x] **Wybór oceny z klawiatury.** Gwiazdki w formularzu opinii były `<svg onclick>` — nie do sfokusowania, nie do aktywowania Enterem. Bez myszy nie dało się wystawić opinii. Zamienione na `<button type="button">` z `aria-label` i `aria-pressed`. Świadoma decyzja: `aria-pressed="true"` dostaje **tylko** gwiazdka równa ocenie, nie wszystkie do niej — inaczej czytnik ogłasza trzy wciśnięte przyciski przy ocenie 3, co brzmi jak trzy wybrane oceny.
+- [ ] Test nawigacji **samą klawiaturą** (Tab przez całą stronę) — czy da się dojść do telefonu i formularza. ⚠️ Uwaga: bez menu mobilnego i bez globalnego `:focus-visible` ten test i tak wypadnie słabo — zrobić po tamtych dwóch punktach.
 - [ ] Test na 200% powiększenia przeglądarki — czy nic się nie rozjeżdża.
 
 ---
