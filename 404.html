@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nie znaleziono strony | MebloFix Gliwice</title>
+  <meta name="robots" content="noindex, follow">
+  <meta name="theme-color" content="#0a0a0a">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="/icon-32.png">
+  <style>
+    :root {
+      color-scheme: dark;
+      --background: #0a0a0a;
+      --surface: #141414;
+      --cream: #f2ede4;
+      --muted: #a19d96;
+      --orange: #e8440a;
+      --orange-hover: #ff5418;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background:
+        radial-gradient(circle at 50% 18%, rgba(232, 68, 10, 0.14), transparent 34rem),
+        var(--background);
+      color: var(--cream);
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    main {
+      width: min(680px, 100%);
+      padding: clamp(32px, 7vw, 64px);
+      text-align: center;
+      background: linear-gradient(145deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.015));
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      box-shadow: 0 28px 80px rgba(0, 0, 0, 0.38);
+    }
+
+    .logo {
+      display: inline-block;
+      margin-bottom: 42px;
+      color: var(--cream);
+      font-size: clamp(28px, 7vw, 42px);
+      font-weight: 800;
+      letter-spacing: -0.05em;
+      text-decoration: none;
+    }
+
+    .logo span {
+      color: var(--orange);
+    }
+
+    .logo small {
+      display: block;
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+    }
+
+    .error-code {
+      color: var(--orange);
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+    }
+
+    h1 {
+      margin-top: 14px;
+      font-size: clamp(34px, 8vw, 58px);
+      line-height: 1.05;
+      letter-spacing: -0.04em;
+    }
+
+    p {
+      max-width: 500px;
+      margin: 20px auto 0;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.7;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 14px;
+      margin-top: 34px;
+    }
+
+    .button,
+    .contact-link {
+      display: inline-flex;
+      min-height: 48px;
+      align-items: center;
+      justify-content: center;
+      padding: 13px 22px;
+      border-radius: 2px;
+      font-size: 14px;
+      font-weight: 700;
+      text-decoration: none;
+      transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+    }
+
+    .button {
+      background: var(--orange);
+      color: #fff;
+    }
+
+    .button:hover,
+    .button:focus-visible {
+      background: var(--orange-hover);
+      transform: translateY(-1px);
+    }
+
+    .contact-link {
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: var(--cream);
+    }
+
+    .contact-link:hover,
+    .contact-link:focus-visible {
+      border-color: var(--orange);
+      color: #fff;
+    }
+
+    a:focus-visible {
+      outline: 3px solid rgba(232, 68, 10, 0.5);
+      outline-offset: 4px;
+    }
+
+    @media (max-width: 480px) {
+      .actions {
+        flex-direction: column;
+      }
+
+      .button,
+      .contact-link {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <a class="logo" href="https://meblofix-gliwice.pl/" aria-label="MebloFix Gliwice — strona główna">
+      Meblo<span>Fix</span>
+      <small>Gliwice</small>
+    </a>
+    <div class="error-code">BŁĄD 404</div>
+    <h1>Nie znaleziono strony</h1>
+    <p>Wygląda na to, że ten adres jest nieaktualny albo strona została przeniesiona. Wróć na stronę główną lub skontaktuj się z nami telefonicznie.</p>
+    <div class="actions">
+      <a class="button" href="https://meblofix-gliwice.pl/">Wróć na stronę główną</a>
+      <a class="contact-link" href="tel:+48784878197">Zadzwoń: 784 878 197</a>
+    </div>
+  </main>
+</body>
+</html>
