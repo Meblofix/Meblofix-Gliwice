@@ -1,2 +1,5 @@
 *.bak-*
 img/realizacje/_surowe/
+_m.html
+.wrangler/
+dist/
