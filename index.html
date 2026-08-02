@@ -2463,7 +2463,46 @@
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 1.2rem;
+    margin: 0 0 1.2rem;
+    padding: 0;
+    list-style: none;
+  }
+
+  .reviews-toggle-wrap {
+    display: flex;
+    justify-content: center;
     margin-bottom: 2.5rem;
+  }
+
+  .reviews-toggle {
+    min-height: 44px;
+    border: 1px solid var(--border-orange);
+    border-radius: 2px;
+    padding: 0.7rem 1.25rem;
+    background: transparent;
+    color: var(--cream);
+    font: 600 0.8rem 'DM Sans', sans-serif;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s, background 0.2s;
+  }
+
+  .reviews-toggle:hover {
+    border-color: var(--orange);
+    color: white;
+    background: rgba(232,68,10,0.08);
+  }
+
+  .reviews-toggle:focus-visible,
+  .reviews-cta-btn:focus-visible {
+    outline: 3px solid var(--orange-light);
+    outline-offset: 3px;
+  }
+
+  .reviews-loading {
+    color: var(--gray);
+    font-size: 0.85rem;
+    padding: 1rem 0;
   }
 
   .review-card {
@@ -2500,7 +2539,7 @@
     line-height: 1.75;
     font-weight: 300;
     font-style: italic;
-    margin-bottom: 1.2rem;
+    margin: 0 0 1.2rem;
   }
 
   .review-author {
@@ -2526,8 +2565,10 @@
   }
 
   .review-name {
+    display: block;
     font-size: 0.85rem;
     font-weight: 600;
+    font-style: normal;
     color: var(--cream);
     letter-spacing: 0.02em;
   }
@@ -2667,6 +2708,46 @@
   }
 
   .add-review-btn:hover { background: var(--orange-btn-hover); transform: translateY(-1px); }
+
+  .reviews-cta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+    padding: 1.25rem 1.5rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: rgba(255,255,255,0.015);
+  }
+
+  .reviews-cta p {
+    color: var(--cream);
+    font-size: 1rem;
+    font-weight: 500;
+  }
+
+  .reviews-cta-btn {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    padding: 0.75rem 1.4rem;
+    border-radius: 2px;
+    background: var(--orange-btn);
+    color: white;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-decoration: none;
+    transition: background 0.2s, transform 0.15s;
+  }
+
+  .reviews-cta-btn:hover {
+    background: var(--orange-btn-hover);
+    transform: translateY(-1px);
+  }
 
   @keyframes reviewPop {
     from { opacity: 0; transform: translateY(16px) scale(0.97); }
@@ -3150,6 +3231,14 @@
     .reviews-grid { grid-template-columns: 1fr; }
     .reviews-section { padding-left: 1.5rem; padding-right: 1.5rem; }
     .add-review-form { grid-template-columns: 1fr; }
+    .add-review-form input,
+    .add-review-form textarea { font-size: 1rem; }
+    .reviews-cta {
+      align-items: stretch;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .reviews-cta-btn { width: 100%; }
     .service-link,
     .blog-card-read,
     .footer-right a {
@@ -3768,22 +3857,26 @@
   <div class="section-label">Co mówią klienci</div>
   <h2 class="section-title">Opinie klientów — montaż mebli Gliwice</h2>
 
-  <div class="reviews-summary">
-    <div class="reviews-score" id="avgScore">5.0</div>
+  <div class="reviews-summary" id="reviewsSummary" role="status" aria-live="polite" aria-atomic="true" aria-busy="true">
+    <div class="reviews-score" id="avgScore" aria-hidden="true">5,0</div>
     <div class="reviews-score-sub">
-      <div class="stars-display" id="avgStars">
-        <svg viewBox="0 0 24 24"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
-        <svg viewBox="0 0 24 24"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
-        <svg viewBox="0 0 24 24"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
-        <svg viewBox="0 0 24 24"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
-        <svg viewBox="0 0 24 24"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
+      <div class="stars-display" id="avgStars" aria-hidden="true">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
       </div>
       <div class="reviews-count-label" id="reviewsCountLabel">Ładowanie opinii…</div>
     </div>
   </div>
 
-  <div class="reviews-grid" id="reviewsGrid">
+  <ul class="reviews-grid" id="reviewsGrid" aria-live="polite" aria-busy="true">
     <!-- opinie ładowane przez JS -->
+  </ul>
+
+  <div class="reviews-toggle-wrap">
+    <button type="button" class="reviews-toggle" id="reviewsToggle" aria-expanded="false" aria-controls="reviewsGrid" hidden>Pokaż wszystkie opinie</button>
   </div>
 
   <!-- Formularz dodawania opinii -->
@@ -3802,12 +3895,12 @@
       </div>
       <div class="star-picker-wrap">
         <div class="star-picker-label" id="starPickerLabel">Ocena</div>
-        <div class="star-picker" id="starPicker" role="group" aria-labelledby="starPickerLabel">
-          <button type="button" data-val="1" aria-label="Ocena 1 gwiazdka" aria-pressed="false" onclick="setStars(1)"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none" aria-hidden="true" focusable="false"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg></button>
-          <button type="button" data-val="2" aria-label="Ocena 2 gwiazdki" aria-pressed="false" onclick="setStars(2)"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none" aria-hidden="true" focusable="false"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg></button>
-          <button type="button" data-val="3" aria-label="Ocena 3 gwiazdki" aria-pressed="false" onclick="setStars(3)"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none" aria-hidden="true" focusable="false"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg></button>
-          <button type="button" data-val="4" aria-label="Ocena 4 gwiazdki" aria-pressed="false" onclick="setStars(4)"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none" aria-hidden="true" focusable="false"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg></button>
-          <button type="button" data-val="5" aria-label="Ocena 5 gwiazdek" aria-pressed="false" onclick="setStars(5)"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none" aria-hidden="true" focusable="false"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg></button>
+        <div class="star-picker" id="starPicker" role="radiogroup" aria-labelledby="starPickerLabel">
+          <button type="button" role="radio" data-val="1" tabindex="-1" aria-label="Ocena 1 na 5" aria-checked="false" onclick="setStars(1)"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none" aria-hidden="true" focusable="false"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg></button>
+          <button type="button" role="radio" data-val="2" tabindex="-1" aria-label="Ocena 2 na 5" aria-checked="false" onclick="setStars(2)"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none" aria-hidden="true" focusable="false"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg></button>
+          <button type="button" role="radio" data-val="3" tabindex="-1" aria-label="Ocena 3 na 5" aria-checked="false" onclick="setStars(3)"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none" aria-hidden="true" focusable="false"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg></button>
+          <button type="button" role="radio" data-val="4" tabindex="-1" aria-label="Ocena 4 na 5" aria-checked="false" onclick="setStars(4)"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none" aria-hidden="true" focusable="false"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg></button>
+          <button type="button" role="radio" data-val="5" tabindex="0" aria-label="Ocena 5 na 5" aria-checked="true" onclick="setStars(5)"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none" aria-hidden="true" focusable="false"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg></button>
         </div>
       </div>
       <div class="form-field review-textarea-wrap">
@@ -3820,6 +3913,11 @@
         <button type="submit" class="add-review-btn">Dodaj opinię →</button>
       </div>
     </form>
+  </div>
+
+  <div class="reviews-cta">
+    <p>Chcesz podobny efekt u siebie?</p>
+    <a class="reviews-cta-btn" href="#kontakt">Wyceń montaż</a>
   </div>
 </section>
 
@@ -4347,47 +4445,127 @@
   bindErrorCleanup('addReviewForm', 'reviewFormStatus');
   bindErrorCleanup('contactForm', 'contactFormStatus');
 
-  function starSVG(filled) {
-    return `<svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:${filled ? '#f5a623' : 'none'};color:${filled ? '#f5a623' : 'rgba(255,255,255,0.2)'};stroke:currentColor;stroke-width:1.5"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>`;
+  function createStarIcon(filled) {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.setAttribute('focusable', 'false');
+    svg.style.fill = filled ? '#f5a623' : 'none';
+    svg.style.color = filled ? '#f5a623' : 'rgba(255,255,255,0.2)';
+    svg.style.stroke = 'currentColor';
+    svg.style.strokeWidth = '1.5';
+
+    const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+    polygon.setAttribute('points', '12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26');
+    svg.appendChild(polygon);
+    return svg;
   }
 
   function initials(name) {
-    return name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+    return String(name || '').trim().split(/\s+/).filter(Boolean).map(word => word[0]).join('').slice(0, 2).toUpperCase() || '?';
   }
 
   function renderReviews(reviews) {
     const grid = document.getElementById('reviewsGrid');
-    grid.innerHTML = '';
+    const summary = document.getElementById('reviewsSummary');
+    const toggle = document.getElementById('reviewsToggle');
+    grid.replaceChildren();
+
     reviews.forEach((r, i) => {
-      const card = document.createElement('div');
+      const stars = Math.min(5, Math.max(1, Math.round(Number(r.stars) || 1)));
+      const card = document.createElement('li');
       card.className = 'review-card' + (r.isNew ? ' new-review' : '');
       card.style.animation = `reviewPop 0.4s ease ${i * 0.07}s both`;
-      card.innerHTML = `
-        ${r.isNew ? '<span class="review-badge-new">Nowa</span>' : ''}
-        <div class="review-stars">${Array.from({length:5},(_,j)=>starSVG(j<r.stars)).join('')}</div>
-        <div class="review-text">"${r.text}"</div>
-        <div class="review-author">
-          <div class="review-avatar">${initials(r.name)}</div>
-          <div>
-            <div class="review-name">${r.name}</div>
-            ${r.city ? `<div class="review-city">${r.city}</div>` : ''}
-          </div>
-        </div>`;
+      if (i >= 3) {
+        card.hidden = true;
+        card.dataset.reviewExtra = '';
+      }
+
+      if (r.isNew) {
+        const badge = document.createElement('span');
+        badge.className = 'review-badge-new';
+        badge.textContent = 'Nowa';
+        card.appendChild(badge);
+      }
+
+      const starsDisplay = document.createElement('div');
+      starsDisplay.className = 'review-stars';
+      starsDisplay.setAttribute('role', 'img');
+      starsDisplay.setAttribute('aria-label', `Ocena ${stars} na 5`);
+      for (let index = 0; index < 5; index += 1) {
+        starsDisplay.appendChild(createStarIcon(index < stars));
+      }
+      card.appendChild(starsDisplay);
+
+      const quote = document.createElement('blockquote');
+      quote.className = 'review-text';
+      quote.textContent = String(r.text || '');
+      card.appendChild(quote);
+
+      const author = document.createElement('div');
+      author.className = 'review-author';
+
+      const avatar = document.createElement('div');
+      avatar.className = 'review-avatar';
+      avatar.setAttribute('aria-hidden', 'true');
+      avatar.textContent = initials(r.name);
+      author.appendChild(avatar);
+
+      const authorDetails = document.createElement('div');
+      const authorName = document.createElement('cite');
+      authorName.className = 'review-name';
+      authorName.textContent = String(r.name || '');
+      authorDetails.appendChild(authorName);
+
+      if (Object.prototype.hasOwnProperty.call(r, 'city') && r.city) {
+        const city = document.createElement('div');
+        city.className = 'review-city';
+        city.textContent = String(r.city);
+        authorDetails.appendChild(city);
+      }
+
+      author.appendChild(authorDetails);
+      card.appendChild(author);
       grid.appendChild(card);
     });
 
-    const avg = reviews.reduce((s,r) => s + r.stars, 0) / reviews.length;
-    document.getElementById('avgScore').textContent = avg.toFixed(1);
-    document.getElementById('reviewsCountLabel').textContent = `${reviews.length} ${reviews.length === 1 ? 'opinia' : reviews.length < 5 ? 'opinie' : 'opinii'}`;
+    const avg = reviews.reduce((sum, review) => sum + Number(review.stars), 0) / reviews.length;
+    const formattedAvg = avg.toFixed(1).replace('.', ',');
+    document.getElementById('avgScore').textContent = formattedAvg;
+    document.getElementById('reviewsCountLabel').textContent = `${formattedAvg} na 5 na podstawie ${reviews.length} opinii`;
+
+    toggle.hidden = reviews.length <= 3;
+    toggle.setAttribute('aria-expanded', 'false');
+    toggle.textContent = 'Pokaż wszystkie opinie';
+    grid.setAttribute('aria-busy', 'false');
+    summary.setAttribute('aria-busy', 'false');
   }
+
+  function toggleReviews() {
+    const toggle = document.getElementById('reviewsToggle');
+    const expanded = toggle.getAttribute('aria-expanded') !== 'true';
+    document.querySelectorAll('#reviewsGrid [data-review-extra]').forEach(card => {
+      card.hidden = !expanded;
+    });
+    toggle.setAttribute('aria-expanded', String(expanded));
+    toggle.textContent = expanded ? 'Pokaż mniej opinii' : 'Pokaż wszystkie opinie';
+  }
+
+  document.getElementById('reviewsToggle').addEventListener('click', toggleReviews);
 
   async function loadReviews() {
     const grid = document.getElementById('reviewsGrid');
-    grid.innerHTML = '<div style="color:var(--gray);font-size:0.85rem;padding:1rem 0">Ładowanie opinii…</div>';
+    const summary = document.getElementById('reviewsSummary');
+    const loading = document.createElement('li');
+    loading.className = 'reviews-loading';
+    loading.textContent = 'Ładowanie opinii…';
+    grid.replaceChildren(loading);
+    grid.setAttribute('aria-busy', 'true');
+    summary.setAttribute('aria-busy', 'true');
     let reviews = [...DEFAULT_REVIEWS];
     try {
-      const data = await sbFetch('reviews?select=name,stars,text,created_at&order=created_at.asc');
-      if (data && data.length) reviews = [...reviews, ...data];
+      const data = await sbFetch('reviews?select=name,city,stars,text,created_at&order=created_at.desc');
+      if (data && data.length) reviews = data;
     } catch(e) {
       console.warn('Supabase load error:', e);
     }
@@ -4400,9 +4578,27 @@
       const s = b.querySelector('svg');
       s.style.fill = i < n ? '#f5a623' : 'none';
       s.style.color = i < n ? '#f5a623' : 'rgba(255,255,255,0.2)';
-      b.setAttribute('aria-pressed', i + 1 === n ? 'true' : 'false');
+      const selected = i + 1 === n;
+      b.setAttribute('aria-checked', String(selected));
+      b.tabIndex = selected ? 0 : -1;
     });
   }
+
+  document.getElementById('starPicker').addEventListener('keydown', event => {
+    const radio = event.target.closest('[role="radio"]');
+    if (!radio) return;
+
+    let nextValue = Number(radio.dataset.val);
+    if (event.key === 'ArrowRight' || event.key === 'ArrowDown') nextValue = nextValue === 5 ? 1 : nextValue + 1;
+    else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') nextValue = nextValue === 1 ? 5 : nextValue - 1;
+    else if (event.key === 'Home') nextValue = 1;
+    else if (event.key === 'End') nextValue = 5;
+    else return;
+
+    event.preventDefault();
+    setStars(nextValue);
+    document.querySelector(`#starPicker [data-val="${nextValue}"]`).focus();
+  });
 
   setStars(5);
 
@@ -4458,7 +4654,7 @@
 
       // Przeładuj opinie z bazy
       await loadReviews();
-      document.getElementById('reviewsGrid').lastChild.scrollIntoView({
+      document.getElementById('reviewsGrid').firstElementChild.scrollIntoView({
         behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
         block: 'nearest'
       });
