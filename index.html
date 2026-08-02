@@ -852,6 +852,26 @@
     line-height: 1.6;
   }
 
+  .skip-link {
+    position: fixed;
+    top: 1rem;
+    left: 1rem;
+    z-index: 1000;
+    padding: 0.8rem 1.2rem;
+    background: var(--orange-btn);
+    color: var(--white);
+    border-radius: 3px;
+    font-weight: 600;
+    text-decoration: none;
+    transform: translateY(calc(-100% - 1rem));
+  }
+
+  .skip-link:focus {
+    transform: translateY(0);
+    outline: 3px solid var(--orange-light);
+    outline-offset: 3px;
+  }
+
   /* ─── NAV ─── */
   nav {
     position: fixed;
@@ -1990,9 +2010,21 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    width: 100%;
     padding: 1.8rem 2rem;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
     gap: 1rem;
     transition: background 0.2s;
+  }
+
+  .faq-question:focus-visible {
+    outline: 3px solid var(--orange-light);
+    outline-offset: -3px;
   }
 
   .faq-item:hover .faq-question { background: rgba(232,68,10,0.04); }
@@ -2968,6 +3000,8 @@
 </head>
 <body>
 
+<a class="skip-link" href="#main-content">Przejdź do treści</a>
+
 <!-- NAV -->
 <nav>
   <div class="logo">
@@ -3056,6 +3090,7 @@
   </div>
 </div>
 
+<main id="main-content" tabindex="-1">
 <!-- HERO -->
 <section class="hero">
   <!-- Full-bleed background photo -->
@@ -3843,59 +3878,59 @@
   <div class="faq-grid">
 
     <div class="faq-item">
-      <div class="faq-question" onclick="toggleFaq(this)">
+      <button class="faq-question" id="faq-question-1" type="button" aria-expanded="false" aria-controls="faq-answer-1" onclick="toggleFaq(this)">
         <span class="faq-q-text">Ile kosztuje montaż mebli IKEA w Gliwicach?</span>
-        <span class="faq-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
-      </div>
-      <div class="faq-answer"><div class="faq-answer-inner">Montaż jednego mebla IKEA zaczyna się od <strong>80 zł</strong>. Przy większych zleceniach (np. całe mieszkanie, zabudowa kuchenna) stosujemy stawkę <strong>60 zł/h</strong>. Wycena zawsze bezpłatna — wystarczy opisać zlecenie lub przesłać zdjęcia.</div></div>
+        <span class="faq-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+      </button>
+      <div class="faq-answer" id="faq-answer-1" role="region" aria-labelledby="faq-question-1" aria-hidden="true"><div class="faq-answer-inner">Montaż jednego mebla IKEA zaczyna się od <strong>80 zł</strong>. Przy większych zleceniach (np. całe mieszkanie, zabudowa kuchenna) stosujemy stawkę <strong>60 zł/h</strong>. Wycena zawsze bezpłatna — wystarczy opisać zlecenie lub przesłać zdjęcia.</div></div>
     </div>
 
     <div class="faq-item">
-      <div class="faq-question" onclick="toggleFaq(this)">
+      <button class="faq-question" id="faq-question-2" type="button" aria-expanded="false" aria-controls="faq-answer-2" onclick="toggleFaq(this)">
         <span class="faq-q-text">Jak szybko możesz przyjechać?</span>
-        <span class="faq-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
-      </div>
-      <div class="faq-answer"><div class="faq-answer-inner">Zazwyczaj jestem w stanie przyjechać <strong>w ciągu 24 godzin</strong> od kontaktu — często tego samego dnia. Wystarczy zadzwonić lub napisać na WhatsApp. Wolę nie zwlekać, bo meble czekają 😄</div></div>
+        <span class="faq-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+      </button>
+      <div class="faq-answer" id="faq-answer-2" role="region" aria-labelledby="faq-question-2" aria-hidden="true"><div class="faq-answer-inner">Zazwyczaj jestem w stanie przyjechać <strong>w ciągu 24 godzin</strong> od kontaktu — często tego samego dnia. Wystarczy zadzwonić lub napisać na WhatsApp. Wolę nie zwlekać, bo meble czekają 😄</div></div>
     </div>
 
     <div class="faq-item">
-      <div class="faq-question" onclick="toggleFaq(this)">
+      <button class="faq-question" id="faq-question-3" type="button" aria-expanded="false" aria-controls="faq-answer-3" onclick="toggleFaq(this)">
         <span class="faq-q-text">Czy montujesz meble z każdego sklepu?</span>
-        <span class="faq-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
-      </div>
-      <div class="faq-answer"><div class="faq-answer-inner">Tak — montuję meble z <strong>IKEA, Agata Meble, Black Red White, Jysk, Bodzio, Abra, VOX, Forte</strong> i innych. Nieważne skąd meble — ważne, żeby były do złożenia. Wystarczy mieć kompletne pudełka i instrukcję.</div></div>
+        <span class="faq-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+      </button>
+      <div class="faq-answer" id="faq-answer-3" role="region" aria-labelledby="faq-question-3" aria-hidden="true"><div class="faq-answer-inner">Tak — montuję meble z <strong>IKEA, Agata Meble, Black Red White, Jysk, Bodzio, Abra, VOX, Forte</strong> i innych. Nieważne skąd meble — ważne, żeby były do złożenia. Wystarczy mieć kompletne pudełka i instrukcję.</div></div>
     </div>
 
     <div class="faq-item">
-      <div class="faq-question" onclick="toggleFaq(this)">
+      <button class="faq-question" id="faq-question-4" type="button" aria-expanded="false" aria-controls="faq-answer-4" onclick="toggleFaq(this)">
         <span class="faq-q-text">Co robić, jeśli brakuje części w zestawie?</span>
-        <span class="faq-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
-      </div>
-      <div class="faq-answer"><div class="faq-answer-inner">Przed wizytą warto sprawdzić kompletność paczek. Jeśli brakuje elementów, <strong>IKEA i większość sklepów bezpłatnie dosyła brakujące części</strong> — wystarczy zadzwonić na infolinię i podać numer artykułu. Ja mogę poczekać na dostawę lub umówić się ponownie bez dodatkowej opłaty za dojazd w Gliwicach.</div></div>
+        <span class="faq-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+      </button>
+      <div class="faq-answer" id="faq-answer-4" role="region" aria-labelledby="faq-question-4" aria-hidden="true"><div class="faq-answer-inner">Przed wizytą warto sprawdzić kompletność paczek. Jeśli brakuje elementów, <strong>IKEA i większość sklepów bezpłatnie dosyła brakujące części</strong> — wystarczy zadzwonić na infolinię i podać numer artykułu. Ja mogę poczekać na dostawę lub umówić się ponownie bez dodatkowej opłaty za dojazd w Gliwicach.</div></div>
     </div>
 
     <div class="faq-item">
-      <div class="faq-question" onclick="toggleFaq(this)">
+      <button class="faq-question" id="faq-question-5" type="button" aria-expanded="false" aria-controls="faq-answer-5" onclick="toggleFaq(this)">
         <span class="faq-q-text">Czy dojeżdżasz poza Gliwice?</span>
-        <span class="faq-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
-      </div>
-      <div class="faq-answer"><div class="faq-answer-inner">Tak — działam na terenie całego Śląska w promieniu do <strong>40–50 km od Gliwic</strong>. Zabrze, Bytom, Katowice, Rybnik, Tychy, Chorzów, Mikołów i okolice. Dojazd w samych Gliwicach jest <strong>gratis</strong>, poza miastem doliczamy niewielki koszt.</div></div>
+        <span class="faq-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+      </button>
+      <div class="faq-answer" id="faq-answer-5" role="region" aria-labelledby="faq-question-5" aria-hidden="true"><div class="faq-answer-inner">Tak — działam na terenie całego Śląska w promieniu do <strong>40–50 km od Gliwic</strong>. Zabrze, Bytom, Katowice, Rybnik, Tychy, Chorzów, Mikołów i okolice. Dojazd w samych Gliwicach jest <strong>gratis</strong>, poza miastem doliczamy niewielki koszt.</div></div>
     </div>
 
     <div class="faq-item">
-      <div class="faq-question" onclick="toggleFaq(this)">
+      <button class="faq-question" id="faq-question-6" type="button" aria-expanded="false" aria-controls="faq-answer-6" onclick="toggleFaq(this)">
         <span class="faq-q-text">Czy muszę być obecny podczas montażu?</span>
-        <span class="faq-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
-      </div>
-      <div class="faq-answer"><div class="faq-answer-inner">Wystarczy, że wpuścisz mnie do mieszkania i powiesz gdzie mają stanąć meble. Nie musisz asystować — możesz robić swoje. Pracuję schludnie, bez niepotrzebnego bałaganu. Po zakończeniu sprawdzamy razem efekt.</div></div>
+        <span class="faq-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+      </button>
+      <div class="faq-answer" id="faq-answer-6" role="region" aria-labelledby="faq-question-6" aria-hidden="true"><div class="faq-answer-inner">Wystarczy, że wpuścisz mnie do mieszkania i powiesz gdzie mają stanąć meble. Nie musisz asystować — możesz robić swoje. Pracuję schludnie, bez niepotrzebnego bałaganu. Po zakończeniu sprawdzamy razem efekt.</div></div>
     </div>
 
     <div class="faq-item">
-      <div class="faq-question" onclick="toggleFaq(this)">
+      <button class="faq-question" id="faq-question-7" type="button" aria-expanded="false" aria-controls="faq-answer-7" onclick="toggleFaq(this)">
         <span class="faq-q-text">Czy wiercisz w ścianie? Co ze ścianami z karton-gipsu?</span>
-        <span class="faq-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
-      </div>
-      <div class="faq-answer"><div class="faq-answer-inner">Tak — montuję półki, szafki wiszące i lustra na ścianach, w tym <strong>karton-gips</strong> (używam odpowiednich kołków do GK). Wiertuję precyzyjnie i poziomo, zawsze z użyciem poziomicy. Dziury po starych kołkach możemy przykryć lub uzupełnić.</div></div>
+        <span class="faq-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+      </button>
+      <div class="faq-answer" id="faq-answer-7" role="region" aria-labelledby="faq-question-7" aria-hidden="true"><div class="faq-answer-inner">Tak — montuję półki, szafki wiszące i lustra na ścianach, w tym <strong>karton-gips</strong> (używam odpowiednich kołków do GK). Wiertuję precyzyjnie i poziomo, zawsze z użyciem poziomicy. Dziury po starych kołkach możemy przykryć lub uzupełnić.</div></div>
     </div>
 
   </div>
@@ -4144,6 +4179,7 @@
     </div>
   </div>
 </section>
+</main>
 
 <!-- FOOTER -->
 <footer>
@@ -4343,11 +4379,19 @@
 
   loadReviews();
 
+  function setFaqExpanded(item, expanded) {
+    const question = item.querySelector('.faq-question');
+    const answer = document.getElementById(question.getAttribute('aria-controls'));
+    item.classList.toggle('open', expanded);
+    question.setAttribute('aria-expanded', String(expanded));
+    answer.setAttribute('aria-hidden', String(!expanded));
+  }
+
   function toggleFaq(questionEl) {
     const item = questionEl.parentElement;
-    const isOpen = item.classList.contains('open');
-    document.querySelectorAll('.faq-item.open').forEach(el => el.classList.remove('open'));
-    if (!isOpen) item.classList.add('open');
+    const isOpen = questionEl.getAttribute('aria-expanded') === 'true';
+    document.querySelectorAll('.faq-item.open').forEach(el => setFaqExpanded(el, false));
+    if (!isOpen) setFaqExpanded(item, true);
   }
 
   // Blog modals
