@@ -2921,7 +2921,7 @@
 
   .works-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 1.5rem;
     list-style: none;
     padding: 0;
@@ -2929,6 +2929,7 @@
   }
 
   .work-card { display: block; }
+  .work-card.is-featured { grid-column: span 2; }
   /* .work-card{display:block} nadpisaloby domyslne [hidden] z UA */
   .work-card[hidden] { display: none; }
 
@@ -2953,10 +2954,11 @@
   .work-thumb {
     display: block;
     position: relative;
-    aspect-ratio: 3 / 4;   /* stala proporcja kafelka => CLS zostaje 0 */
+    aspect-ratio: 4 / 3;   /* stala proporcja kafelka => CLS zostaje 0 */
     background: linear-gradient(135deg, #1a1a1a 0%, #242424 100%);
     overflow: hidden;
   }
+  .work-card.is-featured .work-thumb { aspect-ratio: 8 / 3; }
   .work-thumb img {
     width: 100%;
     height: 100%;
@@ -2994,6 +2996,33 @@
     letter-spacing: 0.05em;
   }
   .work-city::after { content: '·'; margin: 0 0.45rem; }
+
+  .works-cta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    margin-top: 3.5rem;
+    padding: 1.5rem 1.75rem;
+    background: rgba(255,255,255,0.025);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+  }
+  .works-cta p {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.65rem;
+    line-height: 1.1;
+    letter-spacing: 0.04em;
+    color: var(--cream);
+  }
+  .works-cta .btn-primary {
+    flex: 0 0 auto;
+    min-height: 44px;
+  }
+  .works-cta .btn-primary:focus-visible {
+    outline: 2px solid var(--orange);
+    outline-offset: 3px;
+  }
 
   @media (max-width: 900px) {
     nav { padding: 1.2rem 1.5rem; }
@@ -3052,7 +3081,12 @@
       justify-content: center;
     }
     .works-section { padding-left: 1.5rem; padding-right: 1.5rem; }
-    .works-grid { grid-template-columns: 1fr; }
+    .works-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+    }
+    .work-card.is-featured { grid-column: auto; }
+    .work-card.is-featured .work-thumb { aspect-ratio: 4 / 3; }
     .lb-overlay { padding: 1rem 0.75rem; }
     .lb-stage img { max-height: 58vh; }
     .lb-nav { width: 44px; height: 44px; }
@@ -3156,6 +3190,24 @@
       height: 44px !important;
       min-width: 44px;
       min-height: 44px;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .works-grid { grid-template-columns: 1fr; }
+    .work-meta { padding: 1rem 1.1rem 1.15rem; }
+    .work-title { font-size: 1.2rem; }
+    .works-cta {
+      align-items: stretch;
+      flex-direction: column;
+      margin-top: 2.5rem;
+      padding: 1.25rem;
+    }
+    .works-cta p { font-size: 1.45rem; }
+    .works-cta .btn-primary {
+      justify-content: center;
+      padding-left: 1rem;
+      padding-right: 1rem;
     }
   }
 
@@ -3560,212 +3612,42 @@
 
   <div class="works-filters" role="group" aria-label="Filtruj realizacje">
       <button type="button" class="works-filter is-active"
-              aria-pressed="true" data-filter="wszystkie">Wszystkie <span>22</span></button>
+              aria-pressed="true" data-filter="wszystkie">Wszystkie <span>5</span></button>
       <button type="button" class="works-filter"
-              aria-pressed="false" data-filter="sieciowe">Montaż mebli sieciowych <span>15</span></button>
+              aria-pressed="false" data-filter="sieciowe">Montaż sieciowy <span>3</span></button>
       <button type="button" class="works-filter"
-              aria-pressed="false" data-filter="na-wymiar">Meble na wymiar <span>7</span></button>
+              aria-pressed="false" data-filter="na-wymiar">Na wymiar <span>2</span></button>
     <span class="works-chip-wrap"></span>
   </div>
 
-  <p class="works-status" role="status" aria-live="polite">Pokazuję 22 zdjęcia z 5 realizacji</p>
+  <p class="works-status" role="status" aria-live="polite">Pokazuję 5 realizacji</p>
 
   <p class="works-empty" hidden>Żadna realizacja nie spełnia obu warunków naraz. Usuń znacznik pomieszczenia albo wybierz inną kategorię.</p>
 
   <ul class="works-grid">
-      <li class="work-card" data-kat="na-wymiar" data-pomieszczenie="przedpokoj" data-realizacja="zabudowa-wneki-jastrzebie">
-        <button type="button" class="work-card-btn" data-id="zabudowa-wneki-jastrzebie" data-idx="0" aria-label="Pusta wnęka przed zabudową — Jastrzębie-Zdrój — otwórz galerię: Zabudowa wnęki na wymiar, zdjęcie 1 z 5">
+      <li class="work-card is-featured" data-kat="sieciowe" data-pomieszczenie="kuchnia" data-realizacja="kuchnia-ikea-pogrzebien">
+        <button type="button" class="work-card-btn" data-id="kuchnia-ikea-pogrzebien" data-idx="5" aria-label="Montaż kuchni IKEA bez gotowego projektu — Pogrzebień — otwórz galerię projektu, 10 zdjęć">
           <span class="work-thumb">
             <picture>
-              <source type="image/webp" srcset="img/realizacje/na-wymiar/zabudowa-wneki-przed-400.webp 185w, img/realizacje/na-wymiar/zabudowa-wneki-przed-800.webp 369w, img/realizacje/na-wymiar/zabudowa-wneki-przed-1200.webp 554w, img/realizacje/na-wymiar/zabudowa-wneki-przed-1600.webp 738w" sizes="(max-width: 900px) calc(100vw - 3rem), calc((100vw - 13rem) / 3)">
-              <img src="img/realizacje/na-wymiar/zabudowa-wneki-przed-800.jpg" srcset="img/realizacje/na-wymiar/zabudowa-wneki-przed-400.jpg 185w, img/realizacje/na-wymiar/zabudowa-wneki-przed-800.jpg 369w, img/realizacje/na-wymiar/zabudowa-wneki-przed-1200.jpg 554w, img/realizacje/na-wymiar/zabudowa-wneki-przed-1600.jpg 738w" sizes="(max-width: 900px) calc(100vw - 3rem), calc((100vw - 13rem) / 3)"
-                   alt="" width="738" height="1600" loading="lazy" decoding="async">
-            </picture>
-            <span class="work-badge">Meble na wymiar</span>
-          </span>
-          <span class="work-meta">
-            <span class="work-title">Zabudowa wnęki na wymiar</span>
-            <span class="work-city">Jastrzębie-Zdrój</span>
-            <span class="work-count">zdjęcie 1 z 5</span>
-          </span>
-        </button>
-      </li>
-      <li class="work-card" data-kat="sieciowe" data-pomieszczenie="kuchnia" data-realizacja="kuchnia-kedzierzyn">
-        <button type="button" class="work-card-btn" data-id="kuchnia-kedzierzyn" data-idx="0" aria-label="Zamontowana kuchnia z szafkami górnymi na dystansie — Kędzierzyn-Koźle — otwórz galerię: Montaż kuchni na ścianie z wystającymi kafelkami, zdjęcie 1 z 3">
-          <span class="work-thumb">
-            <picture>
-              <source type="image/webp" srcset="img/realizacje/sieciowe/kuchnia-inny-producent-400.webp 225w, img/realizacje/sieciowe/kuchnia-inny-producent-800.webp 405w" sizes="(max-width: 900px) calc(100vw - 3rem), calc((100vw - 13rem) / 3)">
-              <img src="img/realizacje/sieciowe/kuchnia-inny-producent-800.jpg" srcset="img/realizacje/sieciowe/kuchnia-inny-producent-400.jpg 225w, img/realizacje/sieciowe/kuchnia-inny-producent-800.jpg 405w" sizes="(max-width: 900px) calc(100vw - 3rem), calc((100vw - 13rem) / 3)"
-                   alt="" width="405" height="720" loading="lazy" decoding="async">
-            </picture>
-            <span class="work-badge">Montaż mebli sieciowych</span>
-          </span>
-          <span class="work-meta">
-            <span class="work-title">Montaż kuchni na ścianie z wystającymi kafelkami</span>
-            <span class="work-city">Kędzierzyn-Koźle</span>
-            <span class="work-count">zdjęcie 1 z 3</span>
-          </span>
-        </button>
-      </li>
-      <li class="work-card" data-kat="sieciowe" data-pomieszczenie="kuchnia" data-realizacja="kuchnia-ikea-pogrzebien">
-        <button type="button" class="work-card-btn" data-id="kuchnia-ikea-pogrzebien" data-idx="0" aria-label="Zamontowana kuchnia IKEA — Pogrzebień — otwórz galerię: Montaż kuchni IKEA bez gotowego projektu, zdjęcie 1 z 10">
-          <span class="work-thumb">
-            <picture>
-              <source type="image/webp" srcset="img/realizacje/sieciowe/kuchnia-ikea-po-3-400.webp 300w, img/realizacje/sieciowe/kuchnia-ikea-po-3-800.webp 600w, img/realizacje/sieciowe/kuchnia-ikea-po-3-1200.webp 900w, img/realizacje/sieciowe/kuchnia-ikea-po-3-1600.webp 1200w" sizes="(max-width: 900px) calc(100vw - 3rem), calc((100vw - 13rem) / 3)">
-              <img src="img/realizacje/sieciowe/kuchnia-ikea-po-3-800.jpg" srcset="img/realizacje/sieciowe/kuchnia-ikea-po-3-400.jpg 300w, img/realizacje/sieciowe/kuchnia-ikea-po-3-800.jpg 600w, img/realizacje/sieciowe/kuchnia-ikea-po-3-1200.jpg 900w, img/realizacje/sieciowe/kuchnia-ikea-po-3-1600.jpg 1200w" sizes="(max-width: 900px) calc(100vw - 3rem), calc((100vw - 13rem) / 3)"
-                   alt="" width="1200" height="1600" loading="lazy" decoding="async">
+              <source type="image/webp" srcset="img/realizacje/sieciowe/kuchnia-ikea-po-8-400.webp 400w, img/realizacje/sieciowe/kuchnia-ikea-po-8-800.webp 800w, img/realizacje/sieciowe/kuchnia-ikea-po-8-1200.webp 1200w, img/realizacje/sieciowe/kuchnia-ikea-po-8-1600.webp 1600w" sizes="(max-width: 600px) calc(100vw - 3rem), (max-width: 900px) calc((100vw - 4rem) / 2), calc((200vw - 21.5rem) / 3)">
+              <img src="img/realizacje/sieciowe/kuchnia-ikea-po-8-800.jpg" srcset="img/realizacje/sieciowe/kuchnia-ikea-po-8-400.jpg 400w, img/realizacje/sieciowe/kuchnia-ikea-po-8-800.jpg 800w, img/realizacje/sieciowe/kuchnia-ikea-po-8-1200.jpg 1200w, img/realizacje/sieciowe/kuchnia-ikea-po-8-1600.jpg 1600w" sizes="(max-width: 600px) calc(100vw - 3rem), (max-width: 900px) calc((100vw - 4rem) / 2), calc((200vw - 21.5rem) / 3)"
+                   alt="" width="1600" height="1200" loading="lazy" decoding="async">
             </picture>
             <span class="work-badge">Montaż mebli sieciowych</span>
           </span>
           <span class="work-meta">
             <span class="work-title">Montaż kuchni IKEA bez gotowego projektu</span>
             <span class="work-city">Pogrzebień</span>
-            <span class="work-count">zdjęcie 1 z 10</span>
-          </span>
-        </button>
-      </li>
-      <li class="work-card" data-kat="na-wymiar" data-pomieszczenie="sypialnia" data-realizacja="zabudowa-i-lozko-gliwice">
-        <button type="button" class="work-card-btn" data-id="zabudowa-i-lozko-gliwice" data-idx="0" aria-label="Zabudowa i łóżko na wymiar — Gliwice — otwórz galerię: Zabudowa i łóżko na wymiar, zdjęcie 1 z 2">
-          <span class="work-thumb">
-            <picture>
-              <source type="image/webp" srcset="img/realizacje/na-wymiar/zabudowa-i-lozko-400.webp 300w, img/realizacje/na-wymiar/zabudowa-i-lozko-800.webp 600w, img/realizacje/na-wymiar/zabudowa-i-lozko-1200.webp 900w, img/realizacje/na-wymiar/zabudowa-i-lozko-1600.webp 1200w" sizes="(max-width: 900px) calc(100vw - 3rem), calc((100vw - 13rem) / 3)">
-              <img src="img/realizacje/na-wymiar/zabudowa-i-lozko-800.jpg" srcset="img/realizacje/na-wymiar/zabudowa-i-lozko-400.jpg 300w, img/realizacje/na-wymiar/zabudowa-i-lozko-800.jpg 600w, img/realizacje/na-wymiar/zabudowa-i-lozko-1200.jpg 900w, img/realizacje/na-wymiar/zabudowa-i-lozko-1600.jpg 1200w" sizes="(max-width: 900px) calc(100vw - 3rem), calc((100vw - 13rem) / 3)"
-                   alt="" width="1200" height="1600" loading="lazy" decoding="async">
-            </picture>
-            <span class="work-badge">Meble na wymiar</span>
-          </span>
-          <span class="work-meta">
-            <span class="work-title">Zabudowa i łóżko na wymiar</span>
-            <span class="work-city">Gliwice</span>
-            <span class="work-count">zdjęcie 1 z 2</span>
-          </span>
-        </button>
-      </li>
-      <li class="work-card" data-kat="sieciowe" data-pomieszczenie="pokoj-dzieciecy" data-realizacja="pokoj-dzieciecy-zabrze">
-        <button type="button" class="work-card-btn" data-id="pokoj-dzieciecy-zabrze" data-idx="0" aria-label="Zmontowane łóżko dziecięce — Zabrze — otwórz galerię: Łóżko i szafka w pokoju dziecięcym, zdjęcie 1 z 2">
-          <span class="work-thumb">
-            <picture>
-              <source type="image/webp" srcset="img/realizacje/sieciowe/lozko-dla-dziecka-400.webp 300w, img/realizacje/sieciowe/lozko-dla-dziecka-800.webp 600w, img/realizacje/sieciowe/lozko-dla-dziecka-1200.webp 900w, img/realizacje/sieciowe/lozko-dla-dziecka-1600.webp 1200w" sizes="(max-width: 900px) calc(100vw - 3rem), calc((100vw - 13rem) / 3)">
-              <img src="img/realizacje/sieciowe/lozko-dla-dziecka-800.jpg" srcset="img/realizacje/sieciowe/lozko-dla-dziecka-400.jpg 300w, img/realizacje/sieciowe/lozko-dla-dziecka-800.jpg 600w, img/realizacje/sieciowe/lozko-dla-dziecka-1200.jpg 900w, img/realizacje/sieciowe/lozko-dla-dziecka-1600.jpg 1200w" sizes="(max-width: 900px) calc(100vw - 3rem), calc((100vw - 13rem) / 3)"
-                   alt="" width="1200" height="1600" loading="lazy" decoding="async">
-            </picture>
-            <span class="work-badge">Montaż mebli sieciowych</span>
-          </span>
-          <span class="work-meta">
-            <span class="work-title">Łóżko i szafka w pokoju dziecięcym</span>
-            <span class="work-city">Zabrze</span>
-            <span class="work-count">zdjęcie 1 z 2</span>
-          </span>
-        </button>
-      </li>
-      <li class="work-card" data-kat="na-wymiar" data-pomieszczenie="przedpokoj" data-realizacja="zabudowa-wneki-jastrzebie">
-        <button type="button" class="work-card-btn" data-id="zabudowa-wneki-jastrzebie" data-idx="1" aria-label="Gotowa zabudowa wnęki na wymiar — Jastrzębie-Zdrój — otwórz galerię: Zabudowa wnęki na wymiar, zdjęcie 2 z 5">
-          <span class="work-thumb">
-            <picture>
-              <source type="image/webp" srcset="img/realizacje/na-wymiar/zabudowa-wneki-po-400.webp 300w, img/realizacje/na-wymiar/zabudowa-wneki-po-800.webp 600w, img/realizacje/na-wymiar/zabudowa-wneki-po-1200.webp 900w, img/realizacje/na-wymiar/zabudowa-wneki-po-1600.webp 1200w" sizes="(max-width: 900px) calc(100vw - 3rem), calc((100vw - 13rem) / 3)">
-              <img src="img/realizacje/na-wymiar/zabudowa-wneki-po-800.jpg" srcset="img/realizacje/na-wymiar/zabudowa-wneki-po-400.jpg 300w, img/realizacje/na-wymiar/zabudowa-wneki-po-800.jpg 600w, img/realizacje/na-wymiar/zabudowa-wneki-po-1200.jpg 900w, img/realizacje/na-wymiar/zabudowa-wneki-po-1600.jpg 1200w" sizes="(max-width: 900px) calc(100vw - 3rem), calc((100vw - 13rem) / 3)"
-                   alt="" width="1200" height="1600" loading="lazy" decoding="async">
-            </picture>
-            <span class="work-badge">Meble na wymiar</span>
-          </span>
-          <span class="work-meta">
-            <span class="work-title">Zabudowa wnęki na wymiar</span>
-            <span class="work-city">Jastrzębie-Zdrój</span>
-            <span class="work-count">zdjęcie 2 z 5</span>
+            <span class="work-count">+9 zdjęć</span>
           </span>
         </button>
       </li>
       <li class="work-card" data-kat="sieciowe" data-pomieszczenie="kuchnia" data-realizacja="kuchnia-kedzierzyn">
-        <button type="button" class="work-card-btn" data-id="kuchnia-kedzierzyn" data-idx="1" aria-label="Zabudowa kuchenna z frontami w jednej linii mimo nierównej ściany — otwórz galerię: Montaż kuchni na ścianie z wystającymi kafelkami, zdjęcie 2 z 3">
+        <button type="button" class="work-card-btn" data-id="kuchnia-kedzierzyn" data-idx="2" aria-label="Montaż kuchni na ścianie z wystającymi kafelkami — Kędzierzyn-Koźle — otwórz galerię projektu, 3 zdjęcia">
           <span class="work-thumb">
             <picture>
-              <source type="image/webp" srcset="img/realizacje/sieciowe/kuchnia-inny-producent-2-400.webp 225w, img/realizacje/sieciowe/kuchnia-inny-producent-2-800.webp 405w" sizes="(max-width: 900px) calc(100vw - 3rem), calc((100vw - 13rem) / 3)">
-              <img src="img/realizacje/sieciowe/kuchnia-inny-producent-2-800.jpg" srcset="img/realizacje/sieciowe/kuchnia-inny-producent-2-400.jpg 225w, img/realizacje/sieciowe/kuchnia-inny-producent-2-800.jpg 405w" sizes="(max-width: 900px) calc(100vw - 3rem), calc((100vw - 13rem) / 3)"
-                   alt="" width="405" height="720" loading="lazy" decoding="async">
-            </picture>
-            <span class="work-badge">Montaż mebli sieciowych</span>
-          </span>
-          <span class="work-meta">
-            <span class="work-title">Montaż kuchni na ścianie z wystającymi kafelkami</span>
-            <span class="work-city">Kędzierzyn-Koźle</span>
-            <span class="work-count">zdjęcie 2 z 3</span>
-          </span>
-        </button>
-      </li>
-      <li class="work-card" data-kat="sieciowe" data-pomieszczenie="kuchnia" data-realizacja="kuchnia-ikea-pogrzebien">
-        <button type="button" class="work-card-btn" data-id="kuchnia-ikea-pogrzebien" data-idx="1" aria-label="Kuchnia IKEA po montażu, ujęcie 2 — Pogrzebień — otwórz galerię: Montaż kuchni IKEA bez gotowego projektu, zdjęcie 2 z 10">
-          <span class="work-thumb">
-            <picture>
-              <source type="image/webp" srcset="img/realizacje/sieciowe/kuchnia-ikea-po-4-400.webp 300w, img/realizacje/sieciowe/kuchnia-ikea-po-4-800.webp 600w, img/realizacje/sieciowe/kuchnia-ikea-po-4-1200.webp 900w, img/realizacje/sieciowe/kuchnia-ikea-po-4-1600.webp 1200w" sizes="(max-width: 900px) calc(100vw - 3rem), calc((100vw - 13rem) / 3)">
-              <img src="img/realizacje/sieciowe/kuchnia-ikea-po-4-800.jpg" srcset="img/realizacje/sieciowe/kuchnia-ikea-po-4-400.jpg 300w, img/realizacje/sieciowe/kuchnia-ikea-po-4-800.jpg 600w, img/realizacje/sieciowe/kuchnia-ikea-po-4-1200.jpg 900w, img/realizacje/sieciowe/kuchnia-ikea-po-4-1600.jpg 1200w" sizes="(max-width: 900px) calc(100vw - 3rem), calc((100vw - 13rem) / 3)"
-                   alt="" width="1200" height="1600" loading="lazy" decoding="async">
-            </picture>
-            <span class="work-badge">Montaż mebli sieciowych</span>
-          </span>
-          <span class="work-meta">
-            <span class="work-title">Montaż kuchni IKEA bez gotowego projektu</span>
-            <span class="work-city">Pogrzebień</span>
-            <span class="work-count">zdjęcie 2 z 10</span>
-          </span>
-        </button>
-      </li>
-      <li class="work-card" data-kat="na-wymiar" data-pomieszczenie="sypialnia" data-realizacja="zabudowa-i-lozko-gliwice">
-        <button type="button" class="work-card-btn" data-id="zabudowa-i-lozko-gliwice" data-idx="1" aria-label="Zabudowa i łóżko na wymiar, ujęcie 2 — Gliwice — otwórz galerię: Zabudowa i łóżko na wymiar, zdjęcie 2 z 2">
-          <span class="work-thumb">
-            <picture>
-              <source type="image/webp" srcset="img/realizacje/na-wymiar/zabudowa-i-lozko-2-400.webp 400w, img/realizacje/na-wymiar/zabudowa-i-lozko-2-800.webp 800w, img/realizacje/na-wymiar/zabudowa-i-lozko-2-1200.webp 1200w, img/realizacje/na-wymiar/zabudowa-i-lozko-2-1600.webp 1600w" sizes="(max-width: 900px) calc(100vw - 3rem), calc((100vw - 13rem) / 3)">
-              <img src="img/realizacje/na-wymiar/zabudowa-i-lozko-2-800.jpg" srcset="img/realizacje/na-wymiar/zabudowa-i-lozko-2-400.jpg 400w, img/realizacje/na-wymiar/zabudowa-i-lozko-2-800.jpg 800w, img/realizacje/na-wymiar/zabudowa-i-lozko-2-1200.jpg 1200w, img/realizacje/na-wymiar/zabudowa-i-lozko-2-1600.jpg 1600w" sizes="(max-width: 900px) calc(100vw - 3rem), calc((100vw - 13rem) / 3)"
-                   alt="" width="1600" height="1272" loading="lazy" decoding="async">
-            </picture>
-            <span class="work-badge">Meble na wymiar</span>
-          </span>
-          <span class="work-meta">
-            <span class="work-title">Zabudowa i łóżko na wymiar</span>
-            <span class="work-city">Gliwice</span>
-            <span class="work-count">zdjęcie 2 z 2</span>
-          </span>
-        </button>
-      </li>
-      <li class="work-card" data-kat="sieciowe" data-pomieszczenie="pokoj-dzieciecy" data-realizacja="pokoj-dzieciecy-zabrze">
-        <button type="button" class="work-card-btn" data-id="pokoj-dzieciecy-zabrze" data-idx="1" aria-label="Szafka IKEA z otwartymi drzwiami — Zabrze — otwórz galerię: Łóżko i szafka w pokoju dziecięcym, zdjęcie 2 z 2">
-          <span class="work-thumb">
-            <picture>
-              <source type="image/webp" srcset="img/realizacje/sieciowe/szafka-ikea-otwarta-400.webp 300w, img/realizacje/sieciowe/szafka-ikea-otwarta-800.webp 600w, img/realizacje/sieciowe/szafka-ikea-otwarta-1200.webp 900w, img/realizacje/sieciowe/szafka-ikea-otwarta-1600.webp 1200w" sizes="(max-width: 900px) calc(100vw - 3rem), calc((100vw - 13rem) / 3)">
-              <img src="img/realizacje/sieciowe/szafka-ikea-otwarta-800.jpg" srcset="img/realizacje/sieciowe/szafka-ikea-otwarta-400.jpg 300w, img/realizacje/sieciowe/szafka-ikea-otwarta-800.jpg 600w, img/realizacje/sieciowe/szafka-ikea-otwarta-1200.jpg 900w, img/realizacje/sieciowe/szafka-ikea-otwarta-1600.jpg 1200w" sizes="(max-width: 900px) calc(100vw - 3rem), calc((100vw - 13rem) / 3)"
-                   alt="" width="1200" height="1600" loading="lazy" decoding="async">
-            </picture>
-            <span class="work-badge">Montaż mebli sieciowych</span>
-          </span>
-          <span class="work-meta">
-            <span class="work-title">Łóżko i szafka w pokoju dziecięcym</span>
-            <span class="work-city">Zabrze</span>
-            <span class="work-count">zdjęcie 2 z 2</span>
-          </span>
-        </button>
-      </li>
-      <li class="work-card" data-kat="na-wymiar" data-pomieszczenie="przedpokoj" data-realizacja="zabudowa-wneki-jastrzebie">
-        <button type="button" class="work-card-btn" data-id="zabudowa-wneki-jastrzebie" data-idx="2" aria-label="Zabudowa wnęki na wymiar, ujęcie 2 — Jastrzębie-Zdrój — otwórz galerię: Zabudowa wnęki na wymiar, zdjęcie 3 z 5">
-          <span class="work-thumb">
-            <picture>
-              <source type="image/webp" srcset="img/realizacje/na-wymiar/zabudowa-wneki-po-2-400.webp 300w, img/realizacje/na-wymiar/zabudowa-wneki-po-2-800.webp 600w, img/realizacje/na-wymiar/zabudowa-wneki-po-2-1200.webp 900w, img/realizacje/na-wymiar/zabudowa-wneki-po-2-1600.webp 1200w" sizes="(max-width: 900px) calc(100vw - 3rem), calc((100vw - 13rem) / 3)">
-              <img src="img/realizacje/na-wymiar/zabudowa-wneki-po-2-800.jpg" srcset="img/realizacje/na-wymiar/zabudowa-wneki-po-2-400.jpg 300w, img/realizacje/na-wymiar/zabudowa-wneki-po-2-800.jpg 600w, img/realizacje/na-wymiar/zabudowa-wneki-po-2-1200.jpg 900w, img/realizacje/na-wymiar/zabudowa-wneki-po-2-1600.jpg 1200w" sizes="(max-width: 900px) calc(100vw - 3rem), calc((100vw - 13rem) / 3)"
-                   alt="" width="1200" height="1600" loading="lazy" decoding="async">
-            </picture>
-            <span class="work-badge">Meble na wymiar</span>
-          </span>
-          <span class="work-meta">
-            <span class="work-title">Zabudowa wnęki na wymiar</span>
-            <span class="work-city">Jastrzębie-Zdrój</span>
-            <span class="work-count">zdjęcie 3 z 5</span>
-          </span>
-        </button>
-      </li>
-      <li class="work-card" data-kat="sieciowe" data-pomieszczenie="kuchnia" data-realizacja="kuchnia-kedzierzyn">
-        <button type="button" class="work-card-btn" data-id="kuchnia-kedzierzyn" data-idx="2" aria-label="Montaż kuchni w Kędzierzynie-Koźlu, ujęcie 3 — otwórz galerię: Montaż kuchni na ścianie z wystającymi kafelkami, zdjęcie 3 z 3">
-          <span class="work-thumb">
-            <picture>
-              <source type="image/webp" srcset="img/realizacje/sieciowe/kuchnia-inny-producent-3-400.webp 400w, img/realizacje/sieciowe/kuchnia-inny-producent-3-800.webp 800w, img/realizacje/sieciowe/kuchnia-inny-producent-3-1200.webp 1200w, img/realizacje/sieciowe/kuchnia-inny-producent-3-1600.webp 1278w" sizes="(max-width: 900px) calc(100vw - 3rem), calc((100vw - 13rem) / 3)">
-              <img src="img/realizacje/sieciowe/kuchnia-inny-producent-3-800.jpg" srcset="img/realizacje/sieciowe/kuchnia-inny-producent-3-400.jpg 400w, img/realizacje/sieciowe/kuchnia-inny-producent-3-800.jpg 800w, img/realizacje/sieciowe/kuchnia-inny-producent-3-1200.jpg 1200w, img/realizacje/sieciowe/kuchnia-inny-producent-3-1600.jpg 1278w" sizes="(max-width: 900px) calc(100vw - 3rem), calc((100vw - 13rem) / 3)"
+              <source type="image/webp" srcset="img/realizacje/sieciowe/kuchnia-inny-producent-3-400.webp 400w, img/realizacje/sieciowe/kuchnia-inny-producent-3-800.webp 800w, img/realizacje/sieciowe/kuchnia-inny-producent-3-1200.webp 1200w, img/realizacje/sieciowe/kuchnia-inny-producent-3-1600.webp 1278w" sizes="(max-width: 600px) calc(100vw - 3rem), (max-width: 900px) calc((100vw - 4rem) / 2), calc((100vw - 13rem) / 3)">
+              <img src="img/realizacje/sieciowe/kuchnia-inny-producent-3-800.jpg" srcset="img/realizacje/sieciowe/kuchnia-inny-producent-3-400.jpg 400w, img/realizacje/sieciowe/kuchnia-inny-producent-3-800.jpg 800w, img/realizacje/sieciowe/kuchnia-inny-producent-3-1200.jpg 1200w, img/realizacje/sieciowe/kuchnia-inny-producent-3-1600.jpg 1278w" sizes="(max-width: 600px) calc(100vw - 3rem), (max-width: 900px) calc((100vw - 4rem) / 2), calc((100vw - 13rem) / 3)"
                    alt="" width="1278" height="720" loading="lazy" decoding="async">
             </picture>
             <span class="work-badge">Montaż mebli sieciowych</span>
@@ -3773,33 +3655,16 @@
           <span class="work-meta">
             <span class="work-title">Montaż kuchni na ścianie z wystającymi kafelkami</span>
             <span class="work-city">Kędzierzyn-Koźle</span>
-            <span class="work-count">zdjęcie 3 z 3</span>
-          </span>
-        </button>
-      </li>
-      <li class="work-card" data-kat="sieciowe" data-pomieszczenie="kuchnia" data-realizacja="kuchnia-ikea-pogrzebien">
-        <button type="button" class="work-card-btn" data-id="kuchnia-ikea-pogrzebien" data-idx="2" aria-label="Kuchnia IKEA po montażu, ujęcie 3 — Pogrzebień — otwórz galerię: Montaż kuchni IKEA bez gotowego projektu, zdjęcie 3 z 10">
-          <span class="work-thumb">
-            <picture>
-              <source type="image/webp" srcset="img/realizacje/sieciowe/kuchnia-ikea-po-5-400.webp 300w, img/realizacje/sieciowe/kuchnia-ikea-po-5-800.webp 600w, img/realizacje/sieciowe/kuchnia-ikea-po-5-1200.webp 900w, img/realizacje/sieciowe/kuchnia-ikea-po-5-1600.webp 1200w" sizes="(max-width: 900px) calc(100vw - 3rem), calc((100vw - 13rem) / 3)">
-              <img src="img/realizacje/sieciowe/kuchnia-ikea-po-5-800.jpg" srcset="img/realizacje/sieciowe/kuchnia-ikea-po-5-400.jpg 300w, img/realizacje/sieciowe/kuchnia-ikea-po-5-800.jpg 600w, img/realizacje/sieciowe/kuchnia-ikea-po-5-1200.jpg 900w, img/realizacje/sieciowe/kuchnia-ikea-po-5-1600.jpg 1200w" sizes="(max-width: 900px) calc(100vw - 3rem), calc((100vw - 13rem) / 3)"
-                   alt="" width="1200" height="1600" loading="lazy" decoding="async">
-            </picture>
-            <span class="work-badge">Montaż mebli sieciowych</span>
-          </span>
-          <span class="work-meta">
-            <span class="work-title">Montaż kuchni IKEA bez gotowego projektu</span>
-            <span class="work-city">Pogrzebień</span>
-            <span class="work-count">zdjęcie 3 z 10</span>
+            <span class="work-count">+2 zdjęcia</span>
           </span>
         </button>
       </li>
       <li class="work-card" data-kat="na-wymiar" data-pomieszczenie="przedpokoj" data-realizacja="zabudowa-wneki-jastrzebie">
-        <button type="button" class="work-card-btn" data-id="zabudowa-wneki-jastrzebie" data-idx="3" aria-label="Zabudowa wnęki na wymiar, ujęcie 3 — Jastrzębie-Zdrój — otwórz galerię: Zabudowa wnęki na wymiar, zdjęcie 4 z 5">
+        <button type="button" class="work-card-btn" data-id="zabudowa-wneki-jastrzebie" data-idx="2" aria-label="Zabudowa wnęki na wymiar — Jastrzębie-Zdrój — otwórz galerię projektu, 5 zdjęć">
           <span class="work-thumb">
             <picture>
-              <source type="image/webp" srcset="img/realizacje/na-wymiar/zabudowa-wneki-po-3-400.webp 300w, img/realizacje/na-wymiar/zabudowa-wneki-po-3-800.webp 600w, img/realizacje/na-wymiar/zabudowa-wneki-po-3-1200.webp 900w, img/realizacje/na-wymiar/zabudowa-wneki-po-3-1600.webp 1200w" sizes="(max-width: 900px) calc(100vw - 3rem), calc((100vw - 13rem) / 3)">
-              <img src="img/realizacje/na-wymiar/zabudowa-wneki-po-3-800.jpg" srcset="img/realizacje/na-wymiar/zabudowa-wneki-po-3-400.jpg 300w, img/realizacje/na-wymiar/zabudowa-wneki-po-3-800.jpg 600w, img/realizacje/na-wymiar/zabudowa-wneki-po-3-1200.jpg 900w, img/realizacje/na-wymiar/zabudowa-wneki-po-3-1600.jpg 1200w" sizes="(max-width: 900px) calc(100vw - 3rem), calc((100vw - 13rem) / 3)"
+              <source type="image/webp" srcset="img/realizacje/na-wymiar/zabudowa-wneki-po-2-400.webp 300w, img/realizacje/na-wymiar/zabudowa-wneki-po-2-800.webp 600w, img/realizacje/na-wymiar/zabudowa-wneki-po-2-1200.webp 900w, img/realizacje/na-wymiar/zabudowa-wneki-po-2-1600.webp 1200w" sizes="(max-width: 600px) calc(100vw - 3rem), (max-width: 900px) calc((100vw - 4rem) / 2), calc((100vw - 13rem) / 3)">
+              <img src="img/realizacje/na-wymiar/zabudowa-wneki-po-2-800.jpg" srcset="img/realizacje/na-wymiar/zabudowa-wneki-po-2-400.jpg 300w, img/realizacje/na-wymiar/zabudowa-wneki-po-2-800.jpg 600w, img/realizacje/na-wymiar/zabudowa-wneki-po-2-1200.jpg 900w, img/realizacje/na-wymiar/zabudowa-wneki-po-2-1600.jpg 1200w" sizes="(max-width: 600px) calc(100vw - 3rem), (max-width: 900px) calc((100vw - 4rem) / 2), calc((100vw - 13rem) / 3)"
                    alt="" width="1200" height="1600" loading="lazy" decoding="async">
             </picture>
             <span class="work-badge">Meble na wymiar</span>
@@ -3807,143 +3672,41 @@
           <span class="work-meta">
             <span class="work-title">Zabudowa wnęki na wymiar</span>
             <span class="work-city">Jastrzębie-Zdrój</span>
-            <span class="work-count">zdjęcie 4 z 5</span>
+            <span class="work-count">+4 zdjęcia</span>
           </span>
         </button>
       </li>
-      <li class="work-card" data-kat="sieciowe" data-pomieszczenie="kuchnia" data-realizacja="kuchnia-ikea-pogrzebien">
-        <button type="button" class="work-card-btn" data-id="kuchnia-ikea-pogrzebien" data-idx="3" aria-label="Kuchnia IKEA po montażu, ujęcie 4 — Pogrzebień — otwórz galerię: Montaż kuchni IKEA bez gotowego projektu, zdjęcie 4 z 10">
+      <li class="work-card" data-kat="na-wymiar" data-pomieszczenie="sypialnia" data-realizacja="zabudowa-i-lozko-gliwice">
+        <button type="button" class="work-card-btn" data-id="zabudowa-i-lozko-gliwice" data-idx="0" aria-label="Zabudowa i łóżko na wymiar — Gliwice — otwórz galerię projektu, 2 zdjęcia">
           <span class="work-thumb">
             <picture>
-              <source type="image/webp" srcset="img/realizacje/sieciowe/kuchnia-ikea-po-6-400.webp 300w, img/realizacje/sieciowe/kuchnia-ikea-po-6-800.webp 600w, img/realizacje/sieciowe/kuchnia-ikea-po-6-1200.webp 900w, img/realizacje/sieciowe/kuchnia-ikea-po-6-1600.webp 1200w" sizes="(max-width: 900px) calc(100vw - 3rem), calc((100vw - 13rem) / 3)">
-              <img src="img/realizacje/sieciowe/kuchnia-ikea-po-6-800.jpg" srcset="img/realizacje/sieciowe/kuchnia-ikea-po-6-400.jpg 300w, img/realizacje/sieciowe/kuchnia-ikea-po-6-800.jpg 600w, img/realizacje/sieciowe/kuchnia-ikea-po-6-1200.jpg 900w, img/realizacje/sieciowe/kuchnia-ikea-po-6-1600.jpg 1200w" sizes="(max-width: 900px) calc(100vw - 3rem), calc((100vw - 13rem) / 3)"
-                   alt="" width="1200" height="1600" loading="lazy" decoding="async">
-            </picture>
-            <span class="work-badge">Montaż mebli sieciowych</span>
-          </span>
-          <span class="work-meta">
-            <span class="work-title">Montaż kuchni IKEA bez gotowego projektu</span>
-            <span class="work-city">Pogrzebień</span>
-            <span class="work-count">zdjęcie 4 z 10</span>
-          </span>
-        </button>
-      </li>
-      <li class="work-card" data-kat="na-wymiar" data-pomieszczenie="przedpokoj" data-realizacja="zabudowa-wneki-jastrzebie">
-        <button type="button" class="work-card-btn" data-id="zabudowa-wneki-jastrzebie" data-idx="4" aria-label="Zabudowa wnęki na wymiar, ujęcie 4 — Jastrzębie-Zdrój — otwórz galerię: Zabudowa wnęki na wymiar, zdjęcie 5 z 5">
-          <span class="work-thumb">
-            <picture>
-              <source type="image/webp" srcset="img/realizacje/na-wymiar/zabudowa-wneki-po-4-400.webp 300w, img/realizacje/na-wymiar/zabudowa-wneki-po-4-800.webp 600w, img/realizacje/na-wymiar/zabudowa-wneki-po-4-1200.webp 900w, img/realizacje/na-wymiar/zabudowa-wneki-po-4-1600.webp 1200w" sizes="(max-width: 900px) calc(100vw - 3rem), calc((100vw - 13rem) / 3)">
-              <img src="img/realizacje/na-wymiar/zabudowa-wneki-po-4-800.jpg" srcset="img/realizacje/na-wymiar/zabudowa-wneki-po-4-400.jpg 300w, img/realizacje/na-wymiar/zabudowa-wneki-po-4-800.jpg 600w, img/realizacje/na-wymiar/zabudowa-wneki-po-4-1200.jpg 900w, img/realizacje/na-wymiar/zabudowa-wneki-po-4-1600.jpg 1200w" sizes="(max-width: 900px) calc(100vw - 3rem), calc((100vw - 13rem) / 3)"
+              <source type="image/webp" srcset="img/realizacje/na-wymiar/zabudowa-i-lozko-400.webp 300w, img/realizacje/na-wymiar/zabudowa-i-lozko-800.webp 600w, img/realizacje/na-wymiar/zabudowa-i-lozko-1200.webp 900w, img/realizacje/na-wymiar/zabudowa-i-lozko-1600.webp 1200w" sizes="(max-width: 600px) calc(100vw - 3rem), (max-width: 900px) calc((100vw - 4rem) / 2), calc((100vw - 13rem) / 3)">
+              <img src="img/realizacje/na-wymiar/zabudowa-i-lozko-800.jpg" srcset="img/realizacje/na-wymiar/zabudowa-i-lozko-400.jpg 300w, img/realizacje/na-wymiar/zabudowa-i-lozko-800.jpg 600w, img/realizacje/na-wymiar/zabudowa-i-lozko-1200.jpg 900w, img/realizacje/na-wymiar/zabudowa-i-lozko-1600.jpg 1200w" sizes="(max-width: 600px) calc(100vw - 3rem), (max-width: 900px) calc((100vw - 4rem) / 2), calc((100vw - 13rem) / 3)"
                    alt="" width="1200" height="1600" loading="lazy" decoding="async">
             </picture>
             <span class="work-badge">Meble na wymiar</span>
           </span>
           <span class="work-meta">
-            <span class="work-title">Zabudowa wnęki na wymiar</span>
-            <span class="work-city">Jastrzębie-Zdrój</span>
-            <span class="work-count">zdjęcie 5 z 5</span>
+            <span class="work-title">Zabudowa i łóżko na wymiar</span>
+            <span class="work-city">Gliwice</span>
+            <span class="work-count">+1 zdjęcie</span>
           </span>
         </button>
       </li>
-      <li class="work-card" data-kat="sieciowe" data-pomieszczenie="kuchnia" data-realizacja="kuchnia-ikea-pogrzebien">
-        <button type="button" class="work-card-btn" data-id="kuchnia-ikea-pogrzebien" data-idx="4" aria-label="Kuchnia IKEA po montażu, ujęcie 5 — Pogrzebień — otwórz galerię: Montaż kuchni IKEA bez gotowego projektu, zdjęcie 5 z 10">
+      <li class="work-card" data-kat="sieciowe" data-pomieszczenie="pokoj-dzieciecy" data-realizacja="pokoj-dzieciecy-zabrze">
+        <button type="button" class="work-card-btn" data-id="pokoj-dzieciecy-zabrze" data-idx="0" aria-label="Łóżko i szafka w pokoju dziecięcym — Zabrze — otwórz galerię projektu, 2 zdjęcia">
           <span class="work-thumb">
             <picture>
-              <source type="image/webp" srcset="img/realizacje/sieciowe/kuchnia-ikea-po-7-400.webp 300w, img/realizacje/sieciowe/kuchnia-ikea-po-7-800.webp 600w, img/realizacje/sieciowe/kuchnia-ikea-po-7-1200.webp 900w, img/realizacje/sieciowe/kuchnia-ikea-po-7-1600.webp 1200w" sizes="(max-width: 900px) calc(100vw - 3rem), calc((100vw - 13rem) / 3)">
-              <img src="img/realizacje/sieciowe/kuchnia-ikea-po-7-800.jpg" srcset="img/realizacje/sieciowe/kuchnia-ikea-po-7-400.jpg 300w, img/realizacje/sieciowe/kuchnia-ikea-po-7-800.jpg 600w, img/realizacje/sieciowe/kuchnia-ikea-po-7-1200.jpg 900w, img/realizacje/sieciowe/kuchnia-ikea-po-7-1600.jpg 1200w" sizes="(max-width: 900px) calc(100vw - 3rem), calc((100vw - 13rem) / 3)"
+              <source type="image/webp" srcset="img/realizacje/sieciowe/lozko-dla-dziecka-400.webp 300w, img/realizacje/sieciowe/lozko-dla-dziecka-800.webp 600w, img/realizacje/sieciowe/lozko-dla-dziecka-1200.webp 900w, img/realizacje/sieciowe/lozko-dla-dziecka-1600.webp 1200w" sizes="(max-width: 600px) calc(100vw - 3rem), (max-width: 900px) calc((100vw - 4rem) / 2), calc((100vw - 13rem) / 3)">
+              <img src="img/realizacje/sieciowe/lozko-dla-dziecka-800.jpg" srcset="img/realizacje/sieciowe/lozko-dla-dziecka-400.jpg 300w, img/realizacje/sieciowe/lozko-dla-dziecka-800.jpg 600w, img/realizacje/sieciowe/lozko-dla-dziecka-1200.jpg 900w, img/realizacje/sieciowe/lozko-dla-dziecka-1600.jpg 1200w" sizes="(max-width: 600px) calc(100vw - 3rem), (max-width: 900px) calc((100vw - 4rem) / 2), calc((100vw - 13rem) / 3)"
                    alt="" width="1200" height="1600" loading="lazy" decoding="async">
             </picture>
             <span class="work-badge">Montaż mebli sieciowych</span>
           </span>
           <span class="work-meta">
-            <span class="work-title">Montaż kuchni IKEA bez gotowego projektu</span>
-            <span class="work-city">Pogrzebień</span>
-            <span class="work-count">zdjęcie 5 z 10</span>
-          </span>
-        </button>
-      </li>
-      <li class="work-card" data-kat="sieciowe" data-pomieszczenie="kuchnia" data-realizacja="kuchnia-ikea-pogrzebien">
-        <button type="button" class="work-card-btn" data-id="kuchnia-ikea-pogrzebien" data-idx="5" aria-label="Kuchnia IKEA po montażu, ujęcie 6 — Pogrzebień — otwórz galerię: Montaż kuchni IKEA bez gotowego projektu, zdjęcie 6 z 10">
-          <span class="work-thumb">
-            <picture>
-              <source type="image/webp" srcset="img/realizacje/sieciowe/kuchnia-ikea-po-8-400.webp 400w, img/realizacje/sieciowe/kuchnia-ikea-po-8-800.webp 800w, img/realizacje/sieciowe/kuchnia-ikea-po-8-1200.webp 1200w, img/realizacje/sieciowe/kuchnia-ikea-po-8-1600.webp 1600w" sizes="(max-width: 900px) calc(100vw - 3rem), calc((100vw - 13rem) / 3)">
-              <img src="img/realizacje/sieciowe/kuchnia-ikea-po-8-800.jpg" srcset="img/realizacje/sieciowe/kuchnia-ikea-po-8-400.jpg 400w, img/realizacje/sieciowe/kuchnia-ikea-po-8-800.jpg 800w, img/realizacje/sieciowe/kuchnia-ikea-po-8-1200.jpg 1200w, img/realizacje/sieciowe/kuchnia-ikea-po-8-1600.jpg 1600w" sizes="(max-width: 900px) calc(100vw - 3rem), calc((100vw - 13rem) / 3)"
-                   alt="" width="1600" height="1200" loading="lazy" decoding="async">
-            </picture>
-            <span class="work-badge">Montaż mebli sieciowych</span>
-          </span>
-          <span class="work-meta">
-            <span class="work-title">Montaż kuchni IKEA bez gotowego projektu</span>
-            <span class="work-city">Pogrzebień</span>
-            <span class="work-count">zdjęcie 6 z 10</span>
-          </span>
-        </button>
-      </li>
-      <li class="work-card" data-kat="sieciowe" data-pomieszczenie="kuchnia" data-realizacja="kuchnia-ikea-pogrzebien">
-        <button type="button" class="work-card-btn" data-id="kuchnia-ikea-pogrzebien" data-idx="6" aria-label="Kuchnia IKEA po montażu, ujęcie 7 — Pogrzebień — otwórz galerię: Montaż kuchni IKEA bez gotowego projektu, zdjęcie 7 z 10">
-          <span class="work-thumb">
-            <picture>
-              <source type="image/webp" srcset="img/realizacje/sieciowe/kuchnia-ikea-po-9-400.webp 400w, img/realizacje/sieciowe/kuchnia-ikea-po-9-800.webp 800w, img/realizacje/sieciowe/kuchnia-ikea-po-9-1200.webp 1200w, img/realizacje/sieciowe/kuchnia-ikea-po-9-1600.webp 1600w" sizes="(max-width: 900px) calc(100vw - 3rem), calc((100vw - 13rem) / 3)">
-              <img src="img/realizacje/sieciowe/kuchnia-ikea-po-9-800.jpg" srcset="img/realizacje/sieciowe/kuchnia-ikea-po-9-400.jpg 400w, img/realizacje/sieciowe/kuchnia-ikea-po-9-800.jpg 800w, img/realizacje/sieciowe/kuchnia-ikea-po-9-1200.jpg 1200w, img/realizacje/sieciowe/kuchnia-ikea-po-9-1600.jpg 1600w" sizes="(max-width: 900px) calc(100vw - 3rem), calc((100vw - 13rem) / 3)"
-                   alt="" width="1600" height="1200" loading="lazy" decoding="async">
-            </picture>
-            <span class="work-badge">Montaż mebli sieciowych</span>
-          </span>
-          <span class="work-meta">
-            <span class="work-title">Montaż kuchni IKEA bez gotowego projektu</span>
-            <span class="work-city">Pogrzebień</span>
-            <span class="work-count">zdjęcie 7 z 10</span>
-          </span>
-        </button>
-      </li>
-      <li class="work-card" data-kat="sieciowe" data-pomieszczenie="kuchnia" data-realizacja="kuchnia-ikea-pogrzebien">
-        <button type="button" class="work-card-btn" data-id="kuchnia-ikea-pogrzebien" data-idx="7" aria-label="Kuchnia IKEA po montażu, ujęcie 8 — Pogrzebień — otwórz galerię: Montaż kuchni IKEA bez gotowego projektu, zdjęcie 8 z 10">
-          <span class="work-thumb">
-            <picture>
-              <source type="image/webp" srcset="img/realizacje/sieciowe/kuchnia-ikea-po-11-400.webp 400w, img/realizacje/sieciowe/kuchnia-ikea-po-11-800.webp 800w, img/realizacje/sieciowe/kuchnia-ikea-po-11-1200.webp 1200w, img/realizacje/sieciowe/kuchnia-ikea-po-11-1600.webp 1600w" sizes="(max-width: 900px) calc(100vw - 3rem), calc((100vw - 13rem) / 3)">
-              <img src="img/realizacje/sieciowe/kuchnia-ikea-po-11-800.jpg" srcset="img/realizacje/sieciowe/kuchnia-ikea-po-11-400.jpg 400w, img/realizacje/sieciowe/kuchnia-ikea-po-11-800.jpg 800w, img/realizacje/sieciowe/kuchnia-ikea-po-11-1200.jpg 1200w, img/realizacje/sieciowe/kuchnia-ikea-po-11-1600.jpg 1600w" sizes="(max-width: 900px) calc(100vw - 3rem), calc((100vw - 13rem) / 3)"
-                   alt="" width="1600" height="1200" loading="lazy" decoding="async">
-            </picture>
-            <span class="work-badge">Montaż mebli sieciowych</span>
-          </span>
-          <span class="work-meta">
-            <span class="work-title">Montaż kuchni IKEA bez gotowego projektu</span>
-            <span class="work-city">Pogrzebień</span>
-            <span class="work-count">zdjęcie 8 z 10</span>
-          </span>
-        </button>
-      </li>
-      <li class="work-card" data-kat="sieciowe" data-pomieszczenie="kuchnia" data-realizacja="kuchnia-ikea-pogrzebien">
-        <button type="button" class="work-card-btn" data-id="kuchnia-ikea-pogrzebien" data-idx="8" aria-label="Kuchnia IKEA po montażu, ujęcie 9 — Pogrzebień — otwórz galerię: Montaż kuchni IKEA bez gotowego projektu, zdjęcie 9 z 10">
-          <span class="work-thumb">
-            <picture>
-              <source type="image/webp" srcset="img/realizacje/sieciowe/kuchnia-ikea-po-12-400.webp 300w, img/realizacje/sieciowe/kuchnia-ikea-po-12-800.webp 600w, img/realizacje/sieciowe/kuchnia-ikea-po-12-1200.webp 900w, img/realizacje/sieciowe/kuchnia-ikea-po-12-1600.webp 1200w" sizes="(max-width: 900px) calc(100vw - 3rem), calc((100vw - 13rem) / 3)">
-              <img src="img/realizacje/sieciowe/kuchnia-ikea-po-12-800.jpg" srcset="img/realizacje/sieciowe/kuchnia-ikea-po-12-400.jpg 300w, img/realizacje/sieciowe/kuchnia-ikea-po-12-800.jpg 600w, img/realizacje/sieciowe/kuchnia-ikea-po-12-1200.jpg 900w, img/realizacje/sieciowe/kuchnia-ikea-po-12-1600.jpg 1200w" sizes="(max-width: 900px) calc(100vw - 3rem), calc((100vw - 13rem) / 3)"
-                   alt="" width="1200" height="1600" loading="lazy" decoding="async">
-            </picture>
-            <span class="work-badge">Montaż mebli sieciowych</span>
-          </span>
-          <span class="work-meta">
-            <span class="work-title">Montaż kuchni IKEA bez gotowego projektu</span>
-            <span class="work-city">Pogrzebień</span>
-            <span class="work-count">zdjęcie 9 z 10</span>
-          </span>
-        </button>
-      </li>
-      <li class="work-card" data-kat="sieciowe" data-pomieszczenie="kuchnia" data-realizacja="kuchnia-ikea-pogrzebien">
-        <button type="button" class="work-card-btn" data-id="kuchnia-ikea-pogrzebien" data-idx="9" aria-label="Kuchnia IKEA po montażu, ujęcie 10 — Pogrzebień — otwórz galerię: Montaż kuchni IKEA bez gotowego projektu, zdjęcie 10 z 10">
-          <span class="work-thumb">
-            <picture>
-              <source type="image/webp" srcset="img/realizacje/sieciowe/kuchnia-ikea-po-13-400.webp 300w, img/realizacje/sieciowe/kuchnia-ikea-po-13-800.webp 600w, img/realizacje/sieciowe/kuchnia-ikea-po-13-1200.webp 900w, img/realizacje/sieciowe/kuchnia-ikea-po-13-1600.webp 1200w" sizes="(max-width: 900px) calc(100vw - 3rem), calc((100vw - 13rem) / 3)">
-              <img src="img/realizacje/sieciowe/kuchnia-ikea-po-13-800.jpg" srcset="img/realizacje/sieciowe/kuchnia-ikea-po-13-400.jpg 300w, img/realizacje/sieciowe/kuchnia-ikea-po-13-800.jpg 600w, img/realizacje/sieciowe/kuchnia-ikea-po-13-1200.jpg 900w, img/realizacje/sieciowe/kuchnia-ikea-po-13-1600.jpg 1200w" sizes="(max-width: 900px) calc(100vw - 3rem), calc((100vw - 13rem) / 3)"
-                   alt="" width="1200" height="1600" loading="lazy" decoding="async">
-            </picture>
-            <span class="work-badge">Montaż mebli sieciowych</span>
-          </span>
-          <span class="work-meta">
-            <span class="work-title">Montaż kuchni IKEA bez gotowego projektu</span>
-            <span class="work-city">Pogrzebień</span>
-            <span class="work-count">zdjęcie 10 z 10</span>
+            <span class="work-title">Łóżko i szafka w pokoju dziecięcym</span>
+            <span class="work-city">Zabrze</span>
+            <span class="work-count">+1 zdjęcie</span>
           </span>
         </button>
       </li>
@@ -3969,6 +3732,11 @@
       </div>
     </div>
   </figure>
+
+  <div class="works-cta">
+    <p>Podoba Ci się podobna realizacja?</p>
+    <a class="btn-primary" href="#kontakt">Wyceń podobny montaż</a>
+  </div>
 
 </section>
 
@@ -4866,8 +4634,9 @@
       'pokoj-dzieciecy': 'pokój dziecięcy', 'przedpokoj': 'przedpokój',
       'lazienka': 'łazienka'
     };
-    const odmReal = n => n === 1 ? 'realizacji' : 'realizacji';
-    const odmZdj  = n => n === 1 ? 'zdjęcie' : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? 'zdjęcia' : 'zdjęć');
+    const odmReal = n => n === 1
+      ? 'realizację'
+      : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? 'realizacje' : 'realizacji');
 
     let kategoria = 'wszystkie';
     let pomieszczenie = null;
@@ -4907,14 +4676,9 @@
         chipWrap.append(chip);
       }
 
-      // Kafelek = jedno zdjecie, wiec liczymy zdjecia ORAZ odrebne realizacje,
-      // ktore je wnosza — inaczej "22 zdjęcia" nie mowi, ilu projektow dotycza.
-      const projekty = new Set(
-        cards.filter(c => !c.hidden).map(c => c.dataset.realizacja)
-      ).size;
       statusEl.textContent = pomieszczenie
-        ? `Pokazuję ${widoczne} ${odmZdj(widoczne)} z ${projekty} ${odmReal(projekty)}: ${NAZWY[pomieszczenie] || pomieszczenie}`
-        : `Pokazuję ${widoczne} ${odmZdj(widoczne)} z ${projekty} ${odmReal(projekty)}`;
+        ? `Pokazuję ${widoczne} ${odmReal(widoczne)}: ${NAZWY[pomieszczenie] || pomieszczenie}`
+        : `Pokazuję ${widoczne} ${odmReal(widoczne)}`;
 
       emptyEl.hidden = widoczne > 0;   // pusta siatka bez slowa wyglada na awarie
     }
