@@ -3024,7 +3024,7 @@
     .works-grid { grid-template-columns: 1fr; }
     .lb-overlay { padding: 1rem 0.75rem; }
     .lb-stage img { max-height: 58vh; }
-    .lb-nav { width: 38px; height: 38px; }
+    .lb-nav { width: 44px; height: 44px; }
     .lb-title { font-size: 1.25rem; }
     .hero-inner,
     .section,
@@ -3061,6 +3061,108 @@
     .reviews-grid { grid-template-columns: 1fr; }
     .reviews-section { padding-left: 1.5rem; padding-right: 1.5rem; }
     .add-review-form { grid-template-columns: 1fr; }
+    .service-link,
+    .blog-card-read,
+    .footer-right a {
+      display: inline-flex;
+      min-width: 44px;
+      min-height: 44px;
+      align-items: center;
+      justify-content: center;
+    }
+    .works-filter {
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .works-chip {
+      min-height: 44px;
+      padding-top: 0;
+      padding-right: 0;
+      padding-bottom: 0;
+    }
+    .works-chip-x,
+    .star-picker button,
+    .blog-modal-close,
+    .lb-close {
+      width: 44px;
+      height: 44px;
+      min-width: 44px;
+      min-height: 44px;
+    }
+    .star-picker button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .call-modal-close {
+      width: 44px !important;
+      height: 44px !important;
+      min-width: 44px;
+      min-height: 44px;
+    }
+  }
+
+  @media (max-width: 360px) {
+    .add-review-wrap { padding-left: 1rem; padding-right: 1rem; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+
+    *,
+    *::before,
+    *::after {
+      scroll-behavior: auto !important;
+      animation-duration: 0.01ms !important;
+      animation-delay: 0ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      transition-delay: 0ms !important;
+    }
+
+    nav,
+    .hero-eyebrow,
+    h1,
+    .hero-sub,
+    .hero-actions,
+    .hero-stats {
+      animation: none !important;
+      opacity: 1;
+    }
+
+    .hero-deco {
+      animation: none !important;
+      transform: rotate(-8deg);
+    }
+
+    .ticker-inner {
+      animation: none !important;
+      transform: none !important;
+    }
+
+    .service-card {
+      opacity: 1;
+      transform: none !important;
+    }
+
+    .review-card { animation: none !important; }
+
+    .nav-cta:hover,
+    .btn-primary:hover,
+    .price-card:hover,
+    .price-card.featured,
+    .price-card.featured:hover,
+    .seo-link-card:hover,
+    .form-btn:hover,
+    .blog-card:hover,
+    .star-picker button:hover svg,
+    .star-picker svg.active,
+    .add-review-btn:hover,
+    .work-card-btn:hover {
+      transform: none !important;
+    }
   }
 </style>
 </head>
@@ -4527,7 +4629,10 @@
 
       // Przeładuj opinie z bazy
       await loadReviews();
-      document.getElementById('reviewsGrid').lastChild.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      document.getElementById('reviewsGrid').lastChild.scrollIntoView({
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+        block: 'nearest'
+      });
 
       setTimeout(() => {
         btn.textContent = 'Dodaj opinię →';
