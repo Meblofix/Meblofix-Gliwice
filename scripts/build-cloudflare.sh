@@ -32,7 +32,7 @@ copy_directory() {
 rm -rf -- "$DIST_DIR"
 mkdir -p -- "$DIST_DIR"
 
-for required_file in index.html 404.html _headers robots.txt sitemap.xml favicon.ico; do
+for required_file in index.html 404.html _headers _redirects robots.txt sitemap.xml favicon.ico; do
   copy_file "$required_file"
 done
 
@@ -47,7 +47,7 @@ for icon_file in "${icon_files[@]}"; do
   cp -p -- "$icon_file" "$DIST_DIR/"
 done
 
-for required_directory in blog realizacje licencja-zdjec fonts; do
+for required_directory in blog licencja-zdjec fonts; do
   copy_directory "$required_directory"
 done
 
