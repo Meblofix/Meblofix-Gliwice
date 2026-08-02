@@ -47,7 +47,7 @@ for icon_file in "${icon_files[@]}"; do
   cp -p -- "$icon_file" "$DIST_DIR/"
 done
 
-for required_directory in blog realizacje fonts; do
+for required_directory in blog realizacje licencja-zdjec fonts; do
   copy_directory "$required_directory"
 done
 
