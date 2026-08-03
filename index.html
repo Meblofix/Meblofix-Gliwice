@@ -4937,7 +4937,11 @@
 
       // podpowiedz przegladarce nastepne zdjecie, ale bez wstrzymywania biezacego
       const nast = realizacja.zdjecia[i + 1];
-      if (nast) { const p = new Image(); p.src = nast.src; }
+      if (nast) {
+        const p = new Image();
+        if (nast.webp) { p.sizes = SIZES; p.srcset = nast.webp; }
+        else p.src = nast.src;
+      }
     }
 
     function otworz(id, wyzw, start) {
