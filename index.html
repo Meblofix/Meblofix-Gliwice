@@ -1068,22 +1068,134 @@
     max-width: 760px;
   }
 
-  .hero-eyebrow {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.6rem;
-    font-size: 0.72rem;
-    letter-spacing: 0.22em;
-    text-transform: uppercase;
-    color: var(--orange);
-    margin-bottom: 1.35rem;
+  .brand-large {
+    margin-bottom: 2.1rem;
+    color: var(--cream);
   }
 
-  .hero-eyebrow::before {
-    content: '';
-    width: 28px; height: 1px;
+  .brand-large-title {
+    display: flex;
+    align-items: baseline;
+    gap: 0.28em;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(2.07rem, 3.6vw, 3.78rem);
+    letter-spacing: 0.055em;
+    line-height: 0.95;
+    white-space: nowrap;
+  }
+
+  .brand-large-word { display: inline-flex; }
+  .brand-large-base .large-letter,
+  .brand-large-city .large-letter { color: var(--cream); }
+  .brand-large-fix .large-letter { color: var(--orange-light); }
+  .brand-large-fix { margin-left: -0.28em; }
+  .brand-large-city { font-size: 0.82em; }
+
+  .large-letter {
+    display: inline-block;
+    color: var(--cream);
+    opacity: 0;
+    transform: translateY(14px);
+    animation-duration: 11s;
+    animation-timing-function: cubic-bezier(.2,1.35,.35,1);
+    animation-iteration-count: infinite;
+  }
+
+  .brand-large-base .large-letter:nth-child(1) { animation-name: large-letter-1; }
+  .brand-large-base .large-letter:nth-child(2) { animation-name: large-letter-2; }
+  .brand-large-base .large-letter:nth-child(3) { animation-name: large-letter-3; }
+  .brand-large-base .large-letter:nth-child(4) { animation-name: large-letter-4; }
+  .brand-large-base .large-letter:nth-child(5) { animation-name: large-letter-5; }
+  .brand-large-fix .large-letter:nth-child(1) { animation-name: large-letter-6; }
+  .brand-large-fix .large-letter:nth-child(2) { animation-name: large-letter-7; }
+  .brand-large-fix .large-letter:nth-child(3) { animation-name: large-letter-8; }
+  .brand-large-city .large-letter:nth-child(1) { animation-name: large-letter-9; }
+  .brand-large-city .large-letter:nth-child(2) { animation-name: large-letter-10; }
+  .brand-large-city .large-letter:nth-child(3) { animation-name: large-letter-11; }
+  .brand-large-city .large-letter:nth-child(4) { animation-name: large-letter-12; }
+  .brand-large-city .large-letter:nth-child(5) { animation-name: large-letter-13; }
+  .brand-large-city .large-letter:nth-child(6) { animation-name: large-letter-14; }
+  .brand-large-city .large-letter:nth-child(7) { animation-name: large-letter-15; }
+
+  @keyframes large-letter-1 { 0% { opacity: 0; transform: translateY(14px); } 0.7%, 89.8% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; } }
+  @keyframes large-letter-2 { 0%, 2% { opacity: 0; transform: translateY(14px); } 2.7%, 89.8% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; } }
+  @keyframes large-letter-3 { 0%, 4% { opacity: 0; transform: translateY(14px); } 4.7%, 89.8% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; } }
+  @keyframes large-letter-4 { 0%, 6% { opacity: 0; transform: translateY(14px); } 6.7%, 89.8% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; } }
+  @keyframes large-letter-5 { 0%, 8% { opacity: 0; transform: translateY(14px); } 8.7%, 89.8% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; } }
+  @keyframes large-letter-6 { 0%, 15.3% { opacity: 0; transform: translateY(14px); } 16%, 89.8% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; } }
+  @keyframes large-letter-7 { 0%, 17.3% { opacity: 0; transform: translateY(14px); } 18%, 89.8% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; } }
+  @keyframes large-letter-8 { 0%, 19.3% { opacity: 0; transform: translateY(14px); } 20%, 89.8% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; } }
+  @keyframes large-letter-9 { 0%, 26.5% { opacity: 0; transform: translateY(14px); } 27.2%, 89.8% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; } }
+  @keyframes large-letter-10 { 0%, 28.5% { opacity: 0; transform: translateY(14px); } 29.2%, 89.8% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; } }
+  @keyframes large-letter-11 { 0%, 30.5% { opacity: 0; transform: translateY(14px); } 31.2%, 89.8% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; } }
+  @keyframes large-letter-12 { 0%, 32.5% { opacity: 0; transform: translateY(14px); } 33.2%, 89.8% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; } }
+  @keyframes large-letter-13 { 0%, 34.5% { opacity: 0; transform: translateY(14px); } 35.2%, 89.8% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; } }
+  @keyframes large-letter-14 { 0%, 36.5% { opacity: 0; transform: translateY(14px); } 37.2%, 89.8% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; } }
+  @keyframes large-letter-15 { 0%, 38.5% { opacity: 0; transform: translateY(14px); } 39.2%, 89.8% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; } }
+
+  .brand-large-meta {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.55rem;
+    min-height: 1.2rem;
+    margin-top: 1.35rem;
+  }
+
+  .brand-large-meta-line {
+    width: 30px;
+    height: 1px;
+    margin-top: 0.42rem;
+    flex: 0 0 auto;
     background: var(--orange);
-    flex-shrink: 0;
+    transform: scaleX(0);
+    transform-origin: left center;
+    opacity: 0;
+    animation: meta-line-cycle 11s ease-out infinite;
+    animation-iteration-count: infinite;
+  }
+
+  .brand-large-meta-copy { display: flex; flex-direction: column; gap: 0.4rem; }
+  .brand-large-meta-text,
+  .brand-large-meta-subtext {
+    display: block;
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  .brand-large-meta-text {
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.68rem;
+    font-weight: 400;
+    letter-spacing: 0.055em;
+    line-height: 1.25;
+    animation: meta-text-cycle 11s ease-out infinite;
+    animation-iteration-count: infinite;
+  }
+  .brand-large-meta-subtext {
+    color: var(--mid);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.58rem;
+    font-weight: 400;
+    letter-spacing: 0.045em;
+    line-height: 1.2;
+    animation: meta-subtext-cycle 11s ease-out infinite;
+    animation-iteration-count: infinite;
+  }
+
+  @keyframes meta-line-cycle {
+    0%, 39.3% { opacity: 0; transform: scaleX(0); }
+    41%, 89.8% { opacity: 1; transform: scaleX(1); }
+    100% { opacity: 0; transform: scaleX(1); }
+  }
+  @keyframes meta-text-cycle {
+    0%, 41% { opacity: 0; transform: translateY(4px); }
+    41.8%, 89.8% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(0); }
+  }
+  @keyframes meta-subtext-cycle {
+    0%, 43.6% { opacity: 0; transform: translateY(4px); }
+    44.4%, 89.8% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(0); }
   }
 
   .hero h1 {
@@ -1190,64 +1302,78 @@
     text-align: center;
   }
 
-  .hero-media {
+  .hero-visual {
     min-width: 0;
-    margin: 0;
-    overflow: hidden;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    background: var(--card);
-    box-shadow: 0 24px 64px rgba(0,0,0,0.4), 0 0 0 1px rgba(232,68,10,0.04);
+    min-height: 560px;
+    display: grid;
+    place-items: center;
     position: relative;
-    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
   }
 
-  .hero-media::before {
+  .hero-visual::before {
     content: '';
     position: absolute;
-    top: -1px;
-    right: -1px;
-    z-index: 1;
-    width: 72px;
-    height: 72px;
-    border-top: 2px solid var(--orange);
-    border-right: 2px solid var(--orange);
+    width: min(35vw, 480px);
+    aspect-ratio: 1;
+    border: 1px solid rgba(232,68,10,.12);
+    border-radius: 50%;
+    box-shadow: 0 0 80px rgba(232,68,10,.12), inset 0 0 80px rgba(232,68,10,.045);
     pointer-events: none;
   }
 
-  .hero-media picture {
-    display: block;
-    aspect-ratio: 4 / 3;
-    overflow: hidden;
+  #cabinet-svg {
+    width: min(100%, 620px);
+    height: auto;
+    overflow: visible;
+    position: relative;
+    z-index: 1;
   }
 
-  .hero-media img {
-    display: block;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: center;
-  }
+  #cabinet-svg .assembly-body,
+  #cabinet-svg .assembly-shelf,
+  #cabinet-svg .assembly-front-left,
+  #cabinet-svg .assembly-front-right,
+  #cabinet-svg .assembly-handle { opacity: 0; }
+  #cabinet-svg.is-running .assembly-body { animation: body-cycle 7s cubic-bezier(.2,.8,.2,1) infinite; animation-iteration-count: infinite; }
+  #cabinet-svg.is-running .assembly-shelf { animation: shelf-cycle 7s cubic-bezier(.2,.8,.2,1) infinite; animation-iteration-count: infinite; }
+  #cabinet-svg.is-running .assembly-front-left { animation: front-left-cycle 7s cubic-bezier(.2,.8,.2,1) infinite; animation-iteration-count: infinite; }
+  #cabinet-svg.is-running .assembly-front-right { animation: front-right-cycle 7s cubic-bezier(.2,.8,.2,1) infinite; animation-iteration-count: infinite; }
+  #cabinet-svg.is-running .assembly-handle { animation: handle-cycle 7s cubic-bezier(.2,.8,.2,1) infinite; animation-iteration-count: infinite; }
 
-  .hero-media figcaption {
-    display: flex;
-    align-items: center;
-    min-height: 48px;
-    padding: 0.75rem 1rem;
-    border-top: 1px solid var(--border);
-    color: var(--mid);
-    font-size: 0.72rem;
-    font-weight: 500;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-  }
+  .assembly-line { fill: none; stroke: #706b65; stroke-width: 2; vector-effect: non-scaling-stroke; }
+  .assembly-accent { fill: none; stroke: var(--orange-light); stroke-width: 3; vector-effect: non-scaling-stroke; }
+  .assembly-fill { fill: #202020; stroke: #7a746d; stroke-width: 2; vector-effect: non-scaling-stroke; }
+  .assembly-dark { fill: #151515; stroke: #59544f; stroke-width: 2; vector-effect: non-scaling-stroke; }
 
-  @media (min-width: 901px) and (hover: hover) {
-    .hero-media:hover {
-      transform: translateY(-3px);
-      border-color: rgba(232,68,10,0.2);
-      box-shadow: 0 30px 76px rgba(0,0,0,0.46), 0 0 0 1px rgba(232,68,10,0.08);
-    }
+  @keyframes body-cycle {
+    0% { opacity: 0; transform: translateY(24px) scale(.96); }
+    12% { opacity: 1; transform: translateY(0) scale(1); }
+    86% { opacity: 1; transform: translateY(0) scale(1); }
+    100% { opacity: 0; transform: translateY(0) scale(1); }
+  }
+  @keyframes shelf-cycle {
+    0%, 12% { opacity: 0; transform: translateX(-30px); }
+    26% { opacity: 1; transform: translateX(0); }
+    86% { opacity: 1; transform: translateX(0); }
+    100% { opacity: 0; transform: translateX(0); }
+  }
+  @keyframes front-left-cycle {
+    0%, 25% { opacity: 0; transform: translateX(-68px); }
+    38% { opacity: 1; transform: translateX(0); }
+    86% { opacity: 1; transform: translateX(0); }
+    100% { opacity: 0; transform: translateX(0); }
+  }
+  @keyframes front-right-cycle {
+    0%, 25% { opacity: 0; transform: translateX(68px); }
+    38% { opacity: 1; transform: translateX(0); }
+    86% { opacity: 1; transform: translateX(0); }
+    100% { opacity: 0; transform: translateX(0); }
+  }
+  @keyframes handle-cycle {
+    0%, 36% { opacity: 0; transform: scale(.6); }
+    43% { opacity: 1; transform: scale(1); }
+    86% { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(1); }
   }
 
   /* ─── TICKER ─── */
@@ -3207,10 +3333,17 @@
       justify-content: center;
     }
     .hero-proof { margin-top: 0.5rem; }
-    .hero-media {
+    .hero-visual {
       width: 100%;
       max-width: 720px;
+      display: none;
     }
+    .brand-large-title { font-size: clamp(1.49rem, 6.3vw, 2.43rem); }
+    .large-letter { opacity: 1; transform: none; animation: none; }
+    .brand-large-meta-line,
+    .brand-large-meta-text,
+    .brand-large-meta-subtext { opacity: 1; transform: none; animation: none; }
+    .brand-large-meta-line { transform: scaleX(1); }
     .services-grid { grid-template-columns: 1fr; }
     .pricing-grid { grid-template-columns: 1fr; }
     .about-section, .contact-section { grid-template-columns: 1fr; gap: 3rem; }
@@ -3302,11 +3435,6 @@
 
   @media (max-width: 360px) {
     .hero-content-row { padding-top: 1.5rem; }
-    .hero-eyebrow {
-      margin-bottom: 1rem;
-      font-size: 0.68rem;
-      letter-spacing: 0.16em;
-    }
     .hero-actions a { width: 100%; }
     .hero-proof {
       gap: 0.35rem;
@@ -3335,14 +3463,27 @@
     }
 
     nav,
-    .hero-eyebrow,
     h1,
     .hero-sub,
     .hero-actions,
-    .hero-proof,
-    .hero-media {
+    .hero-proof {
       animation: none !important;
       opacity: 1;
+    }
+
+    .large-letter { opacity: 1; transform: none; animation: none !important; }
+    .brand-large-meta-line,
+    .brand-large-meta-text,
+    .brand-large-meta-subtext { opacity: 1; transform: none; animation: none !important; }
+    .brand-large-meta-line { transform: scaleX(1); }
+    #cabinet-svg .assembly-body,
+    #cabinet-svg .assembly-shelf,
+    #cabinet-svg .assembly-front-left,
+    #cabinet-svg .assembly-front-right,
+    #cabinet-svg .assembly-handle {
+      opacity: 1;
+      transform: none;
+      animation: none !important;
     }
 
     .hero-deco {
@@ -3364,7 +3505,6 @@
 
     .nav-cta:hover,
     .btn-primary:hover,
-    .hero-media:hover,
     .price-card:hover,
     .price-card.featured,
     .price-card.featured:hover,
@@ -3480,7 +3620,26 @@
 
   <div class="hero-content-row">
     <div class="hero-inner">
-      <div class="hero-eyebrow">Montaż mebli · Gliwice i Śląsk</div>
+      <div class="brand-large" aria-label="MEBLOFIX GLIWICE">
+        <div class="brand-large-title" aria-hidden="true">
+          <span class="brand-large-word brand-large-base">
+            <span class="large-letter">M</span><span class="large-letter">E</span><span class="large-letter">B</span><span class="large-letter">L</span><span class="large-letter">O</span>
+          </span>
+          <span class="brand-large-word brand-large-fix">
+            <span class="large-letter">F</span><span class="large-letter">I</span><span class="large-letter">X</span>
+          </span>
+          <span class="brand-large-word brand-large-city">
+            <span class="large-letter">G</span><span class="large-letter">L</span><span class="large-letter">I</span><span class="large-letter">W</span><span class="large-letter">I</span><span class="large-letter">C</span><span class="large-letter">E</span>
+          </span>
+        </div>
+        <div class="brand-large-meta" aria-label="Montaż mebli • Zabudowy na wymiar — Szafy • Biurka • Inne meble">
+          <span class="brand-large-meta-line" aria-hidden="true"></span>
+          <span class="brand-large-meta-copy">
+            <span class="brand-large-meta-text">Montaż mebli • Zabudowy na wymiar</span>
+            <span class="brand-large-meta-subtext">Szafy • Biurka • Inne meble</span>
+          </span>
+        </div>
+      </div>
       <h1>
         Montaż mebli w Gliwicach.
         <em>Solidnie, bez bałaganu.</em>
@@ -3502,13 +3661,42 @@
       </ul>
     </div>
 
-    <figure class="hero-media">
-      <picture>
-        <source type="image/webp" srcset="img/realizacje/sieciowe/kuchnia-ikea-po-8-400.webp 400w, img/realizacje/sieciowe/kuchnia-ikea-po-8-800.webp 800w, img/realizacje/sieciowe/kuchnia-ikea-po-8-1200.webp 1200w, img/realizacje/sieciowe/kuchnia-ikea-po-8-1600.webp 1600w" sizes="(max-width: 900px) calc(100vw - 3rem), 42vw">
-        <img src="img/realizacje/sieciowe/kuchnia-ikea-po-8-800.jpg" srcset="img/realizacje/sieciowe/kuchnia-ikea-po-8-400.jpg 400w, img/realizacje/sieciowe/kuchnia-ikea-po-8-800.jpg 800w, img/realizacje/sieciowe/kuchnia-ikea-po-8-1200.jpg 1200w, img/realizacje/sieciowe/kuchnia-ikea-po-8-1600.jpg 1600w" sizes="(max-width: 900px) calc(100vw - 3rem), 42vw" alt="Biała kuchnia IKEA z drewnianym blatem po montażu — realizacja Meblofix" width="1600" height="1200" fetchpriority="high">
-      </picture>
-      <figcaption>Realizacja Meblofix · kuchnia IKEA</figcaption>
-    </figure>
+    <div class="hero-visual" aria-label="Animacja składania zabudowy meblowej">
+      <svg id="cabinet-svg" class="is-running" viewBox="0 0 640 640" aria-hidden="true" focusable="false">
+        <g class="assembly-body">
+          <path class="assembly-line" d="M126 522h388M154 118v404M486 118v404"/>
+          <path class="assembly-fill" d="M154 118h332v28H154zM154 490h332v32H154z"/>
+          <path class="assembly-dark" d="M170 146h300v344H170z"/>
+          <path class="assembly-accent" d="M154 118h332M154 522h332" opacity=".75"/>
+          <path class="assembly-line" d="M170 146h300M170 490h300" opacity=".65"/>
+        </g>
+        <g class="assembly-shelf">
+          <path class="assembly-fill" d="M171 220h298v14H171z"/>
+          <path class="assembly-accent" d="M184 220h272" opacity=".42"/>
+        </g>
+        <g class="assembly-shelf">
+          <path class="assembly-fill" d="M171 306h298v14H171z"/>
+          <path class="assembly-accent" d="M184 306h272" opacity=".42"/>
+        </g>
+        <g class="assembly-shelf">
+          <path class="assembly-fill" d="M171 392h298v14H171z"/>
+          <path class="assembly-accent" d="M184 392h272" opacity=".42"/>
+        </g>
+        <g class="assembly-front-left">
+          <path class="assembly-fill" d="M170 146h146v344H170z"/>
+          <path class="assembly-line" d="M188 164h110v308H188z" opacity=".45"/>
+        </g>
+        <g class="assembly-front-right">
+          <path class="assembly-fill" d="M318 146h152v344H318z"/>
+          <path class="assembly-line" d="M336 164h116v308H336z" opacity=".45"/>
+        </g>
+        <g class="assembly-handle">
+          <path class="assembly-accent" d="M303 304v47M337 304v47"/>
+          <circle cx="303" cy="327" r="4" fill="var(--orange-light)"/>
+          <circle cx="337" cy="327" r="4" fill="var(--orange-light)"/>
+        </g>
+      </svg>
+    </div>
   </div>
 </section>
 
