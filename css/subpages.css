@@ -1,0 +1,105 @@
+/* Wspólna baza podstron — komponenty typowe pozostają w ich lokalnych arkuszach. */
+:root {
+  --black: #0d0d0d;
+  --card: #181818;
+  --orange: #E8440A;
+  --cream: #F2EDE4;
+  --gray: #888;
+  --mid: #b0a99e;
+  --border: rgba(255,255,255,.08);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--black);
+  color: var(--cream);
+  font-family: 'DM Sans', sans-serif;
+  line-height: 1.7;
+}
+
+a {
+  color: inherit;
+}
+
+.wrap {
+  margin: 0 auto;
+}
+
+h1 {
+  font-family: 'Bebas Neue', sans-serif;
+  line-height: .95;
+  letter-spacing: .03em;
+}
+
+.lead {
+  color: var(--mid);
+  font-size: 1.05rem;
+  margin-top: 1.4rem;
+}
+
+.top {
+  padding: 1.2rem 5rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+}
+
+.logo {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.8rem;
+  letter-spacing: .04em;
+  text-decoration: none;
+}
+
+.logo span,
+.accent {
+  color: var(--orange);
+}
+
+.nav {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.nav a {
+  text-decoration: none;
+  color: var(--mid);
+}
+
+.label {
+  font-size: .72rem;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--orange);
+  margin-bottom: .8rem;
+}
+
+footer {
+  border-top: 1px solid var(--border);
+  padding: 2rem 5rem;
+  color: var(--gray);
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 800px) {
+  .top,
+  footer {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+
+  .top {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
