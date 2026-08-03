@@ -102,4 +102,16 @@ footer {
     align-items: flex-start;
     flex-direction: column;
   }
+
+  .nav a,
+  footer > a,
+  .back a,
+  .link-panel a,
+  .links a,
+  .cta a,
+  a.cta {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
 }
