@@ -4923,14 +4923,14 @@
     function pokaz(i) {
       const z = realizacja.zdjecia[i];
       idx = i;
+      img.width     = z.w;
+      img.height    = z.h;
       source.srcset = z.webp;
       source.sizes  = SIZES;
       img.srcset    = z.jpg;
       img.sizes     = SIZES;
       img.src       = z.src;          // ustawiane dopiero teraz — stad leniwe ladowanie
       img.alt       = z.alt;
-      img.width     = z.w;
-      img.height    = z.h;
       elLicz.textContent = `Zdjęcie ${i + 1} z ${realizacja.zdjecia.length}`;
       btnPrev.disabled = i === 0;
       btnNext.disabled = i === realizacja.zdjecia.length - 1;
