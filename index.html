@@ -1088,7 +1088,7 @@
   .brand-large-base .large-letter,
   .brand-large-city .large-letter { color: var(--cream); }
   .brand-large-fix .large-letter { color: var(--orange-light); }
-  .brand-large-fix { margin-left: -0.28em; }
+  .brand-large-fix { margin-left: 0; }
   .brand-large-city { font-size: 0.82em; }
 
   .large-letter {
@@ -3334,16 +3334,13 @@
     }
     .hero-proof { margin-top: 0.5rem; }
     .hero-visual {
-      width: 100%;
-      max-width: 720px;
       display: none;
     }
-    .brand-large-title { font-size: clamp(1.49rem, 6.3vw, 2.43rem); }
-    .large-letter { opacity: 1; transform: none; animation: none; }
-    .brand-large-meta-line,
-    .brand-large-meta-text,
-    .brand-large-meta-subtext { opacity: 1; transform: none; animation: none; }
-    .brand-large-meta-line { transform: scaleX(1); }
+    .brand-large-title {
+      font-size: clamp(1.15rem, 6.25vw, 2.43rem);
+      letter-spacing: 0.04em;
+      gap: 0.2em;
+    }
     .services-grid { grid-template-columns: 1fr; }
     .pricing-grid { grid-template-columns: 1fr; }
     .about-section, .contact-section { grid-template-columns: 1fr; gap: 3rem; }
