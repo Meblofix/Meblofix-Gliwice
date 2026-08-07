@@ -15,16 +15,70 @@
   },
   "items": [
     {
-      "id": "montaz-pojedynczego-mebla",
-      "category": "montaz-mebli",
-      "name": "Montaż pojedynczego mebla",
+      "id": "minimalna-wartosc-zlecenia",
+      "category": "zasady-cenowe",
+      "name": "Minimalna wartość zlecenia",
+      "pricingType": "fixed",
+      "priceMin": 150,
+      "priceMax": 150,
+      "unit": "zlecenie",
+      "public": false,
+      "calculatorEnabled": true,
+      "notes": "Minimalna wartość całego zlecenia wynosi 150 zł.",
+      "matching": {
+        "productTypes": [],
+        "storeDomains": [],
+        "productUrlPatterns": []
+      },
+      "variants": []
+    },
+    {
+      "id": "stawka-godzinowa-jeden-monter",
+      "category": "zasady-cenowe",
+      "name": "Stawka godzinowa — jeden monter",
+      "pricingType": "hourly",
+      "priceMin": 100,
+      "priceMax": 100,
+      "unit": "godzina",
+      "public": false,
+      "calculatorEnabled": true,
+      "notes": "Stawka za godzinę pracy jednego montera wynosi 100 zł.",
+      "matching": {
+        "productTypes": [],
+        "storeDomains": [],
+        "productUrlPatterns": []
+      },
+      "variants": []
+    },
+    {
+      "id": "stawka-godzinowa-dwoch-monterow",
+      "category": "zasady-cenowe",
+      "name": "Stawka godzinowa — dwóch monterów",
+      "pricingType": "hourly",
+      "priceMin": 180,
+      "priceMax": 180,
+      "unit": "godzina",
+      "public": false,
+      "calculatorEnabled": true,
+      "notes": "Łączna stawka za godzinę pracy dwóch monterów wynosi 180 zł.",
+      "matching": {
+        "productTypes": [],
+        "storeDomains": [],
+        "productUrlPatterns": []
+      },
+      "variants": []
+    },
+    {
+      "id": "szafka-nocna-lub-polka",
+      "category": "szafki-i-polki",
+      "name": "Szafka nocna / półka",
       "pricingType": "from",
-      "priceMin": 80,
+      "priceMin": 70,
       "priceMax": null,
       "unit": "sztuka",
-      "public": true,
+      "public": false,
       "calculatorEnabled": true,
-      "notes": "Publicznie potwierdzona cena minimalna: od 80 zł za jeden mebel.",
+      "notes": "Pozycja wewnętrzna; nie jest jeszcze publikowana na stronie.",
       "matching": {
         "productTypes": [],
         "storeDomains": [],
@@ -33,16 +87,16 @@
       "variants": []
     },
     {
-      "id": "stawka-godzinowa",
-      "category": "montaz-mebli",
-      "name": "Stawka godzinowa",
-      "pricingType": "hourly",
-      "priceMin": 60,
-      "priceMax": 60,
-      "unit": "godzina",
-      "public": true,
+      "id": "regal-maly",
+      "category": "regaly",
+      "name": "Regał mały",
+      "pricingType": "range",
+      "priceMin": 100,
+      "priceMax": 140,
+      "unit": "sztuka",
+      "public": false,
       "calculatorEnabled": true,
-      "notes": "Publicznie potwierdzona stawka godzinowa: 60 zł/h.",
+      "notes": "Pozycja wewnętrzna; nie jest jeszcze publikowana na stronie.",
       "matching": {
         "productTypes": [],
         "storeDomains": [],
@@ -51,16 +105,250 @@
       "variants": []
     },
     {
-      "id": "montaz-kuchni",
-      "category": "montaz-kuchni",
-      "name": "Montaż kuchni",
+      "id": "regal-duzy",
+      "category": "regaly",
+      "name": "Regał duży",
+      "pricingType": "range",
+      "priceMin": 140,
+      "priceMax": 220,
+      "unit": "sztuka",
+      "public": false,
+      "calculatorEnabled": true,
+      "notes": "Pozycja wewnętrzna; nie jest jeszcze publikowana na stronie.",
+      "matching": {
+        "productTypes": [],
+        "storeDomains": [],
+        "productUrlPatterns": []
+      },
+      "variants": []
+    },
+    {
+      "id": "komoda-mala",
+      "category": "komody",
+      "name": "Komoda mała",
+      "pricingType": "range",
+      "priceMin": 120,
+      "priceMax": 160,
+      "unit": "sztuka",
+      "public": false,
+      "calculatorEnabled": true,
+      "notes": "Pozycja wewnętrzna; nie jest jeszcze publikowana na stronie.",
+      "matching": {
+        "productTypes": [],
+        "storeDomains": [],
+        "productUrlPatterns": []
+      },
+      "variants": []
+    },
+    {
+      "id": "komoda-duza",
+      "category": "komody",
+      "name": "Komoda duża",
+      "pricingType": "range",
+      "priceMin": 180,
+      "priceMax": 280,
+      "unit": "sztuka",
+      "public": false,
+      "calculatorEnabled": true,
+      "notes": "Pozycja wewnętrzna; nie jest jeszcze publikowana na stronie.",
+      "matching": {
+        "productTypes": [],
+        "storeDomains": [],
+        "productUrlPatterns": []
+      },
+      "variants": []
+    },
+    {
+      "id": "stol",
+      "category": "stoly",
+      "name": "Stół",
+      "pricingType": "range",
+      "priceMin": 120,
+      "priceMax": 180,
+      "unit": "sztuka",
+      "public": false,
+      "calculatorEnabled": true,
+      "notes": "Pozycja wewnętrzna; nie jest jeszcze publikowana na stronie.",
+      "matching": {
+        "productTypes": [],
+        "storeDomains": [],
+        "productUrlPatterns": []
+      },
+      "variants": []
+    },
+    {
+      "id": "biurko-lub-toaletka",
+      "category": "biurka-i-toaletki",
+      "name": "Biurko / toaletka",
+      "pricingType": "range",
+      "priceMin": 130,
+      "priceMax": 200,
+      "unit": "sztuka",
+      "public": false,
+      "calculatorEnabled": true,
+      "notes": "Pozycja wewnętrzna; nie jest jeszcze publikowana na stronie.",
+      "matching": {
+        "productTypes": [],
+        "storeDomains": [],
+        "productUrlPatterns": []
+      },
+      "variants": []
+    },
+    {
+      "id": "lozko-standard",
+      "category": "lozka",
+      "name": "Łóżko standard",
+      "pricingType": "range",
+      "priceMin": 170,
+      "priceMax": 240,
+      "unit": "sztuka",
+      "public": false,
+      "calculatorEnabled": true,
+      "notes": "Pozycja wewnętrzna; nie jest jeszcze publikowana na stronie.",
+      "matching": {
+        "productTypes": [],
+        "storeDomains": [],
+        "productUrlPatterns": []
+      },
+      "variants": []
+    },
+    {
+      "id": "lozko-z-pojemnikiem",
+      "category": "lozka",
+      "name": "Łóżko z pojemnikiem",
+      "pricingType": "range",
+      "priceMin": 230,
+      "priceMax": 350,
+      "unit": "sztuka",
+      "public": false,
+      "calculatorEnabled": true,
+      "notes": "Pozycja wewnętrzna; nie jest jeszcze publikowana na stronie.",
+      "matching": {
+        "productTypes": [],
+        "storeDomains": [],
+        "productUrlPatterns": []
+      },
+      "variants": []
+    },
+    {
+      "id": "lozko-pietrowe",
+      "category": "lozka",
+      "name": "Łóżko piętrowe",
       "pricingType": "from",
-      "priceMin": 60,
+      "priceMin": 300,
       "priceMax": null,
-      "unit": "godzina",
-      "public": true,
+      "unit": "sztuka",
+      "public": false,
       "calculatorEnabled": true,
-      "notes": "Publicznie potwierdzona cena minimalna montażu kuchni: od 60 zł/h.",
+      "notes": "Pozycja wewnętrzna; nie jest jeszcze publikowana na stronie.",
+      "matching": {
+        "productTypes": [],
+        "storeDomains": [],
+        "productUrlPatterns": []
+      },
+      "variants": []
+    },
+    {
+      "id": "szafa-jednodrzwiowa",
+      "category": "szafy",
+      "name": "Szafa 1-drzwiowa",
+      "pricingType": "range",
+      "priceMin": 140,
+      "priceMax": 190,
+      "unit": "sztuka",
+      "public": false,
+      "calculatorEnabled": true,
+      "notes": "Pozycja wewnętrzna; nie jest jeszcze publikowana na stronie.",
+      "matching": {
+        "productTypes": [],
+        "storeDomains": [],
+        "productUrlPatterns": []
+      },
+      "variants": []
+    },
+    {
+      "id": "szafa-dwudrzwiowa",
+      "category": "szafy",
+      "name": "Szafa 2-drzwiowa",
+      "pricingType": "range",
+      "priceMin": 190,
+      "priceMax": 280,
+      "unit": "sztuka",
+      "public": false,
+      "calculatorEnabled": true,
+      "notes": "Pozycja wewnętrzna; nie jest jeszcze publikowana na stronie.",
+      "matching": {
+        "productTypes": [],
+        "storeDomains": [],
+        "productUrlPatterns": []
+      },
+      "variants": []
+    },
+    {
+      "id": "szafa-trzydrzwiowa",
+      "category": "szafy",
+      "name": "Szafa 3-drzwiowa",
+      "pricingType": "range",
+      "priceMin": 280,
+      "priceMax": 420,
+      "unit": "sztuka",
+      "public": false,
+      "calculatorEnabled": true,
+      "notes": "Pozycja wewnętrzna; nie jest jeszcze publikowana na stronie.",
+      "matching": {
+        "productTypes": [],
+        "storeDomains": [],
+        "productUrlPatterns": []
+      },
+      "variants": []
+    },
+    {
+      "id": "szafa-narozna",
+      "category": "szafy",
+      "name": "Szafa narożna",
+      "pricingType": "from",
+      "priceMin": 350,
+      "priceMax": null,
+      "unit": "sztuka",
+      "public": false,
+      "calculatorEnabled": true,
+      "notes": "Pozycja wewnętrzna; nie jest jeszcze publikowana na stronie.",
+      "matching": {
+        "productTypes": [],
+        "storeDomains": [],
+        "productUrlPatterns": []
+      },
+      "variants": []
+    },
+    {
+      "id": "szafa-przesuwna",
+      "category": "szafy",
+      "name": "Szafa przesuwna",
+      "pricingType": "range",
+      "priceMin": 350,
+      "priceMax": 600,
+      "unit": "sztuka",
+      "public": false,
+      "calculatorEnabled": true,
+      "notes": "Pozycja wewnętrzna; nie jest jeszcze publikowana na stronie.",
+      "matching": {
+        "productTypes": [],
+        "storeDomains": [],
+        "productUrlPatterns": []
+      },
+      "variants": []
+    },
+    {
+      "id": "szafa-z-lustrem",
+      "category": "szafy",
+      "name": "Szafa z lustrem",
+      "pricingType": "from",
+      "priceMin": 400,
+      "priceMax": null,
+      "unit": "sztuka",
+      "public": false,
+      "calculatorEnabled": true,
+      "notes": "Pozycja wewnętrzna; nie jest jeszcze publikowana na stronie.",
       "matching": {
         "productTypes": [],
         "storeDomains": [],
@@ -78,7 +366,7 @@
       "unit": "wycena",
       "public": true,
       "calculatorEnabled": false,
-      "notes": "Wycena indywidualna jest bezpłatna.",
+      "notes": "Wycena na podstawie zdjęć, instrukcji lub linku jest bezpłatna.",
       "matching": {
         "productTypes": [],
         "storeDomains": [],
