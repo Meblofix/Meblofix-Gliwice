@@ -65,6 +65,14 @@ def image_path(item: dict, base: str, size: int, extension: str) -> str:
     return f"img/realizacje/{category_dir(item)}/{base}-{size}.{extension}"
 
 
+def gallery_id(item: dict) -> str:
+    return SITE_URL + "#realizacja-" + item["id"]
+
+
+def image_id(item: dict, photo: dict) -> str:
+    return SITE_URL + "#zdjecie-realizacji-" + photo["plik"]
+
+
 def image_variants(item: dict, photo: dict, extension: str) -> list[tuple[str, int, int]]:
     variants: list[tuple[str, int, int]] = []
     used_widths: set[int] = set()
@@ -161,7 +169,7 @@ def render_cards(data: dict) -> str:
         count_label = f"{len(photos)} zdjęć" if len(photos) != 1 else "1 zdjęcie"
         lines.extend(
             [
-                f'    <li class="work-card{featured}" data-kat="{escape(item["kategoria"])}" data-pomieszczenie="{escape(item["pomieszczenie"])}" data-realizacja="{escape(item["id"])}">',
+                f'    <li class="work-card{featured}" id="realizacja-{escape(item["id"])}" data-kat="{escape(item["kategoria"])}" data-pomieszczenie="{escape(item["pomieszczenie"])}" data-realizacja="{escape(item["id"])}">',
                 f'      <a class="work-card-btn" href="{escape(image_path(item, cover["plik"], 1200, "jpg"))}" data-id="{escape(item["id"])}" data-idx="{cover_index}" aria-label="{escape(item["tytul"])} — {escape(item["miasto"])} — otwórz zdjęcie okładkowe; {count_label} w galerii">',
                 '        <span class="work-thumb">',
                 f'          {picture(item, cover, cover=True, featured=position == 0)}',
@@ -176,9 +184,15 @@ def render_cards(data: dict) -> str:
                 '      <details class="work-details">',
                 f'        <summary>Opis i wszystkie zdjęcia ({len(photos)})</summary>',
                 f'        <p class="work-description">{escape(item["opis"])}</p>',
-                '        <ul class="work-gallery" aria-label="Zdjęcia realizacji">',
             ]
         )
+        related_page = item.get("powiazanaStrona")
+        if related_page:
+            lines.append(
+                '        <p class="work-related">Powiązana usługa: '
+                f'<a class="work-related-link" href="{escape(related_page["url"])}">{escape(related_page["etykieta"])}</a></p>'
+            )
+        lines.append('        <ul class="work-gallery" aria-label="Zdjęcia realizacji">')
         for index, photo in enumerate(photos):
             lines.extend(
                 [
@@ -221,7 +235,21 @@ def render_runtime_data(data: dict) -> str:
 
 def render_image_objects(data: dict) -> str:
     graph = []
-    for item in data["realizacje"]:
+    for item in ordered_realizations(data):
+        graph.append(
+            {
+                "@type": "ImageGallery",
+                "@id": gallery_id(item),
+                "url": gallery_id(item),
+                "name": f'{item["tytul"]} — {item["miasto"]}',
+                "description": item["opis"],
+                "inLanguage": "pl",
+                "isPartOf": SITE_URL,
+                "hasPart": [
+                    {"@id": image_id(item, photo)} for photo in item["zdjecia"]
+                ],
+            }
+        )
         for photo in item["zdjecia"]:
             content_path = image_path(item, photo["plik"], 800, "jpg")
             thumbnail_path = image_path(item, photo["plik"], 400, "jpg")
@@ -229,12 +257,14 @@ def render_image_objects(data: dict) -> str:
             graph.append(
                 {
                     "@type": "ImageObject",
+                    "@id": image_id(item, photo),
                     "contentUrl": SITE_URL + content_path,
                     "thumbnailUrl": SITE_URL + thumbnail_path,
                     "width": width,
                     "height": height,
                     "caption": photo["alt"],
                     "name": photo["alt"],
+                    "isPartOf": {"@id": gallery_id(item)},
                     "contentLocation": {"@type": "Place", "name": item["miasto"]},
                     "datePublished": item["data"],
                     "creator": {"@type": "Organization", "name": "MebloFix Gliwice"},

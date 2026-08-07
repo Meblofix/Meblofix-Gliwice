@@ -24,11 +24,11 @@
       "okladka": "zabudowa-wneki-po-2",
       "przed_po": { "przed": "zabudowa-wneki-przed", "po": "zabudowa-wneki-po" },
       "zdjecia": [
-        { "plik": "zabudowa-wneki-przed", "alt": "Pusta wnęka przed zabudową — Jastrzębie-Zdrój" },
-        { "plik": "zabudowa-wneki-po", "alt": "Gotowa zabudowa wnęki na wymiar — Jastrzębie-Zdrój" },
-        { "plik": "zabudowa-wneki-po-2", "alt": "Zabudowa wnęki na wymiar, ujęcie 2 — Jastrzębie-Zdrój" },
-        { "plik": "zabudowa-wneki-po-3", "alt": "Zabudowa wnęki na wymiar, ujęcie 3 — Jastrzębie-Zdrój" },
-        { "plik": "zabudowa-wneki-po-4", "alt": "Zabudowa wnęki na wymiar, ujęcie 4 — Jastrzębie-Zdrój" }
+        { "plik": "zabudowa-wneki-przed", "alt": "Wnęka w przedpokoju przed wykonaniem zabudowy — Jastrzębie-Zdrój" },
+        { "plik": "zabudowa-wneki-po", "alt": "Biała zabudowa wnęki z otwartymi dolnymi szufladami — Jastrzębie-Zdrój" },
+        { "plik": "zabudowa-wneki-po-2", "alt": "Gotowa biała zabudowa wnęki w przedpokoju — Jastrzębie-Zdrój" },
+        { "plik": "zabudowa-wneki-po-3", "alt": "Wnętrze wysokiej szafy w zabudowie wnęki — Jastrzębie-Zdrój" },
+        { "plik": "zabudowa-wneki-po-4", "alt": "Dolne szuflady zabudowy wnęki wysunięte na prowadnicach — Jastrzębie-Zdrój" }
       ]
     },
     {
@@ -43,9 +43,9 @@
       "opis": "Kuchnia kupiona przez internet, montaż w mieszkaniu ze starą glazurą. Kafelki wystawały ze ściany o 3 cm, więc szafki górne nie miały jak przylegać — nadłożyłem płytę wiórową i wykonałem dystans na zawieszkach, żeby fronty ustawiły się w jednej linii. Do tego ściana sypała się przy wierceniu, więc standardowe mocowanie nie miało się czego trzymać. Z zewnątrz nie widać po tym śladu — i o to właśnie chodzi.",
       "okladka": "kuchnia-inny-producent-3",
       "zdjecia": [
-        { "plik": "kuchnia-inny-producent", "alt": "Zamontowana kuchnia z szafkami górnymi na dystansie — Kędzierzyn-Koźle" },
-        { "plik": "kuchnia-inny-producent-2", "alt": "Zabudowa kuchenna z frontami w jednej linii mimo nierównej ściany" },
-        { "plik": "kuchnia-inny-producent-3", "alt": "Montaż kuchni w Kędzierzynie-Koźlu, ujęcie 3" }
+        { "plik": "kuchnia-inny-producent", "alt": "Szafki dolne i górne zamontowane przy wystających kafelkach — Kędzierzyn-Koźle" },
+        { "plik": "kuchnia-inny-producent-2", "alt": "Narożna zabudowa kuchenna z frontami w jednej linii — Kędzierzyn-Koźle" },
+        { "plik": "kuchnia-inny-producent-3", "alt": "Gotowa zabudowa kuchenna z półwyspem — Kędzierzyn-Koźle" }
       ]
     },
     {
@@ -59,17 +59,21 @@
       "czas": null,
       "opis": "Montaż bez projektu z planera IKEA — klient miał tylko zdjęcia w telefonie i ogólny pomysł na rozmieszczenie. Rozkład szafek, kolejność montażu i dopasowanie do wymiarów pomieszczenia ustalałem na miejscu. Nie obyło się bez przeróbek: brakowało kilku elementów, a zawiasy w paczce były pomylone. Finalnie wszystko udało się poskładać, a efekt jest dopasowany do pomieszczenia, a nie do planu, który powstał przy biurku.",
       "okladka": "kuchnia-ikea-po-8",
+      "powiazanaStrona": {
+        "url": "montaz-mebli-ikea-gliwice/",
+        "etykieta": "Montaż mebli IKEA w Gliwicach"
+      },
       "zdjecia": [
-        { "plik": "kuchnia-ikea-po-3", "alt": "Zamontowana kuchnia IKEA — Pogrzebień" },
-        { "plik": "kuchnia-ikea-po-4", "alt": "Kuchnia IKEA po montażu, ujęcie 2 — Pogrzebień" },
-        { "plik": "kuchnia-ikea-po-5", "alt": "Kuchnia IKEA po montażu, ujęcie 3 — Pogrzebień" },
-        { "plik": "kuchnia-ikea-po-6", "alt": "Kuchnia IKEA po montażu, ujęcie 4 — Pogrzebień" },
-        { "plik": "kuchnia-ikea-po-7", "alt": "Kuchnia IKEA po montażu, ujęcie 5 — Pogrzebień" },
-        { "plik": "kuchnia-ikea-po-8", "alt": "Kuchnia IKEA po montażu, ujęcie 6 — Pogrzebień" },
-        { "plik": "kuchnia-ikea-po-9", "alt": "Kuchnia IKEA po montażu, ujęcie 7 — Pogrzebień" },
-        { "plik": "kuchnia-ikea-po-11", "alt": "Kuchnia IKEA po montażu, ujęcie 8 — Pogrzebień" },
-        { "plik": "kuchnia-ikea-po-12", "alt": "Kuchnia IKEA po montażu, ujęcie 9 — Pogrzebień" },
-        { "plik": "kuchnia-ikea-po-13", "alt": "Kuchnia IKEA po montażu, ujęcie 10 — Pogrzebień" }
+        { "plik": "kuchnia-ikea-po-3", "alt": "Dolne szafki kuchni IKEA z szufladami pod płytą grzewczą — Pogrzebień" },
+        { "plik": "kuchnia-ikea-po-4", "alt": "Wysoka zabudowa kuchni IKEA z otwartymi szafkami — Pogrzebień" },
+        { "plik": "kuchnia-ikea-po-5", "alt": "Narożna zabudowa kuchni IKEA przy oknie — Pogrzebień" },
+        { "plik": "kuchnia-ikea-po-6", "alt": "Szafki narożne IKEA z wysuniętą szufladą — Pogrzebień" },
+        { "plik": "kuchnia-ikea-po-7", "alt": "Drewniany blat kuchni IKEA przy oknie — Pogrzebień" },
+        { "plik": "kuchnia-ikea-po-8", "alt": "Kuchnia IKEA w układzie narożnym, szerokie ujęcie — Pogrzebień" },
+        { "plik": "kuchnia-ikea-po-9", "alt": "Wyspa i wysoka zabudowa kuchni IKEA — Pogrzebień" },
+        { "plik": "kuchnia-ikea-po-11", "alt": "Gotowa kuchnia IKEA z wyspą, widok od wejścia — Pogrzebień" },
+        { "plik": "kuchnia-ikea-po-12", "alt": "Wysoka zabudowa IKEA z piekarnikiem i szafkami — Pogrzebień" },
+        { "plik": "kuchnia-ikea-po-13", "alt": "Szafki i drewniany blat kuchni IKEA — Pogrzebień" }
       ]
     },
     {
@@ -83,9 +87,13 @@
       "czas": null,
       "opis": "Zabudowa i łóżko wykonane na wymiar w jednym pomieszczeniu, dopasowane do dostępnej przestrzeni.",
       "okladka": "zabudowa-i-lozko",
+      "powiazanaStrona": {
+        "url": "montaz-mebli-gliwice/",
+        "etykieta": "Montaż mebli w Gliwicach"
+      },
       "zdjecia": [
-        { "plik": "zabudowa-i-lozko", "alt": "Zabudowa i łóżko na wymiar — Gliwice" },
-        { "plik": "zabudowa-i-lozko-2", "alt": "Zabudowa i łóżko na wymiar, ujęcie 2 — Gliwice" }
+        { "plik": "zabudowa-i-lozko", "alt": "Łóżko na wymiar z zabudową ścienną — Gliwice" },
+        { "plik": "zabudowa-i-lozko-2", "alt": "Zabudowa ścienna i stelaż łóżka na wymiar — Gliwice" }
       ]
     },
     {
@@ -99,6 +107,10 @@
       "czas": "ok. 3 godziny",
       "opis": "Jedno zlecenie, jeden pokój: łóżko dziecięce i szafka. Około trzech godzin montażu razem z rozpakowaniem i uprzątnięciem kartonów.",
       "okladka": "lozko-dla-dziecka",
+      "powiazanaStrona": {
+        "url": "montaz-mebli-zabrze/",
+        "etykieta": "Montaż mebli w Zabrzu"
+      },
       "zdjecia": [
         { "plik": "lozko-dla-dziecka", "alt": "Zmontowane łóżko dziecięce — Zabrze" },
 
