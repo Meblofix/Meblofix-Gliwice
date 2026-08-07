@@ -1,0 +1,126 @@
+{
+  "schemaVersion": 1,
+  "currency": "PLN",
+  "calculator": {
+    "status": "not-implemented",
+    "plannedCapabilities": [
+      "multipleItems",
+      "quantity",
+      "variants",
+      "storeProductLinks",
+      "priceRangeCalculation",
+      "travelCost",
+      "estimateGeneration"
+    ]
+  },
+  "items": [
+    {
+      "id": "montaz-pojedynczego-mebla",
+      "category": "montaz-mebli",
+      "name": "Montaż pojedynczego mebla",
+      "pricingType": "from",
+      "priceMin": 80,
+      "priceMax": null,
+      "unit": "sztuka",
+      "public": true,
+      "calculatorEnabled": true,
+      "notes": "Publicznie potwierdzona cena minimalna: od 80 zł za jeden mebel.",
+      "matching": {
+        "productTypes": [],
+        "storeDomains": [],
+        "productUrlPatterns": []
+      },
+      "variants": []
+    },
+    {
+      "id": "stawka-godzinowa",
+      "category": "montaz-mebli",
+      "name": "Stawka godzinowa",
+      "pricingType": "hourly",
+      "priceMin": 60,
+      "priceMax": 60,
+      "unit": "godzina",
+      "public": true,
+      "calculatorEnabled": true,
+      "notes": "Publicznie potwierdzona stawka godzinowa: 60 zł/h.",
+      "matching": {
+        "productTypes": [],
+        "storeDomains": [],
+        "productUrlPatterns": []
+      },
+      "variants": []
+    },
+    {
+      "id": "montaz-kuchni",
+      "category": "montaz-kuchni",
+      "name": "Montaż kuchni",
+      "pricingType": "from",
+      "priceMin": 60,
+      "priceMax": null,
+      "unit": "godzina",
+      "public": true,
+      "calculatorEnabled": true,
+      "notes": "Publicznie potwierdzona cena minimalna montażu kuchni: od 60 zł/h.",
+      "matching": {
+        "productTypes": [],
+        "storeDomains": [],
+        "productUrlPatterns": []
+      },
+      "variants": []
+    },
+    {
+      "id": "wycena-indywidualna",
+      "category": "wycena",
+      "name": "Wycena indywidualna",
+      "pricingType": "individual",
+      "priceMin": 0,
+      "priceMax": 0,
+      "unit": "wycena",
+      "public": true,
+      "calculatorEnabled": false,
+      "notes": "Wycena indywidualna jest bezpłatna.",
+      "matching": {
+        "productTypes": [],
+        "storeDomains": [],
+        "productUrlPatterns": []
+      },
+      "variants": []
+    }
+  ],
+  "travel": {
+    "items": [
+      {
+        "id": "dojazd-gliwice",
+        "category": "dojazd",
+        "name": "Dojazd na terenie Gliwic",
+        "pricingType": "fixed",
+        "priceMin": 0,
+        "priceMax": 0,
+        "unit": "dojazd",
+        "public": true,
+        "calculatorEnabled": true,
+        "notes": "Dojazd na terenie Gliwic jest bezpłatny.",
+        "city": "Gliwice",
+        "pricePerKilometer": null,
+        "freeRadiusKm": null,
+        "routeCalculationMethod": null
+      },
+      {
+        "id": "dojazd-poza-gliwicami",
+        "category": "dojazd",
+        "name": "Dojazd poza Gliwicami",
+        "pricingType": "individual",
+        "priceMin": null,
+        "priceMax": null,
+        "unit": "dojazd",
+        "public": true,
+        "calculatorEnabled": false,
+        "notes": "Koszt dojazdu poza Gliwicami ma być w przyszłości obliczany przez kalkulator; zasady nie zostały jeszcze ustalone.",
+        "city": null,
+        "pricePerKilometer": null,
+        "freeRadiusKm": null,
+        "routeCalculationMethod": null
+      }
+    ]
+  }
+}
