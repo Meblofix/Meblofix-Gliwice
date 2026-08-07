@@ -36,6 +36,10 @@ for required_file in index.html 404.html _headers _redirects robots.txt sitemap.
   copy_file "$required_file"
 done
 
+python3 "$PROJECT_DIR/scripts/generate-realizacje.py" \
+  --template "$PROJECT_DIR/index.html" \
+  --output "$DIST_DIR/index.html"
+
 shopt -s nullglob
 
 icon_files=("$PROJECT_DIR"/icon-*.png)
@@ -67,6 +71,8 @@ while IFS= read -r -d '' image_file; do
   mkdir -p -- "$(dirname "$target_path")"
   cp -p -- "$image_file" "$target_path"
 done < <(find "$PROJECT_DIR/img" -type f ! -path "$PROJECT_DIR/img/realizacje/_surowe/*" -print0)
+
+python3 "$PROJECT_DIR/scripts/test-realizacje.py" --html "$DIST_DIR/index.html"
 
 echo "Cloudflare Pages build gotowy: $DIST_DIR"
 echo "Liczba plików: $(find "$DIST_DIR" -type f | wc -l)"

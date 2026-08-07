@@ -3,6 +3,13 @@
     "sieciowe": "Montaż mebli sieciowych",
     "na-wymiar": "Meble na wymiar"
   },
+  "kolejnosc": [
+    "kuchnia-ikea-pogrzebien",
+    "kuchnia-kedzierzyn",
+    "zabudowa-wneki-jastrzebie",
+    "zabudowa-i-lozko-gliwice",
+    "pokoj-dzieciecy-zabrze"
+  ],
   "realizacje": [
     {
       "id": "zabudowa-wneki-jastrzebie",
@@ -14,7 +21,7 @@
       "data": "2026-07",
       "czas": null,
       "opis": "Wnęka zabudowana na wymiar — od pustej przestrzeni do gotowego mebla dopasowanego do wymiarów pomieszczenia. Poniżej zestawienie przed i po — ten sam fragment mieszkania przed rozpoczęciem prac i po zakończeniu.",
-      "okladka": "zabudowa-wneki-po",
+      "okladka": "zabudowa-wneki-po-2",
       "przed_po": { "przed": "zabudowa-wneki-przed", "po": "zabudowa-wneki-po" },
       "zdjecia": [
         { "plik": "zabudowa-wneki-przed", "alt": "Pusta wnęka przed zabudową — Jastrzębie-Zdrój" },
@@ -34,7 +41,7 @@
       "data": "2026-05",
       "czas": "12 godzin",
       "opis": "Kuchnia kupiona przez internet, montaż w mieszkaniu ze starą glazurą. Kafelki wystawały ze ściany o 3 cm, więc szafki górne nie miały jak przylegać — nadłożyłem płytę wiórową i wykonałem dystans na zawieszkach, żeby fronty ustawiły się w jednej linii. Do tego ściana sypała się przy wierceniu, więc standardowe mocowanie nie miało się czego trzymać. Z zewnątrz nie widać po tym śladu — i o to właśnie chodzi.",
-      "okladka": "kuchnia-inny-producent",
+      "okladka": "kuchnia-inny-producent-3",
       "zdjecia": [
         { "plik": "kuchnia-inny-producent", "alt": "Zamontowana kuchnia z szafkami górnymi na dystansie — Kędzierzyn-Koźle" },
         { "plik": "kuchnia-inny-producent-2", "alt": "Zabudowa kuchenna z frontami w jednej linii mimo nierównej ściany" },
@@ -51,7 +58,7 @@
       "data": "2026-01",
       "czas": null,
       "opis": "Montaż bez projektu z planera IKEA — klient miał tylko zdjęcia w telefonie i ogólny pomysł na rozmieszczenie. Rozkład szafek, kolejność montażu i dopasowanie do wymiarów pomieszczenia ustalałem na miejscu. Nie obyło się bez przeróbek: brakowało kilku elementów, a zawiasy w paczce były pomylone. Finalnie wszystko udało się poskładać, a efekt jest dopasowany do pomieszczenia, a nie do planu, który powstał przy biurku.",
-      "okladka": "kuchnia-ikea-po-3",
+      "okladka": "kuchnia-ikea-po-8",
       "zdjecia": [
         { "plik": "kuchnia-ikea-po-3", "alt": "Zamontowana kuchnia IKEA — Pogrzebień" },
         { "plik": "kuchnia-ikea-po-4", "alt": "Kuchnia IKEA po montażu, ujęcie 2 — Pogrzebień" },
