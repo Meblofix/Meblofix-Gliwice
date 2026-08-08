@@ -2330,6 +2330,23 @@
     color: #ffcfbf;
     font-size: 0.85rem;
   }
+  .quote-products { display: grid; gap: .75rem; }
+  .quote-product-row { display: grid; grid-template-columns: minmax(0, 1fr) 7rem auto; gap: .6rem; align-items: end; }
+  .quote-product-row input { min-width: 0; }
+  .quote-product-remove, .quote-link-add, .quote-calculate { min-height: 3rem; border: 1px solid var(--gold); background: transparent; color: var(--cream); border-radius: 4px; padding: .7rem 1rem; cursor: pointer; font: inherit; }
+  .quote-link-add, .quote-calculate { background: var(--gold); color: #17120e; font-weight: 700; }
+  .quote-product-remove { border-color: rgba(255,255,255,.25); }
+  .quote-product-remove:disabled { opacity: .45; cursor: not-allowed; }
+  .quote-products-status { color: var(--gray); font-size: .9rem; }
+  .quote-calculation-button { width: 100%; margin-top: 1rem; }
+  .quote-calculation-button:disabled { opacity: .65; cursor: wait; }
+  .quote-product-list { margin: .75rem 0 0; padding-left: 1.1rem; color: var(--cream); }
+  .quote-product-list li { margin: .35rem 0; }
+  .quote-individual-link { color: var(--gold); }
+  .quote-individual-button { display: inline-flex; align-items: center; justify-content: center; min-height: 2.75rem; padding: .7rem 1rem; border: 1px solid var(--gold); border-radius: 4px; background: var(--gold); color: #17120e; font-weight: 700; text-decoration: none; }
+  .quote-individual-button:focus-visible { outline: 2px solid var(--cream); outline-offset: 3px; }
+  .quote-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+  @media (max-width: 600px) { .quote-product-row { grid-template-columns: 1fr 6rem; } .quote-product-remove { grid-column: 1 / -1; } }
 
   /* ─── OBSZAR ─── */
   .area-section {
@@ -4527,8 +4544,12 @@
   <p class="quote-intro">Kalkulator pozwala oszacować koszt montażu gotowych mebli dostarczonych w paczkach — na przykład szaf, komód, łóżek, biurek, stołów, regałów, szafek i zestawów meblowych. Możesz wycenić składanie mebli IKEA, Agata, BRW, Jysk i podobnych marek w Gliwicach i okolicach. Kalkulator nie obejmuje wykonania mebli na wymiar.</p>
 
   <form class="quote-form" id="quoteForm" action="https://formspree.io/f/xlgwaank" method="POST" onsubmit="handleQuoteSubmit(event)" novalidate>
-    <input type="hidden" name="_subject" value="Nowe zapytanie o montaż mebli z paczek — MebloFix Gliwice">
-    <input type="hidden" name="koszt_pracy" id="quoteWorkInput" value="150 zł">
+    <input type="hidden" name="_subject" id="quoteSubject" value="Nowe zapytanie Meblofix">
+    <input type="hidden" name="typ_zdarzenia" id="quoteEventType" value="ZAPYTANIE">
+    <input type="hidden" name="produkty_kalkulacji" id="quoteProductsInput" value="">
+    <input type="hidden" name="suma_wartosci_mebli" id="quoteFurnitureInput" value="">
+    <input type="hidden" name="zastosowany_procent" value="20%">
+    <input type="hidden" name="koszt_pracy" id="quoteWorkInput" value="">
     <input type="hidden" name="koszt_dojazdu" id="quoteTravelInput" value="0 zł">
     <input type="hidden" name="cena_orientacyjna_razem" id="quoteTotalInput" value="150 zł">
     <input type="hidden" name="stawka_dojazdu" id="quoteTravelRateInput" value="">
@@ -4543,42 +4564,19 @@
         <legend>Meble z paczek</legend>
 
         <div class="quote-field quote-field-wide">
-          <label class="quote-label" for="quoteService">Rodzaj mebla <span class="quote-required" aria-hidden="true">*</span></label>
-          <select id="quoteService" name="rodzaj_mebla" required>
-            <option value="">Wybierz rodzaj mebla</option>
-            <option value="Szafa">Szafa</option>
-            <option value="Komoda">Komoda</option>
-            <option value="Łóżko">Łóżko</option>
-            <option value="Biurko">Biurko</option>
-            <option value="Stół">Stół</option>
-            <option value="Regał">Regał</option>
-            <option value="Szafka / RTV">Szafka / RTV</option>
-            <option value="Zestaw mebli">Zestaw mebli</option>
+          <label class="quote-label" for="quoteService">Rodzaj mebla</label>
+          <select id="quoteService" name="rodzaj_mebla">
+            <option value="Meble z paczek">Meble z paczek</option>
             <option value="Kuchnia z gotowych elementów/paczek">Kuchnia z gotowych elementów/paczek</option>
-            <option value="Inne meble z paczek">Inne meble z paczek</option>
+            <option value="Zestaw mebli">Zestaw mebli</option>
           </select>
-          <span class="quote-error" id="quoteService-error"></span>
-        </div>
-
-        <div class="quote-field">
-          <label class="quote-label" for="quoteItems">Liczba mebli / elementów <span class="quote-required" aria-hidden="true">*</span></label>
-          <input type="number" id="quoteItems" name="liczba_elementow" min="1" max="1000" step="1" value="1" inputmode="numeric" required>
-          <span class="quote-error" id="quoteItems-error"></span>
-        </div>
-
-        <div class="quote-field">
-          <label class="quote-label" for="quoteHours">Przewidywana liczba godzin montażu <span class="quote-required" aria-hidden="true">*</span></label>
-          <input type="number" id="quoteHours" name="przewidywane_godziny" min="0.5" max="100" step="0.5" value="1" inputmode="decimal" required>
-          <span class="quote-error" id="quoteHours-error"></span>
         </div>
 
         <div class="quote-field quote-field-wide">
-          <label class="quote-label" for="quoteInstallers">Liczba monterów <span class="quote-required" aria-hidden="true">*</span></label>
-          <select id="quoteInstallers" name="liczba_monterow" required>
-            <option value="1" selected>1 monter — 100 zł / godz.</option>
-            <option value="2">2 monterów — 180 zł / godz.</option>
-          </select>
-          <span class="quote-error" id="quoteInstallers-error"></span>
+          <span class="quote-label" id="quoteProductsLabel">Linki do produktów <span class="quote-required" aria-hidden="true">*</span></span>
+          <div class="quote-products" id="quoteProducts" aria-labelledby="quoteProductsLabel"></div>
+          <button class="quote-link-add" type="button" id="quoteAddLink">+ Dodaj kolejny link</button>
+          <p class="quote-products-status" id="quoteProductsStatus" role="status" aria-live="polite">Podaj co najmniej jeden link do produktu.</p>
         </div>
 
         <div class="quote-field">
@@ -4595,12 +4593,6 @@
         </div>
 
         <div class="quote-field quote-field-wide">
-          <label class="quote-label" for="quoteProductUrl">Link do produktu lub projektu (opcjonalnie)</label>
-          <input type="url" id="quoteProductUrl" name="link_do_produktu_lub_projektu" maxlength="2048" placeholder="https://... np. IKEA, Agata, BRW lub Jysk" inputmode="url" autocomplete="url">
-          <span class="quote-error" id="quoteProductUrl-error"></span>
-        </div>
-
-        <div class="quote-field quote-field-wide">
           <label class="quote-label" for="quoteDetails">Dodatkowe informacje (opcjonalnie)</label>
           <textarea id="quoteDetails" name="dodatkowe_informacje" maxlength="2000" placeholder="Opisz wariant mebla, liczbę paczek, wyposażenie lub dodatkowe czynności przy montażu."></textarea>
           <span class="quote-error" id="quoteDetails-error"></span>
@@ -4614,22 +4606,25 @@
         </div>
         <div class="quote-result-lines" id="quotePriceLive" role="status" aria-live="polite" aria-atomic="true">
           <div class="quote-result-line">
-            <span>Koszt montażu</span>
-            <output id="quoteWorkCost" for="quoteHours quoteInstallers">150 zł</output>
+            <span>Koszt montażu (20% wartości mebli, min. 150 zł)</span>
+            <output id="quoteWorkCost">—</output>
           </div>
           <div class="quote-result-line">
             <span>Koszt dojazdu</span>
-            <output id="quoteTravelCost" for="quoteCity quoteDistance">0 zł</output>
+            <output id="quoteTravelCost">—</output>
           </div>
           <div class="quote-result-line quote-result-total">
             <span>Razem</span>
-            <output id="quoteTotalCost">150 zł</output>
+            <output id="quoteTotalCost">—</output>
           </div>
         </div>
         <p class="quote-travel-note" id="quoteTravelExplanation">Dojazd na terenie Gliwic: bez dodatkowej opłaty.</p>
-        <p class="quote-disclaimer">Podana cena jest orientacyjna. Ostateczna wycena zależy od liczby i rodzaju mebli, stopnia skomplikowania montażu, warunków na miejscu oraz ewentualnych prac dodatkowych.</p>
+          <p class="quote-disclaimer">Orientacyjny koszt montażu został obliczony na podstawie aktualnych cen produktów odczytanych z podanych linków. Kalkulator przyjmuje 20% łącznej wartości mebli, nie mniej niż 150 zł. Ostateczna cena może ulec zmianie po weryfikacji zakresu prac.</p>
+        <ul class="quote-product-list" id="quoteProductResults" aria-live="polite"></ul>
       </aside>
     </div>
+
+    <button class="quote-calculate" id="quoteCalculate" type="button">Oblicz orientacyjny koszt montażu</button>
 
     <fieldset class="quote-contact">
       <legend>Dane do kontaktu</legend>
@@ -5515,15 +5510,8 @@
   bindErrorCleanup('contactForm', 'contactFormStatus');
   bindErrorCleanup('quoteForm', 'quoteFormStatus');
 
-  // ─── KALKULATOR WYCENY ───
-  // Wszystkie stawki kalkulatora są zebrane w jednym miejscu.
-  const QUOTE_RATES = Object.freeze({
-    minimumJob: 150,
-    hourlyOneInstaller: 100,
-    hourlyTwoInstallers: 180,
-    travelPerKm: 1.5
-  });
-
+  // ─── KALKULATOR OPARTY WYŁĄCZNIE NA LINKACH ───
+  const QUOTE_RULES = Object.freeze({ minimumJob: 150, installationRate: 0.2, travelPerKm: 1.5, maxLinks: 10 });
   const quoteForm = document.getElementById('quoteForm');
   const quoteCityField = document.getElementById('quoteCity');
   const quoteDistanceField = document.getElementById('quoteDistance');
@@ -5532,233 +5520,90 @@
   const quoteTravelCost = document.getElementById('quoteTravelCost');
   const quoteTotalCost = document.getElementById('quoteTotalCost');
   const quoteTravelExplanation = document.getElementById('quoteTravelExplanation');
+  const quoteProducts = document.getElementById('quoteProducts');
+  const quoteProductsStatus = document.getElementById('quoteProductsStatus');
+  const quoteProductResults = document.getElementById('quoteProductResults');
+  const quoteAddLink = document.getElementById('quoteAddLink');
+  const quoteCalculate = document.getElementById('quoteCalculate');
+  const quoteEventType = document.getElementById('quoteEventType');
+  const quoteSubject = document.getElementById('quoteSubject');
+  const quoteProductsInput = document.getElementById('quoteProductsInput');
+  const quoteFurnitureInput = document.getElementById('quoteFurnitureInput');
   const quoteWorkInput = document.getElementById('quoteWorkInput');
   const quoteTravelInput = document.getElementById('quoteTravelInput');
   const quoteTotalInput = document.getElementById('quoteTotalInput');
-  const quoteTravelRateInput = document.getElementById('quoteTravelRateInput');
+  let lastCalculation = null;
+  let calculationKey = '';
+  let calculationNoticeKey = '';
 
-  function isGliwice(city) {
-    return String(city || '').trim().toLocaleLowerCase('pl-PL') === 'gliwice';
+  function isGliwice(city) { return String(city || '').trim().toLocaleLowerCase('pl-PL') === 'gliwice'; }
+  function money(value) { return `${new Intl.NumberFormat('pl-PL', { maximumFractionDigits: 0 }).format(value)} zł`; }
+  function syncDistance() {
+    const local = isGliwice(quoteCityField.value);
+    quoteDistanceField.readOnly = local;
+    if (local) { quoteDistanceField.value = '0'; quoteDistanceHint.textContent = 'W Gliwicach dojazd jest bez dodatkowej opłaty.'; }
+    else { if (quoteDistanceField.value === '0') quoteDistanceField.value = ''; quoteDistanceHint.textContent = 'Poza Gliwicami podaj odległość w jedną stronę.'; }
   }
-
-  function calculateQuote(hours, installers, distance, city) {
-    const safeHours = Number(hours);
-    const safeInstallers = Number(installers);
-    const safeDistance = Number(distance);
-    const localJob = isGliwice(city);
-
-    if (!Number.isFinite(safeHours) || safeHours <= 0) return null;
-    if (safeInstallers !== 1 && safeInstallers !== 2) return null;
-    if (!Number.isFinite(safeDistance) || safeDistance < 0) return null;
-    if (!localJob && safeDistance <= 0) return null;
-
-    const hourlyRate = safeInstallers === 2
-      ? QUOTE_RATES.hourlyTwoInstallers
-      : QUOTE_RATES.hourlyOneInstaller;
-    const work = Math.round(Math.max(QUOTE_RATES.minimumJob, safeHours * hourlyRate));
-    const travel = localJob ? 0 : Math.round(safeDistance * 2 * QUOTE_RATES.travelPerKm);
-
-    return Object.freeze({ work, travel, total: work + travel });
+  function addProductRow() {
+    if (quoteProducts.children.length >= QUOTE_RULES.maxLinks) return;
+    const row = document.createElement('div'); row.className = 'quote-product-row';
+    const index = quoteProducts.children.length + 1;
+    row.innerHTML = `<label class="quote-sr-only" for="quoteLink${index}">Link do produktu ${index}</label><input type="url" id="quoteLink${index}" name="link_produktu_${index}" maxlength="2048" placeholder="https://..." inputmode="url" autocomplete="url"><label class="quote-sr-only" for="quoteQty${index}">Ilość ${index}</label><input type="number" id="quoteQty${index}" name="ilosc_${index}" min="1" max="100" step="1" value="1" aria-label="Ilość produktu ${index}"><button type="button" class="quote-product-remove" aria-label="Usuń link ${index}">Usuń</button>`;
+    row.querySelector('.quote-product-remove').addEventListener('click', () => { row.remove(); renumberRows(); });
+    quoteProducts.append(row); renumberRows();
   }
-
-  window.MebloFixQuoteCalculator = Object.freeze({
-    rates: QUOTE_RATES,
-    calculate: calculateQuote
-  });
-
-  function formatQuoteCurrency(value) {
-    if (!Number.isFinite(value)) return '—';
-    return `${new Intl.NumberFormat('pl-PL', { maximumFractionDigits: 0 }).format(value)} zł`;
+  function renumberRows() { quoteAddLink.disabled = quoteProducts.children.length >= QUOTE_RULES.maxLinks; quoteProductsStatus.textContent = `${quoteProducts.children.length}/${QUOTE_RULES.maxLinks} linków dodanych. Każdy produkt musi mieć jednoznacznie odczytaną cenę.`; }
+  function rows() { return [...quoteProducts.querySelectorAll('.quote-product-row')].map(row => ({ url: row.querySelector('input[type="url"]').value.trim(), quantity: Number(row.querySelector('input[type="number"]').value) || 0 })); }
+  function setResult(result) {
+    if (!result) { quoteWorkCost.textContent = quoteTravelCost.textContent = quoteTotalCost.textContent = '—'; quoteProductResults.replaceChildren(); return; }
+    quoteWorkCost.textContent = money(result.installation); quoteTravelCost.textContent = money(result.travel); quoteTotalCost.textContent = money(result.total);
+    quoteWorkInput.value = money(result.installation); quoteTravelInput.value = money(result.travel); quoteTotalInput.value = money(result.total); quoteFurnitureInput.value = money(result.furniture); quoteProductsInput.value = JSON.stringify(result.products);
+    quoteTravelExplanation.textContent = result.travel ? `Dojazd: ${result.distance} km × 2 × 1,50 zł = ${money(result.travel)}.` : 'Dojazd na terenie Gliwic: bez dodatkowej opłaty.';
+    quoteProductResults.replaceChildren(...result.products.map(product => { const li = document.createElement('li'); const link = document.createElement('a'); link.href = product.url; link.target = '_blank'; link.rel = 'noopener noreferrer'; link.textContent = `${product.name} — ${money(product.price)} × ${product.quantity} = ${money(product.value)}`; li.append(link); return li; }));
   }
-
-  function syncQuoteDistanceField() {
-    if (isGliwice(quoteCityField.value)) {
-      clearFieldError(quoteDistanceField);
-      quoteDistanceField.value = '0';
-      quoteDistanceField.readOnly = true;
-      quoteDistanceHint.textContent = 'W Gliwicach dojazd jest bez dodatkowej opłaty.';
-    } else {
-      if (quoteDistanceField.readOnly && Number(quoteDistanceField.value) === 0) {
-        quoteDistanceField.value = '';
-      }
-      quoteDistanceField.readOnly = false;
-      quoteDistanceHint.textContent = 'Poza Gliwicami podaj odległość w jedną stronę.';
-    }
-    if (!quoteDistanceField.hasAttribute('aria-invalid')) {
-      quoteDistanceField.setAttribute('aria-describedby', quoteDistanceHint.id);
-    }
+  function showIndividualQuote(message) {
+    lastCalculation = null; setResult(null); quoteProductsStatus.textContent = message;
+    const li = document.createElement('li'); const link = document.createElement('a'); link.className = 'quote-individual-button'; link.href = '#kontakt'; link.textContent = 'Poproś o indywidualną wycenę'; li.append(link); quoteProductResults.replaceChildren(li);
   }
-
-  function updateQuoteResult() {
-    const hours = document.getElementById('quoteHours').value;
-    const installers = document.getElementById('quoteInstallers').value;
-    const distance = quoteDistanceField.value;
-    const city = quoteCityField.value;
-    if (!quoteDistanceField.hasAttribute('aria-invalid')) {
-      quoteDistanceField.setAttribute('aria-describedby', quoteDistanceHint.id);
-    }
-    const result = calculateQuote(hours, installers, distance, city);
-
-    if (!result) {
-      quoteWorkCost.textContent = '—';
-      quoteTravelCost.textContent = '—';
-      quoteTotalCost.textContent = '—';
-      quoteWorkInput.value = '';
-      quoteTravelInput.value = '';
-      quoteTotalInput.value = '';
-      quoteTravelExplanation.textContent = isGliwice(city)
-        ? 'Dojazd na terenie Gliwic: bez dodatkowej opłaty.'
-        : 'Podaj odległość od Gliwic, aby obliczyć koszt przejazdu w obie strony.';
-      return null;
-    }
-
-    const workText = formatQuoteCurrency(result.work);
-    const travelText = formatQuoteCurrency(result.travel);
-    const totalText = formatQuoteCurrency(result.total);
-    quoteWorkCost.textContent = workText;
-    quoteTravelCost.textContent = travelText;
-    quoteTotalCost.textContent = totalText;
-    quoteWorkInput.value = workText;
-    quoteTravelInput.value = travelText;
-    quoteTotalInput.value = totalText;
-
-    if (isGliwice(city)) {
-      quoteTravelExplanation.textContent = 'Dojazd na terenie Gliwic: bez dodatkowej opłaty.';
-    } else {
-      const distanceText = new Intl.NumberFormat('pl-PL', { maximumFractionDigits: 1 }).format(Number(distance));
-      const rateText = new Intl.NumberFormat('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(QUOTE_RATES.travelPerKm);
-      quoteTravelExplanation.textContent = `Dojazd: ${distanceText} km × 2 × ${rateText} zł = ${travelText}.`;
-    }
-    return result;
-  }
-
-  function validateQuoteForm() {
-    const serviceField = document.getElementById('quoteService');
-    const itemsField = document.getElementById('quoteItems');
-    const hoursField = document.getElementById('quoteHours');
-    const installersField = document.getElementById('quoteInstallers');
-    const productUrlField = document.getElementById('quoteProductUrl');
-    const nameField = document.getElementById('quoteName');
-    const phoneField = document.getElementById('quotePhone');
-    const emailField = document.getElementById('quoteEmail');
-    const checkedFields = [
-      serviceField, itemsField, hoursField, installersField, quoteCityField,
-      quoteDistanceField, productUrlField, nameField, phoneField, emailField
-    ];
-    checkedFields.forEach(clearFieldError);
-
-    const invalidFields = [];
-    const items = Number(itemsField.value);
-    const hours = Number(hoursField.value);
-    const distance = Number(quoteDistanceField.value);
-
-    if (!serviceField.value) {
-      setFieldError(serviceField, 'Wybierz rodzaj mebla.');
-      invalidFields.push(serviceField);
-    }
-    if (!Number.isInteger(items) || items < 1 || items > 1000) {
-      setFieldError(itemsField, 'Podaj liczbę od 1 do 1000.');
-      invalidFields.push(itemsField);
-    }
-    if (!Number.isFinite(hours) || hours < 0.5 || hours > 100 || !hoursField.validity.valid) {
-      setFieldError(hoursField, 'Podaj czas od 0,5 do 100 godzin, co 0,5 godziny.');
-      invalidFields.push(hoursField);
-    }
-    if (installersField.value !== '1' && installersField.value !== '2') {
-      setFieldError(installersField, 'Wybierz liczbę monterów.');
-      invalidFields.push(installersField);
-    }
-    if (!quoteCityField.value.trim()) {
-      setFieldError(quoteCityField, 'Podaj miejscowość.');
-      invalidFields.push(quoteCityField);
-    }
-    if (!isGliwice(quoteCityField.value) && (!Number.isFinite(distance) || distance <= 0 || distance > 500)) {
-      setFieldError(quoteDistanceField, 'Poza Gliwicami podaj odległość od 1 do 500 km.');
-      invalidFields.push(quoteDistanceField);
-    }
-    if (productUrlField.value && !productUrlField.validity.valid) {
-      setFieldError(productUrlField, 'Wklej pełny link zaczynający się od http:// lub https://.');
-      invalidFields.push(productUrlField);
-    }
-    if (!nameField.value.trim()) {
-      setFieldError(nameField, 'Podaj imię.');
-      invalidFields.push(nameField);
-    }
-    if (phoneField.value.replace(/\D/g, '').length < 7) {
-      setFieldError(phoneField, 'Podaj poprawny numer telefonu.');
-      invalidFields.push(phoneField);
-    }
-    if (emailField.value && !emailField.validity.valid) {
-      setFieldError(emailField, 'Podaj poprawny adres e-mail.');
-      invalidFields.push(emailField);
-    }
-
-    if (invalidFields.length) return { valid: false, firstInvalid: invalidFields[0], result: null };
-    return { valid: true, firstInvalid: null, result: updateQuoteResult() };
-  }
-
-  async function handleQuoteSubmit(event) {
-    event.preventDefault();
-    const form = event.currentTarget;
-    const status = document.getElementById('quoteFormStatus');
-    const submit = document.getElementById('quoteSubmit');
-    const originalText = submit.textContent;
-    clearFormStatus(status);
-
-    if (document.getElementById('quoteWebsite').value) return;
-
-    const validation = validateQuoteForm();
-    if (!validation.valid || !validation.result) {
-      setFormStatus(status, 'Sprawdź zaznaczone pola kalkulatora.', 'error');
-      validation.firstInvalid?.focus();
-      return;
-    }
-
-    submit.disabled = true;
-    submit.textContent = 'Wysyłam wycenę…';
-
+  async function calculateFromLinks() {
+    const items = rows().filter(item => item.url);
+    if (!items.length || items.some(item => !Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 100)) { setFormStatus(quoteProductsStatus, 'Podaj poprawny link i ilość każdego produktu.', 'error'); return; }
+    quoteCalculate.disabled = true; quoteCalculate.textContent = 'Analizuję link…'; quoteProductsStatus.textContent = 'Analizuję link…';
     try {
-      const response = await fetch(form.action, {
-        method: 'POST',
-        body: new FormData(form),
-        headers: { 'Accept': 'application/json' }
-      });
-      if (!response.ok) throw new Error('Formularz wyceny zwrócił błąd');
-
-      form.reset();
-      form.querySelectorAll('[aria-invalid="true"]').forEach(clearFieldError);
-      syncQuoteDistanceField();
-      updateQuoteResult();
-      setFormStatus(status, 'Zapytanie zostało wysłane. Skontaktuję się, aby potwierdzić zakres montażu i ostateczną cenę.', 'success');
-      submit.textContent = '✓ Zapytanie wysłane';
-      setTimeout(() => {
-        submit.textContent = originalText;
-        submit.disabled = false;
-      }, 5000);
-    } catch (error) {
-      setFormStatus(status, 'Nie udało się wysłać wyceny. Spróbuj ponownie lub zadzwoń: +48 784 878 197.', 'error');
-      submit.textContent = originalText;
-      submit.disabled = false;
-    }
+      const response = await fetch('/api/quote-products', { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({ urls: items.map(item => item.url) }) });
+      const data = await response.json(); if (!response.ok || !Array.isArray(data.products)) throw new Error('product lookup failed');
+      const planner = data.products.find(product => product.kind === 'ikea-project');
+      if (planner) {
+        showIndividualQuote(planner.error || 'Projekt IKEA został rozpoznany, ale nie możemy automatycznie odczytać jego wartości. Ten projekt wymaga indywidualnej wyceny.');
+        return;
+      }
+      const products = data.products.map((product, i) => ({ ...product, quantity: items[i].quantity, value: Math.round(product.price * items[i].quantity) }));
+      if (!data.allConfirmed || products.some(product => product.error)) { showIndividualQuote('Nie udało się potwierdzić ceny wszystkich produktów. To zlecenie wymaga indywidualnej wyceny.'); return; }
+      const furniture = products.reduce((sum, product) => sum + product.value, 0); const installation = Math.max(QUOTE_RULES.minimumJob, Math.round(furniture * QUOTE_RULES.installationRate)); const distance = isGliwice(quoteCityField.value) ? 0 : Number(quoteDistanceField.value); if (!Number.isFinite(distance) || distance < 0 || (!isGliwice(quoteCityField.value) && distance <= 0)) throw new Error('distance');
+      const travel = Math.round(distance * 2 * QUOTE_RULES.travelPerKm); const result = { products, furniture, installation, distance, travel, total: installation + travel }; lastCalculation = result; calculationKey = JSON.stringify({ items, city: quoteCityField.value.trim(), distance }); setResult(result); quoteProductsStatus.textContent = 'Ceny produktów potwierdzone. Wynik jest orientacyjny.';
+      await sendCalculationNotice(result, calculationKey);
+    } catch { showIndividualQuote('Nie udało się automatycznie potwierdzić ceny. To zlecenie wymaga indywidualnej wyceny.'); }
+    finally { quoteCalculate.disabled = false; quoteCalculate.textContent = 'Oblicz orientacyjny koszt montażu'; }
   }
-
-  quoteTravelRateInput.value = `${QUOTE_RATES.travelPerKm.toFixed(2).replace('.', ',')} zł/km, przejazd w obie strony`;
-  quoteCityField.addEventListener('input', () => {
-    syncQuoteDistanceField();
-    updateQuoteResult();
-  });
-  quoteForm.addEventListener('input', event => {
-    if (event.target !== quoteCityField) updateQuoteResult();
-  });
-  quoteForm.addEventListener('change', updateQuoteResult);
-  quoteForm.addEventListener('reset', () => {
-    setTimeout(() => {
-      syncQuoteDistanceField();
-      updateQuoteResult();
-    }, 0);
-  });
-  syncQuoteDistanceField();
-  updateQuoteResult();
+  async function sendCalculationNotice(result, key) {
+    if (calculationNoticeKey === key) return;
+    calculationNoticeKey = key; quoteEventType.value = 'KALKULACJA'; quoteSubject.value = `Nowa kalkulacja Meblofix – ${result.total} zł`;
+    const payload = new FormData(); payload.append('_subject', quoteSubject.value); payload.append('typ_zdarzenia', 'KALKULACJA'); payload.append('data_i_godzina', new Date().toISOString()); payload.append('produkty_kalkulacji', JSON.stringify(result.products)); payload.append('suma_wartosci_mebli', money(result.furniture)); payload.append('zastosowany_procent', '20%'); payload.append('koszt_montazu', money(result.installation)); payload.append('koszt_dojazdu', money(result.travel)); payload.append('cena_razem', money(result.total)); payload.append('miejscowosc', quoteCityField.value.trim()); payload.append('odleglosc_km', String(result.distance)); payload.append('klient_przeslal_formularz', 'NIE');
+    try { const response = await fetch(quoteForm.action, { method: 'POST', body: payload, headers: { Accept: 'application/json' } }); if (!response.ok) throw new Error('notification failed'); } catch { quoteProductsStatus.textContent = 'Wynik obliczono, ale nie udało się wysłać powiadomienia. Skontaktuj się telefonicznie, aby potwierdzić wycenę.'; }
+  }
+  function validateContact() {
+    const name = document.getElementById('quoteName'), phone = document.getElementById('quotePhone'), email = document.getElementById('quoteEmail'); [name, phone, email].forEach(clearFieldError); const invalid = [];
+    if (!lastCalculation) { setFormStatus(document.getElementById('quoteFormStatus'), 'Najpierw oblicz cenę na podstawie linków do produktów lub wybierz wycenę indywidualną.', 'error'); return false; }
+    if (!name.value.trim()) { setFieldError(name, 'Podaj imię.'); invalid.push(name); } if (phone.value.replace(/\D/g, '').length < 7) { setFieldError(phone, 'Podaj poprawny numer telefonu.'); invalid.push(phone); } if (email.value && !email.validity.valid) { setFieldError(email, 'Podaj poprawny adres e-mail.'); invalid.push(email); }
+    invalid[0]?.focus(); return !invalid.length;
+  }
+  async function handleQuoteSubmit(event) {
+    event.preventDefault(); if (document.getElementById('quoteWebsite').value || !validateContact()) return; const form = event.currentTarget, status = document.getElementById('quoteFormStatus'), submit = document.getElementById('quoteSubmit'); submit.disabled = true; submit.textContent = 'Wysyłam zapytanie…';
+    quoteEventType.value = 'ZAPYTANIE'; quoteSubject.value = `Nowe zapytanie Meblofix – ${lastCalculation.total} zł`; const payload = new FormData(form); payload.set('klient_przeslal_formularz', 'TAK'); payload.set('data_i_godzina', new Date().toISOString());
+    try { const response = await fetch(form.action, { method: 'POST', body: payload, headers: { Accept: 'application/json' } }); if (!response.ok) throw new Error('send failed'); setFormStatus(status, 'Zapytanie zostało wysłane. Skontaktuję się, aby potwierdzić zakres montażu.', 'success'); submit.textContent = '✓ Zapytanie wysłane'; } catch { setFormStatus(status, 'Nie udało się wysłać zapytania. Zadzwoń: +48 784 878 197.', 'error'); submit.disabled = false; submit.textContent = 'Wyślij zapytanie o montaż'; }
+  }
+  quoteAddLink.addEventListener('click', addProductRow); quoteCalculate.addEventListener('click', calculateFromLinks); quoteCityField.addEventListener('input', syncDistance); syncDistance(); addProductRow();
+  window.MebloFixQuoteCalculator = Object.freeze({ rules: QUOTE_RULES });
 
   function createStarIcon(filled) {
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
