@@ -8,3 +8,4 @@ img-licencja/
 .dev.vars
 .env
 .env.*
+node_modules/

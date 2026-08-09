@@ -78,11 +78,14 @@ python3 "$PROJECT_DIR/scripts/test-seo.py" --dist "$DIST_DIR"
 FUNCTIONS_TEMP_DIR="$(mktemp -d)"
 trap 'rm -rf -- "$FUNCTIONS_TEMP_DIR"' EXIT
 
-npx --yes wrangler@4.68.1 pages functions build "$PROJECT_DIR/functions" \
-  --project-directory "$PROJECT_DIR" \
-  --outfile "$FUNCTIONS_TEMP_DIR/_worker.js" \
-  --output-routes-path "$FUNCTIONS_TEMP_DIR/_routes.json"
-cp -p -- "$FUNCTIONS_TEMP_DIR/_worker.js" "$DIST_DIR/_worker.js"
+(
+  cd "$PROJECT_DIR"
+  npx --no-install wrangler pages functions build "$PROJECT_DIR/functions" \
+    --project-directory "$PROJECT_DIR" \
+    --outdir "$FUNCTIONS_TEMP_DIR/_worker.js" \
+    --output-routes-path "$FUNCTIONS_TEMP_DIR/_routes.json"
+)
+cp -a -- "$FUNCTIONS_TEMP_DIR/_worker.js" "$DIST_DIR/_worker.js"
 cp -p -- "$FUNCTIONS_TEMP_DIR/_routes.json" "$DIST_DIR/_routes.json"
 
 echo "Cloudflare Pages build gotowy: $DIST_DIR"

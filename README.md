@@ -13,7 +13,7 @@ podgląd kalkulatora uruchom w trybie testowym Cloudflare:
 
 ```bash
 bash scripts/build-cloudflare.sh
-npx --yes wrangler@4.68.1 pages dev dist \
+npx --no-install wrangler pages dev dist \
   --kv QUOTE_NOTIFICATION_KV \
   --binding QUOTE_NOTIFICATION_SECRET=lokalny-sekret-o-dlugosci-minimum-32-znakow \
   --binding QUOTE_NOTIFICATION_FORMSPREE_ENDPOINT=https://formspree.io/f/lokalnytest \
@@ -26,6 +26,18 @@ Adres podglądu: http://127.0.0.1:8788
 
 `QUOTE_NOTIFICATION_MODE=test` zatrzymuje wysyłkę przed Formspree. Nie używaj
 tej zmiennej w produkcji.
+
+Projekt przypina `wrangler` w wersji `4.120.0` w `devDependencies` i
+`package-lock.json`. Po `npm ci` zarówno build, lokalny podgląd, jak i deploy
+powinny korzystać z lokalnej wersji przez `npx --no-install wrangler ...`.
+Artefakt z `bash scripts/build-cloudflare.sh` można wdrożyć bez przepakowania:
+
+```bash
+npx --no-install wrangler pages deploy dist \
+  --project-name=meblofix-gliwice-prod \
+  --branch=main \
+  --commit-hash="$(git rev-parse HEAD)"
+```
 
 ## Powiadomienia automatycznej wyceny
 

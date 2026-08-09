@@ -4642,7 +4642,7 @@
       </aside>
     </div>
 
-    <button class="quote-calculate" id="quoteCalculate" type="button">Oblicz orientacyjny koszt montażu</button>
+    <button class="quote-calculate" id="quoteCalculate" type="button">Sprawdź wycenę</button>
 
     <fieldset class="quote-contact">
       <legend>Dane do kontaktu</legend>
@@ -5612,7 +5612,7 @@
         console.warn('Powiadomienie o wycenie nie jest skonfigurowane. Wynik kalkulacji pozostaje dostępny.');
       }
     } catch { showIndividualQuote('Nie udało się automatycznie potwierdzić ceny. To zlecenie wymaga indywidualnej wyceny.'); }
-    finally { quoteCalculate.disabled = false; quoteCalculate.textContent = 'Oblicz orientacyjny koszt montażu'; }
+    finally { quoteCalculate.disabled = false; quoteCalculate.textContent = 'Sprawdź wycenę'; }
   }
   async function sendCalculationNotice(token, key) {
     if (calculationNoticeKey === key) return;
