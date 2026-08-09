@@ -5,3 +5,6 @@ _m.html
 dist/
 img-licencja/
 .agents/
+.dev.vars
+.env
+.env.*

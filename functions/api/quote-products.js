@@ -1,6 +1,14 @@
-const MAX_URLS = 10;
+const MAX_ITEMS = 10;
 const MAX_BYTES = 1_500_000;
+const MAX_REQUEST_BYTES = 32_000;
 const TIMEOUT_MS = 8_000;
+export const TOKEN_LIFETIME_MS = 20 * 60 * 1_000;
+const QUOTE_RULES = Object.freeze({ minimumJob: 150, installationRate: 0.2, travelPerKm: 1.5 });
+const ALLOWED_FURNITURE_TYPES = new Set([
+  'Meble z paczek',
+  'Kuchnia z gotowych elementów/paczek',
+  'Zestaw mebli'
+]);
 const ALLOWED_HOSTS = new Set([
   'ikea.com', 'www.ikea.com', 'ikea.pl', 'www.ikea.pl',
   'agatameble.pl', 'www.agatameble.pl',
@@ -10,6 +18,16 @@ const ALLOWED_HOSTS = new Set([
 ]);
 
 const IKEA_PLANNER_HOSTS = ['kitchen.planner.ikea.com'];
+const encoder = new TextEncoder();
+const decoder = new TextDecoder();
+
+function cleanText(value, maxLength) {
+  return String(value ?? '').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '').trim().slice(0, maxLength);
+}
+
+function isGliwice(city) {
+  return city.toLocaleLowerCase('pl-PL') === 'gliwice';
+}
 
 function isIkeaPlanner(url) {
   return IKEA_PLANNER_HOSTS.includes(url.hostname.toLowerCase()) && /^\/pl\/pl\/planner\/[0-9a-f-]{20,}(?:\/|$)/i.test(url.pathname);
@@ -19,8 +37,8 @@ function isPrivateHost(hostname) {
   const host = hostname.toLowerCase().replace(/^\[|\]$/g, '');
   if (host === 'localhost' || host.endsWith('.localhost') || host === '::1' || host === '0.0.0.0') return true;
   if (/^(0|10|127)\./.test(host) || /^169\.254\./.test(host) || /^192\.0\.0\./.test(host) || /^192\.168\./.test(host) || /^198\.18\./.test(host) || /^198\.51\.100\./.test(host) || /^203\.0\.113\./.test(host) || /^22[4-9]\.|^23[0-9]\.|^24[0-9]\.|^25[0-5]\./.test(host)) return true;
-  const m = host.match(/^172\.(\d{1,3})\./);
-  if (m && Number(m[1]) >= 16 && Number(m[1]) <= 31) return true;
+  const private172 = host.match(/^172\.(\d{1,3})\./);
+  if (private172 && Number(private172[1]) >= 16 && Number(private172[1]) <= 31) return true;
   if (host.includes(':')) {
     if (host === '::' || host.startsWith('fc') || host.startsWith('fd') || host.startsWith('fe8') || host.startsWith('fe9') || host.startsWith('fea') || host.startsWith('feb')) return true;
     const mapped = host.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
@@ -36,6 +54,7 @@ function validUrl(value) {
     if (!ALLOWED_HOSTS.has(url.hostname.toLowerCase())) return null;
     url.username = '';
     url.password = '';
+    url.hash = '';
     return url;
   } catch { return null; }
 }
@@ -58,15 +77,15 @@ function productFromJsonLd(html) {
       const root = JSON.parse(match[1].trim());
       for (const item of flatten(root)) {
         const type = Array.isArray(item['@type']) ? item['@type'] : [item['@type']];
-        if (!type.some(t => String(t).toLowerCase() === 'product')) continue;
+        if (!type.some(entry => String(entry).toLowerCase() === 'product')) continue;
         const offers = Array.isArray(item.offers) ? item.offers[0] : item.offers;
         const offer = offers && typeof offers === 'object' ? offers : null;
         const price = Number(String(offer?.price ?? '').replace(',', '.'));
         const currency = String(offer?.priceCurrency || '').toUpperCase();
-        if (!Number.isFinite(price) || price <= 0 || price > 1_000_000 || !/^(PLN|EUR|USD|GBP)$/.test(currency)) continue;
-        const name = String(item.name || '').replace(/\s+/g, ' ').trim();
+        if (!Number.isFinite(price) || price <= 0 || price > 1_000_000 || currency !== 'PLN') continue;
+        const name = cleanText(item.name, 240);
         if (!name) continue;
-        return { name: name.slice(0, 240), price, currency, sourceUrl: offer?.url || null };
+        return { name, price, currency };
       }
     } catch { /* Pomijamy niepoprawny blok JSON-LD. */ }
   }
@@ -78,8 +97,8 @@ function productFromMeta(html) {
   const currency = html.match(/(?:itemprop=["']priceCurrency["'][^>]*content|property=["']product:price:currency["'][^>]*content)=["']([^"']+)/i)?.[1];
   const title = html.match(/<meta[^>]+(?:property|name)=["'](?:og:title|twitter:title)["'][^>]+content=["']([^"']+)/i)?.[1];
   const parsed = Number(String(price || '').replace(',', '.'));
-  if (!Number.isFinite(parsed) || parsed <= 0 || !currency || !title) return null;
-  return { name: title.replace(/\s+/g, ' ').trim().slice(0, 240), price: parsed, currency: currency.toUpperCase(), sourceUrl: null };
+  if (!Number.isFinite(parsed) || parsed <= 0 || String(currency || '').toUpperCase() !== 'PLN' || !title) return null;
+  return { name: cleanText(title.replace(/\s+/g, ' '), 240), price: parsed, currency: 'PLN' };
 }
 
 async function readLimited(response) {
@@ -99,12 +118,22 @@ async function readLimited(response) {
   const bytes = new Uint8Array(total);
   let offset = 0;
   for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
-  return new TextDecoder().decode(bytes);
+  return decoder.decode(bytes);
 }
 
 async function resolveProduct(rawUrl) {
   const url = validUrl(rawUrl);
-  if (!url) return { url: String(rawUrl || ''), error: 'Nieprawidłowy lub zablokowany adres URL.' };
+  if (!url) return { url: cleanText(rawUrl, 2048), error: 'Nieprawidłowy lub zablokowany adres URL.' };
+  if (isIkeaPlanner(url)) {
+    const projectId = url.pathname.split('/').filter(Boolean).at(-1) || null;
+    return {
+      url: url.toString(),
+      kind: 'ikea-project',
+      store: 'IKEA Kitchen Planner',
+      project: { name: 'Projekt IKEA Kitchen Planner', projectId, itemCount: null, products: [], total: null },
+      error: 'Projekt IKEA został rozpoznany, ale nie możemy automatycznie odczytać jego wartości. Ten projekt wymaga indywidualnej wyceny.'
+    };
+  }
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
@@ -113,16 +142,6 @@ async function resolveProduct(rawUrl) {
     const contentType = String(response.headers.get('content-type') || '').split(';', 1)[0].trim().toLowerCase();
     if (!['text/html', 'application/xhtml+xml'].includes(contentType)) throw new Error('unsupported-content-type');
     const html = await readLimited(response);
-    if (isIkeaPlanner(url)) {
-      const projectId = url.pathname.split('/').filter(Boolean).at(-1) || null;
-      return {
-        url: url.toString(),
-        kind: 'ikea-project',
-        store: 'IKEA Kitchen Planner',
-        project: { name: 'Projekt IKEA Kitchen Planner', projectId, itemCount: null, products: [], total: null },
-        error: 'Projekt IKEA został rozpoznany, ale nie możemy automatycznie odczytać jego wartości. Ten projekt wymaga indywidualnej wyceny.'
-      };
-    }
     const product = productFromJsonLd(html) || productFromMeta(html);
     if (!product) return { url: url.toString(), error: 'Nie udało się automatycznie potwierdzić ceny tego produktu.' };
     return { url: url.toString(), ...product };
@@ -131,12 +150,122 @@ async function resolveProduct(rawUrl) {
   } finally { clearTimeout(timer); }
 }
 
-export async function onRequestPost({ request }) {
+function bytesToBase64Url(bytes) {
+  let binary = '';
+  for (let offset = 0; offset < bytes.length; offset += 0x8000) binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+}
+
+function base64UrlToBytes(value) {
+  const base64 = value.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(value.length / 4) * 4, '=');
+  const binary = atob(base64);
+  return Uint8Array.from(binary, character => character.charCodeAt(0));
+}
+
+async function hmacKey(secret) {
+  return crypto.subtle.importKey('raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']);
+}
+
+function notificationSecret(env) {
+  const secret = String(env?.QUOTE_NOTIFICATION_SECRET || '');
+  return secret.length >= 32 ? secret : null;
+}
+
+async function sha256(value) {
+  return bytesToBase64Url(new Uint8Array(await crypto.subtle.digest('SHA-256', encoder.encode(value))));
+}
+
+async function signQuote(payload, env) {
+  const secret = notificationSecret(env);
+  if (!secret) throw new Error('missing-notification-secret');
+  const encoded = bytesToBase64Url(encoder.encode(JSON.stringify(payload)));
+  const signature = new Uint8Array(await crypto.subtle.sign('HMAC', await hmacKey(secret), encoder.encode(encoded)));
+  return `v1.${encoded}.${bytesToBase64Url(signature)}`;
+}
+
+export async function verifyQuoteToken(token, env) {
+  const secret = notificationSecret(env);
+  const parts = String(token || '').split('.');
+  if (!secret || parts.length !== 3 || parts[0] !== 'v1') throw new Error('invalid-token');
+  const valid = await crypto.subtle.verify('HMAC', await hmacKey(secret), base64UrlToBytes(parts[2]), encoder.encode(parts[1]));
+  if (!valid) throw new Error('invalid-token');
+  const payload = JSON.parse(decoder.decode(base64UrlToBytes(parts[1])));
+  if (
+    payload?.v !== 1
+    || typeof payload.quoteId !== 'string'
+    || !/^[0-9a-f-]{36}$/i.test(payload.quoteId)
+    || !payload.quote
+    || !payload.context
+    || !Number.isFinite(payload.issuedAt)
+    || !Number.isFinite(payload.expiresAt)
+    || payload.expiresAt <= payload.issuedAt
+    || Date.now() > payload.expiresAt
+  ) throw new Error('expired-token');
+  return payload;
+}
+
+function normalizeRequest(body) {
+  const rawItems = Array.isArray(body?.items) ? body.items : [];
+  if (!rawItems.length || rawItems.length > MAX_ITEMS) throw new Error('items');
+  const items = rawItems.map(item => {
+    const url = cleanText(item?.url, 2048);
+    const quantity = Number(item?.quantity);
+    if (!url || !Number.isInteger(quantity) || quantity < 1 || quantity > 100) throw new Error('items');
+    return { url, quantity };
+  });
+  const city = cleanText(body?.city, 80);
+  const furnitureType = cleanText(body?.furnitureType, 80);
+  const distanceInput = Number(body?.distance);
+  if (!city || !ALLOWED_FURNITURE_TYPES.has(furnitureType) || !Number.isFinite(distanceInput) || distanceInput < 0 || distanceInput > 500) throw new Error('context');
+  const distance = isGliwice(city) ? 0 : distanceInput;
+  if (!isGliwice(city) && distance <= 0) throw new Error('distance');
+  return {
+    items,
+    context: {
+      city,
+      distance,
+      furnitureType,
+      details: cleanText(body?.details, 2000),
+      contact: {
+        name: cleanText(body?.contact?.name, 80),
+        phone: cleanText(body?.contact?.phone, 20),
+        email: cleanText(body?.contact?.email, 254)
+      }
+    }
+  };
+}
+
+export async function onRequestPost({ request, env }) {
   try {
-    const body = await request.json();
-    const urls = Array.isArray(body?.urls) ? body.urls.map(String).filter(Boolean) : [];
-    if (!urls.length || urls.length > MAX_URLS) return Response.json({ error: 'Podaj od 1 do 10 linków.' }, { status: 400 });
-    const products = await Promise.all(urls.map(resolveProduct));
-    return Response.json({ products, allConfirmed: products.every(item => !item.error) }, { headers: { 'Cache-Control': 'no-store' } });
-  } catch { return Response.json({ error: 'Nieprawidłowe żądanie.' }, { status: 400 }); }
+    const declaredLength = Number(request.headers.get('content-length') || 0);
+    if (declaredLength > MAX_REQUEST_BYTES) return Response.json({ error: 'Żądanie jest zbyt duże.' }, { status: 413 });
+    const rawBody = await request.text();
+    if (encoder.encode(rawBody).byteLength > MAX_REQUEST_BYTES) return Response.json({ error: 'Żądanie jest zbyt duże.' }, { status: 413 });
+    const { items, context } = normalizeRequest(JSON.parse(rawBody));
+    const resolved = await Promise.all(items.map(item => resolveProduct(item.url)));
+    const products = resolved.map((product, index) => ({
+      ...product,
+      quantity: items[index].quantity,
+      ...(product.price ? { value: Math.round(product.price * items[index].quantity) } : {})
+    }));
+    const allConfirmed = products.every(product => !product.error && Number.isFinite(product.price));
+    if (!allConfirmed) return Response.json({ products, allConfirmed: false }, { headers: { 'Cache-Control': 'no-store' } });
+
+    const furniture = products.reduce((sum, product) => sum + product.value, 0);
+    const installation = Math.max(QUOTE_RULES.minimumJob, Math.round(furniture * QUOTE_RULES.installationRate));
+    const travel = Math.round(context.distance * 2 * QUOTE_RULES.travelPerKm);
+    const quote = { products, furniture, installation, distance: context.distance, travel, total: installation + travel };
+    const issuedAt = Date.now();
+    const clientFingerprint = await sha256(`${request.headers.get('cf-connecting-ip') || 'unknown'}|${request.headers.get('user-agent') || 'unknown'}`);
+    // Każde poprawne obliczenie dostaje własny identyfikator. Nie wyprowadzamy go
+    // z IP, User-Agent ani treści wyceny, więc klienci za wspólnym NAT nie kolidują.
+    const quoteId = crypto.randomUUID();
+    let notificationToken = null;
+    if (notificationSecret(env)) {
+      notificationToken = await signQuote({ v: 1, quoteId, clientFingerprint, issuedAt, expiresAt: issuedAt + TOKEN_LIFETIME_MS, quote, context }, env);
+    }
+    return Response.json({ products, allConfirmed: true, quote, notificationToken, quoteId }, { headers: { 'Cache-Control': 'no-store' } });
+  } catch {
+    return Response.json({ error: 'Nieprawidłowe żądanie.' }, { status: 400, headers: { 'Cache-Control': 'no-store' } });
+  }
 }

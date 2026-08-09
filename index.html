@@ -2335,6 +2335,31 @@
   .quote-product-row input { min-width: 0; }
   .quote-product-remove, .quote-link-add, .quote-calculate { min-height: 3rem; border: 1px solid var(--gold); background: transparent; color: var(--cream); border-radius: 4px; padding: .7rem 1rem; cursor: pointer; font: inherit; }
   .quote-link-add, .quote-calculate { background: var(--gold); color: #17120e; font-weight: 700; }
+  .quote-link-add {
+    height: 3rem;
+    border: 1px solid rgba(255,92,26,.8);
+    background: rgba(255,255,255,.035);
+    color: #fff;
+    transition: border-color .2s, background .2s, box-shadow .2s;
+  }
+  .quote-link-add:hover:not(:disabled) {
+    border-color: var(--orange-light);
+    background: rgba(232,68,10,.14);
+    color: #fff;
+  }
+  .quote-link-add:focus-visible {
+    border-color: var(--orange-light);
+    outline: 3px solid var(--orange-light);
+    outline-offset: 3px;
+    background: rgba(232,68,10,.14);
+    color: #fff;
+  }
+  .quote-link-add:disabled {
+    border-color: rgba(255,255,255,.22);
+    background: rgba(255,255,255,.025);
+    color: rgba(255,255,255,.68);
+    cursor: not-allowed;
+  }
   .quote-product-remove { border-color: rgba(255,255,255,.25); }
   .quote-product-remove:disabled { opacity: .45; cursor: not-allowed; }
   .quote-products-status { color: var(--gray); font-size: .9rem; }
@@ -4546,13 +4571,6 @@
   <form class="quote-form" id="quoteForm" action="https://formspree.io/f/xlgwaank" method="POST" onsubmit="handleQuoteSubmit(event)" novalidate>
     <input type="hidden" name="_subject" id="quoteSubject" value="Nowe zapytanie Meblofix">
     <input type="hidden" name="typ_zdarzenia" id="quoteEventType" value="ZAPYTANIE">
-    <input type="hidden" name="produkty_kalkulacji" id="quoteProductsInput" value="">
-    <input type="hidden" name="suma_wartosci_mebli" id="quoteFurnitureInput" value="">
-    <input type="hidden" name="zastosowany_procent" value="20%">
-    <input type="hidden" name="koszt_pracy" id="quoteWorkInput" value="">
-    <input type="hidden" name="koszt_dojazdu" id="quoteTravelInput" value="0 zł">
-    <input type="hidden" name="cena_orientacyjna_razem" id="quoteTotalInput" value="150 zł">
-    <input type="hidden" name="stawka_dojazdu" id="quoteTravelRateInput" value="">
     <input type="hidden" name="charakter_wyceny" value="Orientacyjna wycena montażu gotowych mebli z paczek — wymaga potwierdzenia zakresu prac">
     <div class="quote-honeypot" aria-hidden="true">
       <label for="quoteWebsite">Pozostaw to pole puste</label>
@@ -5511,7 +5529,7 @@
   bindErrorCleanup('quoteForm', 'quoteFormStatus');
 
   // ─── KALKULATOR OPARTY WYŁĄCZNIE NA LINKACH ───
-  const QUOTE_RULES = Object.freeze({ minimumJob: 150, installationRate: 0.2, travelPerKm: 1.5, maxLinks: 10 });
+  const QUOTE_MAX_LINKS = 10;
   const quoteForm = document.getElementById('quoteForm');
   const quoteCityField = document.getElementById('quoteCity');
   const quoteDistanceField = document.getElementById('quoteDistance');
@@ -5527,11 +5545,11 @@
   const quoteCalculate = document.getElementById('quoteCalculate');
   const quoteEventType = document.getElementById('quoteEventType');
   const quoteSubject = document.getElementById('quoteSubject');
-  const quoteProductsInput = document.getElementById('quoteProductsInput');
-  const quoteFurnitureInput = document.getElementById('quoteFurnitureInput');
-  const quoteWorkInput = document.getElementById('quoteWorkInput');
-  const quoteTravelInput = document.getElementById('quoteTravelInput');
-  const quoteTotalInput = document.getElementById('quoteTotalInput');
+  const quoteServiceField = document.getElementById('quoteService');
+  const quoteDetailsField = document.getElementById('quoteDetails');
+  const quoteNameField = document.getElementById('quoteName');
+  const quotePhoneField = document.getElementById('quotePhone');
+  const quoteEmailField = document.getElementById('quoteEmail');
   let lastCalculation = null;
   let calculationKey = '';
   let calculationNoticeKey = '';
@@ -5545,20 +5563,19 @@
     else { if (quoteDistanceField.value === '0') quoteDistanceField.value = ''; quoteDistanceHint.textContent = 'Poza Gliwicami podaj odległość w jedną stronę.'; }
   }
   function addProductRow() {
-    if (quoteProducts.children.length >= QUOTE_RULES.maxLinks) return;
+    if (quoteProducts.children.length >= QUOTE_MAX_LINKS) return;
     const row = document.createElement('div'); row.className = 'quote-product-row';
     const index = quoteProducts.children.length + 1;
     row.innerHTML = `<label class="quote-sr-only" for="quoteLink${index}">Link do produktu ${index}</label><input type="url" id="quoteLink${index}" name="link_produktu_${index}" maxlength="2048" placeholder="https://..." inputmode="url" autocomplete="url"><label class="quote-sr-only" for="quoteQty${index}">Ilość ${index}</label><input type="number" id="quoteQty${index}" name="ilosc_${index}" min="1" max="100" step="1" value="1" aria-label="Ilość produktu ${index}"><button type="button" class="quote-product-remove" aria-label="Usuń link ${index}">Usuń</button>`;
     row.querySelector('.quote-product-remove').addEventListener('click', () => { row.remove(); renumberRows(); });
     quoteProducts.append(row); renumberRows();
   }
-  function renumberRows() { quoteAddLink.disabled = quoteProducts.children.length >= QUOTE_RULES.maxLinks; quoteProductsStatus.textContent = `${quoteProducts.children.length}/${QUOTE_RULES.maxLinks} linków dodanych. Każdy produkt musi mieć jednoznacznie odczytaną cenę.`; }
+  function renumberRows() { quoteAddLink.disabled = quoteProducts.children.length >= QUOTE_MAX_LINKS; quoteProductsStatus.textContent = `${quoteProducts.children.length}/${QUOTE_MAX_LINKS} linków dodanych. Każdy produkt musi mieć jednoznacznie odczytaną cenę.`; }
   function rows() { return [...quoteProducts.querySelectorAll('.quote-product-row')].map(row => ({ url: row.querySelector('input[type="url"]').value.trim(), quantity: Number(row.querySelector('input[type="number"]').value) || 0 })); }
   function setResult(result) {
     if (!result) { quoteWorkCost.textContent = quoteTravelCost.textContent = quoteTotalCost.textContent = '—'; quoteProductResults.replaceChildren(); return; }
     quoteWorkCost.textContent = money(result.installation); quoteTravelCost.textContent = money(result.travel); quoteTotalCost.textContent = money(result.total);
-    quoteWorkInput.value = money(result.installation); quoteTravelInput.value = money(result.travel); quoteTotalInput.value = money(result.total); quoteFurnitureInput.value = money(result.furniture); quoteProductsInput.value = JSON.stringify(result.products);
-    quoteTravelExplanation.textContent = result.travel ? `Dojazd: ${result.distance} km × 2 × 1,50 zł = ${money(result.travel)}.` : 'Dojazd na terenie Gliwic: bez dodatkowej opłaty.';
+    quoteTravelExplanation.textContent = result.travel ? `Orientacyjny koszt dojazdu dla podanej odległości: ${money(result.travel)}.` : 'Dojazd na terenie Gliwic: bez dodatkowej opłaty.';
     quoteProductResults.replaceChildren(...result.products.map(product => { const li = document.createElement('li'); const link = document.createElement('a'); link.href = product.url; link.target = '_blank'; link.rel = 'noopener noreferrer'; link.textContent = `${product.name} — ${money(product.price)} × ${product.quantity} = ${money(product.value)}`; li.append(link); return li; }));
   }
   function showIndividualQuote(message) {
@@ -5568,28 +5585,45 @@
   async function calculateFromLinks() {
     const items = rows().filter(item => item.url);
     if (!items.length || items.some(item => !Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 100)) { setFormStatus(quoteProductsStatus, 'Podaj poprawny link i ilość każdego produktu.', 'error'); return; }
+    const requestData = {
+      items,
+      city: quoteCityField.value.trim(),
+      distance: Number(quoteDistanceField.value),
+      furnitureType: quoteServiceField.value,
+      details: quoteDetailsField.value.trim(),
+      contact: { name: quoteNameField.value.trim(), phone: quotePhoneField.value.trim(), email: quoteEmailField.value.trim() }
+    };
     quoteCalculate.disabled = true; quoteCalculate.textContent = 'Analizuję link…'; quoteProductsStatus.textContent = 'Analizuję link…';
     try {
-      const response = await fetch('/api/quote-products', { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({ urls: items.map(item => item.url) }) });
+      const response = await fetch('/api/quote-products', { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(requestData) });
       const data = await response.json(); if (!response.ok || !Array.isArray(data.products)) throw new Error('product lookup failed');
       const planner = data.products.find(product => product.kind === 'ikea-project');
       if (planner) {
         showIndividualQuote(planner.error || 'Projekt IKEA został rozpoznany, ale nie możemy automatycznie odczytać jego wartości. Ten projekt wymaga indywidualnej wyceny.');
         return;
       }
-      const products = data.products.map((product, i) => ({ ...product, quantity: items[i].quantity, value: Math.round(product.price * items[i].quantity) }));
-      if (!data.allConfirmed || products.some(product => product.error)) { showIndividualQuote('Nie udało się potwierdzić ceny wszystkich produktów. To zlecenie wymaga indywidualnej wyceny.'); return; }
-      const furniture = products.reduce((sum, product) => sum + product.value, 0); const installation = Math.max(QUOTE_RULES.minimumJob, Math.round(furniture * QUOTE_RULES.installationRate)); const distance = isGliwice(quoteCityField.value) ? 0 : Number(quoteDistanceField.value); if (!Number.isFinite(distance) || distance < 0 || (!isGliwice(quoteCityField.value) && distance <= 0)) throw new Error('distance');
-      const travel = Math.round(distance * 2 * QUOTE_RULES.travelPerKm); const result = { products, furniture, installation, distance, travel, total: installation + travel }; lastCalculation = result; calculationKey = JSON.stringify({ items, city: quoteCityField.value.trim(), distance }); setResult(result); quoteProductsStatus.textContent = 'Ceny produktów potwierdzone. Wynik jest orientacyjny.';
-      await sendCalculationNotice(result, calculationKey);
+      if (!data.allConfirmed || data.products.some(product => product.error)) { showIndividualQuote('Nie udało się potwierdzić ceny wszystkich produktów. To zlecenie wymaga indywidualnej wyceny.'); return; }
+      if (!data.quote) throw new Error('missing verified quote');
+      const result = data.quote; lastCalculation = result; calculationKey = JSON.stringify(requestData); setResult(result); quoteProductsStatus.textContent = 'Ceny produktów potwierdzone. Wynik jest orientacyjny.';
+      if (data.notificationToken) {
+        await new Promise(resolve => requestAnimationFrame(() => resolve()));
+        await sendCalculationNotice(data.notificationToken, calculationKey);
+      } else {
+        console.warn('Powiadomienie o wycenie nie jest skonfigurowane. Wynik kalkulacji pozostaje dostępny.');
+      }
     } catch { showIndividualQuote('Nie udało się automatycznie potwierdzić ceny. To zlecenie wymaga indywidualnej wyceny.'); }
     finally { quoteCalculate.disabled = false; quoteCalculate.textContent = 'Oblicz orientacyjny koszt montażu'; }
   }
-  async function sendCalculationNotice(result, key) {
+  async function sendCalculationNotice(token, key) {
     if (calculationNoticeKey === key) return;
-    calculationNoticeKey = key; quoteEventType.value = 'KALKULACJA'; quoteSubject.value = `Nowa kalkulacja Meblofix – ${result.total} zł`;
-    const payload = new FormData(); payload.append('_subject', quoteSubject.value); payload.append('typ_zdarzenia', 'KALKULACJA'); payload.append('data_i_godzina', new Date().toISOString()); payload.append('produkty_kalkulacji', JSON.stringify(result.products)); payload.append('suma_wartosci_mebli', money(result.furniture)); payload.append('zastosowany_procent', '20%'); payload.append('koszt_montazu', money(result.installation)); payload.append('koszt_dojazdu', money(result.travel)); payload.append('cena_razem', money(result.total)); payload.append('miejscowosc', quoteCityField.value.trim()); payload.append('odleglosc_km', String(result.distance)); payload.append('klient_przeslal_formularz', 'NIE');
-    try { const response = await fetch(quoteForm.action, { method: 'POST', body: payload, headers: { Accept: 'application/json' } }); if (!response.ok) throw new Error('notification failed'); } catch { quoteProductsStatus.textContent = 'Wynik obliczono, ale nie udało się wysłać powiadomienia. Skontaktuj się telefonicznie, aby potwierdzić wycenę.'; }
+    calculationNoticeKey = key;
+    try {
+      const response = await fetch('/api/quote-notification', { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({ token }) });
+      if (!response.ok) throw new Error('notification failed');
+    } catch (error) {
+      calculationNoticeKey = '';
+      console.warn('Nie udało się wysłać technicznego powiadomienia o wycenie.', error);
+    }
   }
   function validateContact() {
     const name = document.getElementById('quoteName'), phone = document.getElementById('quotePhone'), email = document.getElementById('quoteEmail'); [name, phone, email].forEach(clearFieldError); const invalid = [];
@@ -5599,11 +5633,10 @@
   }
   async function handleQuoteSubmit(event) {
     event.preventDefault(); if (document.getElementById('quoteWebsite').value || !validateContact()) return; const form = event.currentTarget, status = document.getElementById('quoteFormStatus'), submit = document.getElementById('quoteSubmit'); submit.disabled = true; submit.textContent = 'Wysyłam zapytanie…';
-    quoteEventType.value = 'ZAPYTANIE'; quoteSubject.value = `Nowe zapytanie Meblofix – ${lastCalculation.total} zł`; const payload = new FormData(form); payload.set('klient_przeslal_formularz', 'TAK'); payload.set('data_i_godzina', new Date().toISOString());
+    quoteEventType.value = 'ZAPYTANIE'; quoteSubject.value = 'Nowe zapytanie Meblofix'; const payload = new FormData(form); payload.set('klient_przeslal_formularz', 'TAK'); payload.set('data_i_godzina', new Date().toISOString());
     try { const response = await fetch(form.action, { method: 'POST', body: payload, headers: { Accept: 'application/json' } }); if (!response.ok) throw new Error('send failed'); setFormStatus(status, 'Zapytanie zostało wysłane. Skontaktuję się, aby potwierdzić zakres montażu.', 'success'); submit.textContent = '✓ Zapytanie wysłane'; } catch { setFormStatus(status, 'Nie udało się wysłać zapytania. Zadzwoń: +48 784 878 197.', 'error'); submit.disabled = false; submit.textContent = 'Wyślij zapytanie o montaż'; }
   }
   quoteAddLink.addEventListener('click', addProductRow); quoteCalculate.addEventListener('click', calculateFromLinks); quoteCityField.addEventListener('input', syncDistance); syncDistance(); addProductRow();
-  window.MebloFixQuoteCalculator = Object.freeze({ rules: QUOTE_RULES });
 
   function createStarIcon(filled) {
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');

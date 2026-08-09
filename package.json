@@ -1,0 +1,8 @@
+{
+  "name": "meblofix-gliwice",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:quote": "node tests/quote-notification.test.js"
+  }
+}
