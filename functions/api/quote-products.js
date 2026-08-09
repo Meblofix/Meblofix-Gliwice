@@ -4,6 +4,16 @@ const MAX_REQUEST_BYTES = 32_000;
 const TIMEOUT_MS = 8_000;
 export const TOKEN_LIFETIME_MS = 20 * 60 * 1_000;
 const QUOTE_RULES = Object.freeze({ minimumJob: 150, installationRate: 0.2, travelPerKm: 1.5 });
+// Jedna wspólna tabela dla wszystkich lokalizacji. Przeglądarka przesyła tylko
+// serviceId i quantity; nazwy oraz kwoty zawsze pochodzą z kontrolowanego backendu.
+const EXTRA_SERVICE_CATALOG = Object.freeze({
+  sink_cutout: Object.freeze({ name: 'Wycięcie otworu pod zlew', unitPrice: 100 }),
+  hob_cutout: Object.freeze({ name: 'Wycięcie otworu pod płytę', unitPrice: 100 }),
+  sink_install: Object.freeze({ name: 'Montaż zlewu', unitPrice: 100 }),
+  tap_install: Object.freeze({ name: 'Montaż baterii', unitPrice: 60 }),
+  dishwasher_connect: Object.freeze({ name: 'Podłączenie zmywarki', unitPrice: 80 }),
+  hood_install: Object.freeze({ name: 'Montaż okapu', unitPrice: 100 })
+});
 const ALLOWED_FURNITURE_TYPES = new Set([
   'Meble z paczek',
   'Kuchnia z gotowych elementów/paczek',
@@ -166,6 +176,11 @@ async function hmacKey(secret) {
   return crypto.subtle.importKey('raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']);
 }
 
+async function encryptionKey(secret) {
+  const digest = await crypto.subtle.digest('SHA-256', encoder.encode(secret));
+  return crypto.subtle.importKey('raw', digest, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
+}
+
 function notificationSecret(env) {
   const secret = String(env?.QUOTE_NOTIFICATION_SECRET || '');
   return secret.length >= 32 ? secret : null;
@@ -178,18 +193,40 @@ async function sha256(value) {
 async function signQuote(payload, env) {
   const secret = notificationSecret(env);
   if (!secret) throw new Error('missing-notification-secret');
-  const encoded = bytesToBase64Url(encoder.encode(JSON.stringify(payload)));
-  const signature = new Uint8Array(await crypto.subtle.sign('HMAC', await hmacKey(secret), encoder.encode(encoded)));
-  return `v1.${encoded}.${bytesToBase64Url(signature)}`;
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const encrypted = new Uint8Array(await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv },
+    await encryptionKey(secret),
+    encoder.encode(JSON.stringify(payload))
+  ));
+  const signedValue = `v2.${bytesToBase64Url(iv)}.${bytesToBase64Url(encrypted)}`;
+  const signature = new Uint8Array(await crypto.subtle.sign('HMAC', await hmacKey(secret), encoder.encode(signedValue)));
+  return `${signedValue}.${bytesToBase64Url(signature)}`;
 }
 
 export async function verifyQuoteToken(token, env) {
   const secret = notificationSecret(env);
   const parts = String(token || '').split('.');
-  if (!secret || parts.length !== 3 || parts[0] !== 'v1') throw new Error('invalid-token');
-  const valid = await crypto.subtle.verify('HMAC', await hmacKey(secret), base64UrlToBytes(parts[2]), encoder.encode(parts[1]));
-  if (!valid) throw new Error('invalid-token');
-  const payload = JSON.parse(decoder.decode(base64UrlToBytes(parts[1])));
+  if (!secret) throw new Error('invalid-token');
+  let payload;
+  if (parts.length === 4 && parts[0] === 'v2') {
+    const signedValue = parts.slice(0, 3).join('.');
+    const valid = await crypto.subtle.verify('HMAC', await hmacKey(secret), base64UrlToBytes(parts[3]), encoder.encode(signedValue));
+    if (!valid) throw new Error('invalid-token');
+    const decrypted = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv: base64UrlToBytes(parts[1]) },
+      await encryptionKey(secret),
+      base64UrlToBytes(parts[2])
+    );
+    payload = JSON.parse(decoder.decode(decrypted));
+  } else if (parts.length === 3 && parts[0] === 'v1') {
+    // Krótka zgodność wsteczna dla tokenów wystawionych przed wdrożeniem v2.
+    const valid = await crypto.subtle.verify('HMAC', await hmacKey(secret), base64UrlToBytes(parts[2]), encoder.encode(parts[1]));
+    if (!valid) throw new Error('invalid-token');
+    payload = JSON.parse(decoder.decode(base64UrlToBytes(parts[1])));
+  } else {
+    throw new Error('invalid-token');
+  }
   if (
     payload?.v !== 1
     || typeof payload.quoteId !== 'string'
@@ -219,8 +256,23 @@ function normalizeRequest(body) {
   if (!city || !ALLOWED_FURNITURE_TYPES.has(furnitureType) || !Number.isFinite(distanceInput) || distanceInput < 0 || distanceInput > 500) throw new Error('context');
   const distance = isGliwice(city) ? 0 : distanceInput;
   if (!isGliwice(city) && distance <= 0) throw new Error('distance');
+  const rawExtraServices = body?.extraServices == null ? [] : body.extraServices;
+  if (!Array.isArray(rawExtraServices) || rawExtraServices.length > 10) throw new Error('extra-services');
+  const seenServiceIds = new Set();
+  const extraServices = rawExtraServices.map(item => {
+    const serviceId = cleanText(item?.serviceId, 80);
+    const quantity = Number(item?.quantity);
+    const service = EXTRA_SERVICE_CATALOG[serviceId];
+    if (!service || seenServiceIds.has(serviceId) || !Number.isInteger(quantity) || quantity < 1 || quantity > 10) {
+      throw new Error('extra-services');
+    }
+    seenServiceIds.add(serviceId);
+    const value = Math.round(service.unitPrice * quantity);
+    return { serviceId, name: service.name, quantity, unitPrice: service.unitPrice, value };
+  });
   return {
     items,
+    extraServices,
     context: {
       city,
       distance,
@@ -241,7 +293,7 @@ export async function onRequestPost({ request, env }) {
     if (declaredLength > MAX_REQUEST_BYTES) return Response.json({ error: 'Żądanie jest zbyt duże.' }, { status: 413 });
     const rawBody = await request.text();
     if (encoder.encode(rawBody).byteLength > MAX_REQUEST_BYTES) return Response.json({ error: 'Żądanie jest zbyt duże.' }, { status: 413 });
-    const { items, context } = normalizeRequest(JSON.parse(rawBody));
+    const { items, extraServices, context } = normalizeRequest(JSON.parse(rawBody));
     const resolved = await Promise.all(items.map(item => resolveProduct(item.url)));
     const products = resolved.map((product, index) => ({
       ...product,
@@ -253,8 +305,22 @@ export async function onRequestPost({ request, env }) {
 
     const furniture = products.reduce((sum, product) => sum + product.value, 0);
     const installation = Math.max(QUOTE_RULES.minimumJob, Math.round(furniture * QUOTE_RULES.installationRate));
+    const extraServicesTotal = extraServices.reduce((sum, service) => sum + service.value, 0);
     const travel = Math.round(context.distance * 2 * QUOTE_RULES.travelPerKm);
-    const quote = { products, furniture, installation, distance: context.distance, travel, total: installation + travel };
+    const quote = {
+      products,
+      furniture,
+      installation,
+      extraServices,
+      extraServicesTotal,
+      distance: context.distance,
+      travel,
+      total: installation + extraServicesTotal + travel
+    };
+    const clientQuote = {
+      ...quote,
+      extraServices: quote.extraServices.map(({ serviceId, name, quantity }) => ({ serviceId, name, quantity }))
+    };
     const issuedAt = Date.now();
     const clientFingerprint = await sha256(`${request.headers.get('cf-connecting-ip') || 'unknown'}|${request.headers.get('user-agent') || 'unknown'}`);
     // Każde poprawne obliczenie dostaje własny identyfikator. Nie wyprowadzamy go
@@ -264,7 +330,7 @@ export async function onRequestPost({ request, env }) {
     if (notificationSecret(env)) {
       notificationToken = await signQuote({ v: 1, quoteId, clientFingerprint, issuedAt, expiresAt: issuedAt + TOKEN_LIFETIME_MS, quote, context }, env);
     }
-    return Response.json({ products, allConfirmed: true, quote, notificationToken, quoteId }, { headers: { 'Cache-Control': 'no-store' } });
+    return Response.json({ products, allConfirmed: true, quote: clientQuote, notificationToken, quoteId }, { headers: { 'Cache-Control': 'no-store' } });
   } catch {
     return Response.json({ error: 'Nieprawidłowe żądanie.' }, { status: 400, headers: { 'Cache-Control': 'no-store' } });
   }

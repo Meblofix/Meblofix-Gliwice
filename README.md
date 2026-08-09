@@ -48,6 +48,15 @@ Cloudflare Pages musi mieć skonfigurowane:
 - zaszyfrowaną zmienną `QUOTE_NOTIFICATION_FORMSPREE_ENDPOINT` z pełnym adresem
   osobnego formularza Formspree przeznaczonego tylko do automatycznych powiadomień.
 
+Kalkulator obsługuje backendowy schemat `extraServices` (`serviceId` i
+`quantity`). Frontend nie zawiera ani nie przesyła cen jednostkowych: wszystkie
+stawki usług są wybierane z jednej, kontrolowanej tabeli w
+`functions/api/quote-products.js`, niezależnie od miejscowości. Nieznany
+`serviceId`, duplikat lub ilość spoza zakresu 1–10 są odrzucane. Podpisany token
+HMAC obejmuje pełną, obliczoną po stronie serwera listę usług i ich wartości.
+Payload tokenu v2 jest dodatkowo szyfrowany AES-GCM, dzięki czemu ceny
+jednostkowe usług nie są widoczne w odpowiedzi API ani po zdekodowaniu tokenu.
+
 Sekret i endpoint Formspree należy dodać w ustawieniach projektu Cloudflare jako
 zaszyfrowane zmienne. Nie zapisuj ich w repozytorium, publicznej konfiguracji ani
 w kodzie JavaScript przeglądarki. Endpoint automatycznych powiadomień musi być

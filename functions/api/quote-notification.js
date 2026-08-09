@@ -46,6 +46,17 @@ function productLines(products) {
   ].join('\n')).join('\n\n');
 }
 
+function extraServiceLines(services) {
+  if (!Array.isArray(services) || services.length === 0) return 'Nie wybrano';
+  return services.map((service, index) => [
+    `${index + 1}. ${service.name}`,
+    `Identyfikator: ${service.serviceId}`,
+    `Ilość: ${service.quantity}`,
+    `Cena jednostkowa: ${money(service.unitPrice)}`,
+    `Wartość pozycji: ${money(service.value)}`
+  ].join('\n')).join('\n\n');
+}
+
 export function automaticNotificationFields(payload) {
   const { quote, context } = payload;
   const fields = new FormData();
@@ -56,6 +67,8 @@ export function automaticNotificationFields(payload) {
   fields.set('produkty', productLines(quote.products));
   fields.set('laczna_wartosc_produktow', money(quote.furniture));
   fields.set('koszt_montazu', money(quote.installation));
+  fields.set('uslugi_dodatkowe', extraServiceLines(quote.extraServices));
+  fields.set('laczny_koszt_uslug_dodatkowych', money(quote.extraServicesTotal || 0));
   fields.set('koszt_dojazdu', money(quote.travel));
   fields.set('laczna_orientacyjna_wycena', money(quote.total));
   fields.set('miejscowosc', context.city);

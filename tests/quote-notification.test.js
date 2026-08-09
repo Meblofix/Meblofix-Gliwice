@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { onRequestPost as calculateQuote, TOKEN_LIFETIME_MS } from '../functions/api/quote-products.js';
+import { onRequestPost as calculateQuote, TOKEN_LIFETIME_MS, verifyQuoteToken } from '../functions/api/quote-products.js';
 import { onRequestPost as notifyQuote } from '../functions/api/quote-notification.js';
 
 const SECRET = 'testowy-sekret-powiadomien-ma-co-najmniej-32-znaki';
@@ -45,9 +45,7 @@ function request(path, value, userAgent = 'Meblofix test') {
   });
 }
 
-function tokenPayload(token) {
-  return JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString('utf8'));
-}
+async function tokenPayload(token, bindings) { return verifyQuoteToken(token, bindings); }
 
 function installFetchMock({ products = {}, deliveries, deliveryStatus = 200 }) {
   const original = globalThis.fetch;
@@ -91,6 +89,8 @@ test('poprawna wycena jednego produktu wysyła dokładnie jedno powiadomienie', 
     assert.ok(deliveries[0].data_i_godzina);
     assert.equal(deliveries[0].laczna_wartosc_produktow, '1000 zł');
     assert.equal(deliveries[0].koszt_montazu, '200 zł');
+    assert.equal(deliveries[0].uslugi_dodatkowe, 'Nie wybrano');
+    assert.equal(deliveries[0].laczny_koszt_uslug_dodatkowych, '0 zł');
     assert.equal(deliveries[0].koszt_dojazdu, '0 zł');
     assert.equal(deliveries[0].laczna_orientacyjna_wycena, '200 zł');
     assert.equal(deliveries[0].rodzaj_mebla, 'Meble z paczek');
@@ -169,7 +169,7 @@ test('dwie identyczne wyceny otrzymują dwa różne losowe quoteId', async () =>
     assert.notEqual(first.data.quoteId, second.data.quoteId);
     assert.match(first.data.quoteId, /^[0-9a-f-]{36}$/i);
     assert.match(second.data.quoteId, /^[0-9a-f-]{36}$/i);
-    const payload = tokenPayload(first.data.notificationToken);
+    const payload = await tokenPayload(first.data.notificationToken, bindings);
     assert.equal(payload.expiresAt - payload.issuedAt, TOKEN_LIFETIME_MS);
   } finally { restore(); }
 });
@@ -199,7 +199,8 @@ test('zmodyfikowany i wygasły token są odrzucane', async () => {
     const bindings = env();
     const result = await calculate(body([{ url, quantity: 1 }]), bindings, 'test-token');
     const parts = result.data.notificationToken.split('.');
-    const changed = `${parts[0]}.${parts[1].slice(0, -1)}${parts[1].endsWith('a') ? 'b' : 'a'}.${parts[2]}`;
+    parts[parts.length - 1] = `${parts.at(-1).startsWith('a') ? 'b' : 'a'}${parts.at(-1).slice(1)}`;
+    const changed = parts.join('.');
     assert.equal((await notify(changed, bindings)).response.status, 400);
 
     Date.now = () => realNow() + TOKEN_LIFETIME_MS + 1_000;
@@ -312,6 +313,193 @@ test('frontend nie może wskazać endpointu ani zmienić podpisanych kwot', asyn
   } finally { restore(); }
 });
 
+test('brak usług dodatkowych daje koszt 0 i wynik zgodny z backendem', async () => {
+  const deliveries = [];
+  const url = 'https://www.ikea.com/pl/pl/p/test-no-extra-services/';
+  const restore = installFetchMock({ products: { [url]: PRODUCT_HTML('Szafa', 1000) }, deliveries });
+  try {
+    const result = await calculate(body([{ url, quantity: 1 }], { extraServices: [] }), env(), 'test-no-extra-services');
+    assert.equal(result.response.status, 200);
+    assert.deepEqual(result.data.quote.extraServices, []);
+    assert.equal(result.data.quote.extraServicesTotal, 0);
+    assert.equal(result.data.quote.total, result.data.quote.installation + result.data.quote.travel);
+    const payload = await tokenPayload(result.data.notificationToken, env());
+    assert.deepEqual(payload.quote.extraServices, []);
+    assert.equal(payload.quote.extraServicesTotal, 0);
+  } finally { restore(); }
+});
+
+test('jedna usługa dodatkowa jest liczona według tabeli backendu', async () => {
+  const deliveries = [];
+  const url = 'https://www.ikea.com/pl/pl/p/test-one-extra-service/';
+  const restore = installFetchMock({ products: { [url]: PRODUCT_HTML('Szafa', 1000) }, deliveries });
+  try {
+    const result = await calculate(body([{ url, quantity: 1 }], {
+      extraServices: [{ serviceId: 'sink_cutout', quantity: 1 }]
+    }), env(), 'test-one-extra-service');
+    assert.equal(result.response.status, 200);
+    assert.deepEqual(result.data.quote.extraServices, [{
+      serviceId: 'sink_cutout', name: 'Wycięcie otworu pod zlew', quantity: 1
+    }]);
+    assert.equal('unitPrice' in result.data.quote.extraServices[0], false);
+    assert.equal('value' in result.data.quote.extraServices[0], false);
+    assert.doesNotMatch(result.data.notificationToken, /sink_cutout|Wycięcie|unitPrice/);
+    const signed = await tokenPayload(result.data.notificationToken, env());
+    assert.equal(signed.quote.extraServices[0].unitPrice, 100);
+    assert.equal(signed.quote.extraServices[0].value, 100);
+    assert.equal(result.data.quote.extraServicesTotal, 100);
+    assert.equal(result.data.quote.total, 300);
+  } finally { restore(); }
+});
+
+test('kilka usług i ilość większa niż 1 sumują się po stronie backendu', async () => {
+  const deliveries = [];
+  const url = 'https://www.ikea.com/pl/pl/p/test-many-extra-services/';
+  const restore = installFetchMock({ products: { [url]: PRODUCT_HTML('Kuchnia testowa', 1000) }, deliveries });
+  try {
+    const result = await calculate(body([{ url, quantity: 1 }], {
+      extraServices: [
+        { serviceId: 'tap_install', quantity: 2 },
+        { serviceId: 'dishwasher_connect', quantity: 1 },
+        { serviceId: 'hood_install', quantity: 1 }
+      ]
+    }), env(), 'test-many-extra-services');
+    assert.equal(result.response.status, 200);
+    assert.deepEqual(result.data.quote.extraServices.map(service => [service.serviceId, service.quantity]), [
+      ['tap_install', 2],
+      ['dishwasher_connect', 1],
+      ['hood_install', 1]
+    ]);
+    const signed = await tokenPayload(result.data.notificationToken, env());
+    assert.deepEqual(signed.quote.extraServices.map(service => [service.serviceId, service.quantity, service.unitPrice, service.value]), [
+      ['tap_install', 2, 60, 120],
+      ['dishwasher_connect', 1, 80, 80],
+      ['hood_install', 1, 100, 100]
+    ]);
+    assert.equal(result.data.quote.extraServicesTotal, 300);
+    assert.equal(result.data.quote.total, 500);
+  } finally { restore(); }
+});
+
+test('wszystkie zatwierdzone serviceId mają właściwe stawki backendowe', async () => {
+  const deliveries = [];
+  const url = 'https://www.ikea.com/pl/pl/p/test-all-extra-services/';
+  const restore = installFetchMock({ products: { [url]: PRODUCT_HTML('Zestaw kuchenny', 2000) }, deliveries });
+  try {
+    const result = await calculate(body([{ url, quantity: 1 }], {
+      extraServices: [
+        { serviceId: 'sink_cutout', quantity: 1 },
+        { serviceId: 'hob_cutout', quantity: 1 },
+        { serviceId: 'sink_install', quantity: 1 },
+        { serviceId: 'tap_install', quantity: 1 },
+        { serviceId: 'dishwasher_connect', quantity: 1 },
+        { serviceId: 'hood_install', quantity: 1 }
+      ]
+    }), env(), 'test-all-extra-services');
+    assert.equal(result.response.status, 200);
+    const signed = await tokenPayload(result.data.notificationToken, env());
+    assert.deepEqual(Object.fromEntries(signed.quote.extraServices.map(service => [service.serviceId, service.unitPrice])), {
+      sink_cutout: 100,
+      hob_cutout: 100,
+      sink_install: 100,
+      tap_install: 60,
+      dishwasher_connect: 80,
+      hood_install: 100
+    });
+    assert.equal(result.data.quote.extraServicesTotal, 540);
+    assert.equal(result.data.quote.total, 940);
+  } finally { restore(); }
+});
+
+test('nieistniejący serviceId jest odrzucany przed pobraniem produktu', async () => {
+  const deliveries = [];
+  const restore = installFetchMock({ deliveries });
+  try {
+    const result = await calculate(body([{ url: 'https://www.ikea.com/pl/pl/p/test-unknown-service/', quantity: 1 }], {
+      extraServices: [{ serviceId: 'wlasna-usluga', quantity: 1 }]
+    }), env(), 'test-unknown-service');
+    assert.equal(result.response.status, 400);
+    assert.equal(result.data.error, 'Nieprawidłowe żądanie.');
+    assert.equal(deliveries.length, 0);
+  } finally { restore(); }
+});
+
+test('duplikat usługi i ilość spoza zakresu są odrzucane', async () => {
+  const deliveries = [];
+  const restore = installFetchMock({ deliveries });
+  try {
+    const url = 'https://www.ikea.com/pl/pl/p/test-invalid-extra-quantity/';
+    const duplicate = await calculate(body([{ url, quantity: 1 }], {
+      extraServices: [
+        { serviceId: 'sink_install', quantity: 1 },
+        { serviceId: 'sink_install', quantity: 1 }
+      ]
+    }), env(), 'test-duplicate-service');
+    const tooMany = await calculate(body([{ url, quantity: 1 }], {
+      extraServices: [{ serviceId: 'sink_install', quantity: 11 }]
+    }), env(), 'test-extra-quantity');
+    assert.equal(duplicate.response.status, 400);
+    assert.equal(tooMany.response.status, 400);
+    assert.equal(deliveries.length, 0);
+  } finally { restore(); }
+});
+
+test('kwoty usług i sumy przesłane przez frontend nie wpływają na wycenę', async () => {
+  const deliveries = [];
+  const url = 'https://www.ikea.com/pl/pl/p/test-price-injection/';
+  const restore = installFetchMock({ products: { [url]: PRODUCT_HTML('Komoda', 800) }, deliveries });
+  try {
+    const result = await calculate(body([{ url, quantity: 1 }], {
+      extraServices: [{ serviceId: 'sink_cutout', quantity: 1, unitPrice: 1, price: 1, value: 1 }],
+      extraServicesTotal: 99_999,
+      installation: 1,
+      travel: 1,
+      total: 1
+    }), env(), 'test-price-injection');
+    assert.equal(result.response.status, 200);
+    assert.equal(result.data.quote.installation, 160);
+    assert.equal('unitPrice' in result.data.quote.extraServices[0], false);
+    assert.equal('value' in result.data.quote.extraServices[0], false);
+    const signed = await tokenPayload(result.data.notificationToken, env());
+    assert.equal(signed.quote.extraServices[0].unitPrice, 100);
+    assert.equal(signed.quote.extraServices[0].value, 100);
+    assert.equal(result.data.quote.extraServicesTotal, 100);
+    assert.equal(result.data.quote.travel, 0);
+    assert.equal(result.data.quote.total, 260);
+  } finally { restore(); }
+});
+
+test('e-mail właściciela zawiera wszystkie usługi, ilości i wewnętrzne ceny', async () => {
+  const deliveries = [];
+  const url = 'https://www.ikea.com/pl/pl/p/test-extra-services-email/';
+  const restore = installFetchMock({ products: { [url]: PRODUCT_HTML('Kuchnia', 1500) }, deliveries });
+  try {
+    const bindings = env();
+    const result = await calculate(body([{ url, quantity: 1 }], {
+      city: 'Zabrze', distance: 10,
+      extraServices: [
+        { serviceId: 'hob_cutout', quantity: 2 },
+        { serviceId: 'dishwasher_connect', quantity: 1 }
+      ]
+    }), bindings, 'test-extra-services-email');
+    const notification = await notify(result.data.notificationToken, bindings);
+    assert.equal(notification.response.status, 200);
+    assert.equal(deliveries.length, 1);
+    assert.match(deliveries[0].uslugi_dodatkowe, /Wycięcie otworu pod płytę/);
+    assert.match(deliveries[0].uslugi_dodatkowe, /Identyfikator: hob_cutout/);
+    assert.match(deliveries[0].uslugi_dodatkowe, /Ilość: 2/);
+    assert.match(deliveries[0].uslugi_dodatkowe, /Cena jednostkowa: 100 zł/);
+    assert.match(deliveries[0].uslugi_dodatkowe, /Wartość pozycji: 200 zł/);
+    assert.match(deliveries[0].uslugi_dodatkowe, /Podłączenie zmywarki/);
+    assert.match(deliveries[0].uslugi_dodatkowe, /Cena jednostkowa: 80 zł/);
+    assert.equal(deliveries[0].laczny_koszt_uslug_dodatkowych, '280 zł');
+    assert.equal(deliveries[0].koszt_montazu, '300 zł');
+    assert.equal(deliveries[0].koszt_dojazdu, '30 zł');
+    assert.equal(deliveries[0].laczna_orientacyjna_wycena, '610 zł');
+    assert.equal(deliveries[0].identyfikator_wyceny, result.data.quoteId);
+  } finally { restore(); }
+});
+
 test('awaria Formspree zwraca techniczny błąd bez fałszywego sukcesu', async () => {
   const deliveries = [];
   const url = 'https://www.ikea.com/pl/pl/p/test-formspree-failure/';
@@ -365,4 +553,22 @@ test('frontend nie zawiera reguły procentowej ani technicznego minimum', async 
   assert.doesNotMatch(calculator, /installationRate|minimumJob|travelPerKm|QUOTE_RULES|20%|150 zł/);
   assert.match(calculator, /\/api\/quote-notification/);
   assert.doesNotMatch(calculator, /QUOTE_NOTIFICATION_FORMSPREE_ENDPOINT|formspree\.io\/f\/testquoteendpoint/);
+  const serviceUi = html.slice(html.indexOf('<section class="quote-extra-services"'), html.indexOf('</section>', html.indexOf('<section class="quote-extra-services"')));
+  assert.doesNotMatch(serviceUi, /\b(?:60|80|100)\s*zł|unitPrice|price|value/);
+  assert.match(serviceUi, /sink_cutout/);
+  assert.match(serviceUi, /hood_install/);
+});
+
+test('CTA jest w polach kalkulatora przed kontaktem i awaria powiadomienia nie czyści wyniku', async () => {
+  const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
+  const fieldsStart = html.indexOf('<fieldset class="quote-fields">');
+  const fieldsEnd = html.indexOf('</fieldset>', fieldsStart);
+  const calculateButton = html.indexOf('id="quoteCalculate"');
+  const contact = html.indexOf('<fieldset class="quote-contact">');
+  assert.ok(fieldsStart < calculateButton && calculateButton < fieldsEnd && fieldsEnd < contact);
+  assert.match(html, /quoteCalculate\.disabled = true; quoteCalculate\.textContent = 'Analizuję linki…'/);
+  assert.match(html, /quoteCalculate\.textContent = 'PRZELICZ WYCENĘ'/);
+  const notificationFailure = html.slice(html.indexOf('async function sendCalculationNotice'), html.indexOf('function validateContact'));
+  assert.doesNotMatch(notificationFailure, /setResult\(null\)|lastCalculation\s*=\s*null/);
+  assert.match(notificationFailure, /console\.warn/);
 });
