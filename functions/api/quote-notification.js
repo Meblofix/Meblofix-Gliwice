@@ -27,7 +27,11 @@ function configuredFormspreeEndpoint(env) {
 }
 
 function money(value) {
-  return `${new Intl.NumberFormat('pl-PL', { maximumFractionDigits: 0 }).format(value)} zł`;
+  const hasFraction = Math.round(Number(value) * 100) % 100 !== 0;
+  return `${new Intl.NumberFormat('pl-PL', {
+    minimumFractionDigits: hasFraction ? 2 : 0,
+    maximumFractionDigits: 2
+  }).format(value)} zł`;
 }
 
 function polishDate(timestamp = Date.now()) {
@@ -57,6 +61,24 @@ function extraServiceLines(services) {
   ].join('\n')).join('\n\n');
 }
 
+function attemptProductLines(products) {
+  return products.map((product, index) => [
+    `${index + 1}. ${product.name || 'Produkt bez potwierdzonej nazwy'}`,
+    `Link: ${product.url}`,
+    `Ilość: ${product.quantity}`,
+    'Status: cena niepotwierdzona'
+  ].join('\n')).join('\n\n');
+}
+
+function attemptExtraServiceLines(services) {
+  if (!Array.isArray(services) || services.length === 0) return 'Nie wybrano';
+  return services.map((service, index) => [
+    `${index + 1}. ${service.name}`,
+    `Identyfikator: ${service.serviceId}`,
+    `Ilość: ${service.quantity}`
+  ].join('\n')).join('\n\n');
+}
+
 export function automaticNotificationFields(payload) {
   const { quote, context } = payload;
   const fields = new FormData();
@@ -82,14 +104,52 @@ export function automaticNotificationFields(payload) {
   return fields;
 }
 
+
+export function failedAttemptNotificationFields(payload) {
+  const { attempt, context } = payload;
+  const fields = new FormData();
+  fields.set('_subject', 'Nieudana próba automatycznej wyceny');
+  fields.set('typ_zdarzenia', 'NIEUDANA_PROBA_AUTOMATYCZNEJ_WYCENY');
+  fields.set('data_i_godzina', polishDate(payload.issuedAt));
+  fields.set('identyfikator_proby', payload.quoteId);
+  fields.set('przyczyna', 'price_not_confirmed');
+  fields.set('produkty', attemptProductLines(attempt.products));
+  fields.set('uslugi_dodatkowe', attemptExtraServiceLines(attempt.extraServices));
+  fields.set('miejscowosc', context.city);
+  fields.set('odleglosc_od_gliwic_km', String(context.distance));
+  fields.set('rodzaj_mebla', context.furnitureType);
+  fields.set('dodatkowe_informacje', context.details || 'Nie podano');
+  fields.set('imie', context.contact.name || 'Nie podano');
+  fields.set('telefon', context.contact.phone || 'Nie podano');
+  fields.set('email_klienta', context.contact.email || 'Nie podano');
+  fields.set('wynik', 'Nie wygenerowano kwoty końcowej. Wymagana jest indywidualna wycena.');
+  return fields;
+}
+
+function notificationFields(payload) {
+  return payload.eventType === 'price_not_confirmed'
+    ? failedAttemptNotificationFields(payload)
+    : automaticNotificationFields(payload);
+}
+
 function cleanupMemory(now) {
   for (const [key, expiresAt] of memorySent) if (expiresAt <= now) memorySent.delete(key);
   for (const [key, state] of memoryRate) if (state.expiresAt <= now) memoryRate.delete(key);
 }
 
-async function alreadySent(env, quoteId) {
-  if (memorySent.has(quoteId)) return true;
-  return Boolean(await env.QUOTE_NOTIFICATION_KV.get(`notification:${quoteId}`));
+function deliveryKey(payload) {
+  return typeof payload.notificationKey === 'string' && /^[A-Za-z0-9_-]{20,100}$/.test(payload.notificationKey)
+    ? payload.notificationKey
+    : payload.quoteId;
+}
+
+async function alreadySent(env, payload) {
+  const key = deliveryKey(payload);
+  if (memorySent.has(key)) return true;
+  return Boolean(
+    await env.QUOTE_NOTIFICATION_KV.get(`notification:${payload.quoteId}`)
+    || await env.QUOTE_NOTIFICATION_KV.get(`notification-dedupe:${key}`)
+  );
 }
 
 async function checkRateLimit(env, clientFingerprint, now) {
@@ -110,22 +170,24 @@ async function checkRateLimit(env, clientFingerprint, now) {
 async function deliver(payload, env, endpoint) {
   const now = Date.now();
   cleanupMemory(now);
-  if (await alreadySent(env, payload.quoteId)) return Response.json({ sent: false, error: 'notification-already-sent' }, { status: 409 });
+  if (await alreadySent(env, payload)) return Response.json({ sent: false, error: 'notification-already-sent' }, { status: 409 });
   if (!await checkRateLimit(env, payload.clientFingerprint, now)) return Response.json({ sent: false, error: 'rate-limit' }, { status: 429 });
 
   if (env.QUOTE_NOTIFICATION_MODE !== 'test') {
     const response = await fetch(endpoint, {
       method: 'POST',
-      body: automaticNotificationFields(payload),
+      body: notificationFields(payload),
       headers: { Accept: 'application/json' }
     });
     if (!response.ok) return Response.json({ sent: false, error: 'delivery-failed' }, { status: 502 });
   }
 
-  memorySent.set(payload.quoteId, payload.expiresAt);
+  const key = deliveryKey(payload);
+  memorySent.set(key, payload.expiresAt);
   // Rekord replay żyje dłużej niż 20-minutowy token. KV pozostaje best-effort,
   // natomiast inFlight chroni dodatkowo równoległe wywołania w tym samym isolate.
   await env.QUOTE_NOTIFICATION_KV.put(`notification:${payload.quoteId}`, '1', { expirationTtl: NOTIFICATION_RECORD_TTL_SECONDS });
+  await env.QUOTE_NOTIFICATION_KV.put(`notification-dedupe:${key}`, '1', { expirationTtl: NOTIFICATION_RECORD_TTL_SECONDS });
   return Response.json({ sent: true, testMode: env.QUOTE_NOTIFICATION_MODE === 'test' }, { status: 200 });
 }
 
@@ -143,9 +205,10 @@ export async function onRequestPost({ request, env }) {
   }
 
   try {
-    if (inFlight.has(payload.quoteId)) return (await inFlight.get(payload.quoteId)).clone();
-    const delivery = deliver(payload, env, endpoint).finally(() => inFlight.delete(payload.quoteId));
-    inFlight.set(payload.quoteId, delivery);
+    const key = deliveryKey(payload);
+    if (inFlight.has(key)) return (await inFlight.get(key)).clone();
+    const delivery = deliver(payload, env, endpoint).finally(() => inFlight.delete(key));
+    inFlight.set(key, delivery);
     return await delivery;
   } catch {
     return Response.json({ sent: false, error: 'notification-temporarily-unavailable' }, { status: 503 });

@@ -6,6 +6,14 @@ import { onRequestPost as notifyQuote } from '../functions/api/quote-notificatio
 
 const SECRET = 'testowy-sekret-powiadomien-ma-co-najmniej-32-znaki';
 const NOTIFICATION_ENDPOINT = 'https://formspree.io/f/testquoteendpoint';
+const ALLEGRO_URL = 'https://allegro.pl/produkt/lozko-pojedyncze-ikea-hemnes-drewniane-biale-80x200-z-pojemnikiem-34f7722e-546b-437d-a88d-2d618d6728d0?offerId=18281158355';
+const ALLEGRO_NAME = 'IKEA HEMNES łóżko składane, leżanka 3 szufladami biały 80x200';
+const ALLEGRO_VISIBLE_HTML = `<!doctype html><html><head><meta property="og:title" content="${ALLEGRO_NAME}"></head><body>
+  <h1>${ALLEGRO_NAME}</h1>
+  <section><h2>Warunki oferty</h2><p>dla biznesu</p><p>cena 1399,00&nbsp;zł</p></section>
+  <section><h2>Opcje zakupu</h2><p>Dostawa od 400,00 zł</p></section>
+  <footer>Numer oferty: 18281158355</footer>
+</body></html>`;
 const PRODUCT_HTML = (name, price) => `<!doctype html><html><head><script type="application/ld+json">${JSON.stringify({
   '@type': 'Product', name, offers: { price, priceCurrency: 'PLN' }
 })}</script></head></html>`;
@@ -47,7 +55,7 @@ function request(path, value, userAgent = 'Meblofix test') {
 
 async function tokenPayload(token, bindings) { return verifyQuoteToken(token, bindings); }
 
-function installFetchMock({ products = {}, deliveries, deliveryStatus = 200 }) {
+function installFetchMock({ products = {}, deliveries, deliveryStatus = 200, requests = [] }) {
   const original = globalThis.fetch;
   globalThis.fetch = async (input, init = {}) => {
     const url = String(input);
@@ -55,7 +63,17 @@ function installFetchMock({ products = {}, deliveries, deliveryStatus = 200 }) {
       deliveries.push(Object.fromEntries(init.body.entries()));
       return Response.json({ ok: deliveryStatus < 400 }, { status: deliveryStatus });
     }
-    if (url in products) return new Response(products[url], { status: 200, headers: { 'content-type': 'text/html; charset=utf-8' } });
+    if (url in products) {
+      requests.push({ url, init });
+      const entry = products[url];
+      if (typeof entry === 'object' && entry !== null && !Array.isArray(entry)) {
+        return new Response(entry.body ?? '', {
+          status: entry.status ?? 200,
+          headers: { 'content-type': 'text/html; charset=utf-8', ...(entry.headers || {}) }
+        });
+      }
+      return new Response(entry, { status: 200, headers: { 'content-type': 'text/html; charset=utf-8' } });
+    }
     throw new Error(`Nieprzechwycony request testowy: ${url}`);
   };
   return () => { globalThis.fetch = original; };
@@ -118,19 +136,130 @@ test('kilka produktów zachowuje wszystkie linki, ilości i potwierdzone ceny', 
   } finally { restore(); }
 });
 
-test('błędny link nie tworzy tokenu i nie wysyła fałszywego powiadomienia', async () => {
+test('Allegro potwierdza 1399 PLN tylko z sekcji właściwej oferty', async () => {
   const deliveries = [];
-  const restore = installFetchMock({ deliveries });
+  const requests = [];
+  const restore = installFetchMock({ products: { [ALLEGRO_URL]: ALLEGRO_VISIBLE_HTML }, deliveries, requests });
   try {
-    const result = await calculate(body([{ url: 'https://example.com/produkt', quantity: 1 }]), env(), 'test-invalid');
+    const result = await calculate(body([{ url: ALLEGRO_URL, quantity: 1 }]), env(), 'test-allegro-visible');
+    assert.equal(result.response.status, 200);
+    assert.equal(result.data.allConfirmed, true);
+    assert.equal(result.data.products[0].store, 'Allegro');
+    assert.equal(result.data.products[0].offerId, '18281158355');
+    assert.equal(result.data.products[0].name, ALLEGRO_NAME);
+    assert.equal(result.data.products[0].price, 1399);
+    assert.equal(result.data.quote.furniture, 1399);
+    assert.equal(result.data.quote.installation, 279.8);
+    assert.equal(result.data.quote.total, 279.8);
+    assert.equal(requests.length, 1);
+    assert.equal(requests[0].init.redirect, 'manual');
+    assert.match(requests[0].init.headers['User-Agent'], /Mozilla\/5\.0/);
+  } finally { restore(); }
+});
+
+test('Allegro akceptuje poprawny JSON-LD wyłącznie z identyfikatorem właściwej oferty', async () => {
+  const deliveries = [];
+  const html = `<!doctype html><script type="application/ld+json">${JSON.stringify({
+    '@type': 'Product', name: ALLEGRO_NAME,
+    offers: { '@type': 'Offer', sku: '18281158355', price: '1399.00', priceCurrency: 'PLN' }
+  })}</script>`;
+  const restore = installFetchMock({ products: { [ALLEGRO_URL]: html }, deliveries });
+  try {
+    const result = await calculate(body([{ url: ALLEGRO_URL, quantity: 1 }]), env(), 'test-allegro-jsonld');
+    assert.equal(result.data.allConfirmed, true);
+    assert.equal(result.data.products[0].price, 1399);
+  } finally { restore(); }
+});
+
+test('Allegro bez ceny pozostaje wyceną indywidualną', async () => {
+  const deliveries = [];
+  const html = `<html><h1>${ALLEGRO_NAME}</h1><h2>Warunki oferty</h2><p>Brak aktywnej ceny</p><h2>Opcje zakupu</h2><p>Numer oferty: 18281158355</p></html>`;
+  const restore = installFetchMock({ products: { [ALLEGRO_URL]: html }, deliveries });
+  try {
+    const result = await calculate(body([{ url: ALLEGRO_URL, quantity: 1 }]), env(), 'test-allegro-no-price');
+    assert.equal(result.data.allConfirmed, false);
+    assert.equal(result.data.quote, undefined);
+    assert.ok(result.data.notificationToken);
+  } finally { restore(); }
+});
+
+test('błędny link Allegro jest odrzucany przed pobraniem strony', async () => {
+  const deliveries = [];
+  const requests = [];
+  const restore = installFetchMock({ deliveries, requests });
+  try {
+    const result = await calculate(body([{ url: 'https://allegro.pl/produkt/bledny-link', quantity: 1 }]), env(), 'test-allegro-invalid');
+    assert.equal(result.data.allConfirmed, false);
+    assert.match(result.data.products[0].error, /Nieprawidłowy link do oferty Allegro/);
+    assert.equal(requests.length, 0);
+  } finally { restore(); }
+});
+
+test('redirect Allegro przechodzi tylko do ponownie zwalidowanego oficjalnego hosta', async () => {
+  const deliveries = [];
+  const redirected = ALLEGRO_URL.replace('https://allegro.pl/', 'https://www.allegro.pl/');
+  const restore = installFetchMock({ products: {
+    [ALLEGRO_URL]: { status: 302, headers: { location: redirected } },
+    [redirected]: ALLEGRO_VISIBLE_HTML
+  }, deliveries });
+  try {
+    const result = await calculate(body([{ url: ALLEGRO_URL, quantity: 1 }]), env(), 'test-allegro-redirect');
+    assert.equal(result.data.allConfirmed, true);
+    assert.equal(result.data.products[0].price, 1399);
+  } finally { restore(); }
+});
+
+test('błędna waluta i brak ceny nie tworzą automatycznej kwoty', async () => {
+  const deliveries = [];
+  const euro = 'https://www.ikea.com/pl/pl/p/test-euro/';
+  const missing = 'https://www.brw.pl/test-missing-price/';
+  const euroHtml = `<!doctype html><script type="application/ld+json">${JSON.stringify({
+    '@type': 'Product', name: 'Produkt EUR', offers: { price: 120, priceCurrency: 'EUR' }
+  })}</script>`;
+  const restore = installFetchMock({ products: { [euro]: euroHtml, [missing]: '<html><title>Bez ceny</title></html>' }, deliveries });
+  try {
+    const wrongCurrency = await calculate(body([{ url: euro, quantity: 1 }]), env(), 'test-euro');
+    const noPrice = await calculate(body([{ url: missing, quantity: 1 }]), env(), 'test-missing-price');
+    assert.equal(wrongCurrency.data.allConfirmed, false);
+    assert.equal(noPrice.data.allConfirmed, false);
+    assert.equal(wrongCurrency.data.quote, undefined);
+    assert.equal(noPrice.data.quote, undefined);
+  } finally { restore(); }
+});
+
+test('IKEA, BRW, Agata i Jysk zachowują działający parser JSON-LD', async () => {
+  const deliveries = [];
+  const stores = [
+    'https://www.ikea.com/pl/pl/p/regression/',
+    'https://www.brw.pl/regression/',
+    'https://www.agatameble.pl/regression/',
+    'https://www.jysk.pl/regression/'
+  ];
+  const products = Object.fromEntries(stores.map((url, index) => [url, PRODUCT_HTML(`Produkt ${index + 1}`, 100 + index)]));
+  const restore = installFetchMock({ products, deliveries });
+  try {
+    const result = await calculate(body(stores.map(url => ({ url, quantity: 1 }))), env(), 'test-stores-regression');
+    assert.equal(result.data.allConfirmed, true);
+    assert.deepEqual(result.data.products.map(product => product.price), [100, 101, 102, 103]);
+  } finally { restore(); }
+});
+
+test('próba SSRF nadal jest blokowana bez wykonania pobrania', async () => {
+  const deliveries = [];
+  const requests = [];
+  const restore = installFetchMock({ deliveries, requests });
+  try {
+    const result = await calculate(body([{ url: 'http://127.0.0.1/produkt', quantity: 1 }]), env(), 'test-ssrf');
     assert.equal(result.response.status, 200);
     assert.equal(result.data.allConfirmed, false);
-    assert.equal(result.data.notificationToken, undefined);
+    assert.ok(result.data.notificationToken);
+    assert.match(result.data.products[0].error, /Nieprawidłowy lub zablokowany/);
+    assert.equal(requests.length, 0);
     assert.equal(deliveries.length, 0);
   } finally { restore(); }
 });
 
-test('projekt IKEA Planner pozostaje wyceną indywidualną bez powiadomienia o sukcesie', async () => {
+test('projekt IKEA Planner pozostaje wyceną indywidualną i dostaje wyłącznie token nieudanej próby', async () => {
   const deliveries = [];
   const url = 'https://kitchen.planner.ikea.com/pl/pl/planner/12345678-1234-1234-1234-123456789abc/';
   const restore = installFetchMock({ products: { [url]: '<!doctype html><html></html>' }, deliveries });
@@ -138,7 +267,8 @@ test('projekt IKEA Planner pozostaje wyceną indywidualną bez powiadomienia o s
     const result = await calculate(body([{ url, quantity: 1 }]), env(), 'test-planner');
     assert.equal(result.data.allConfirmed, false);
     assert.equal(result.data.products[0].kind, 'ikea-project');
-    assert.equal(result.data.notificationToken, undefined);
+    assert.ok(result.data.notificationToken);
+    assert.equal((await tokenPayload(result.data.notificationToken, env())).eventType, 'price_not_confirmed');
     assert.equal(deliveries.length, 0);
   } finally { restore(); }
 });
@@ -188,6 +318,68 @@ test('ponowne użycie quoteId po udanej wysyłce jest odrzucane', async () => {
     assert.equal(deliveries.length, 1);
     assert.equal(await bindings.QUOTE_NOTIFICATION_KV.get(`notification:${result.data.quoteId}`), '1');
   } finally { restore(); }
+});
+
+test('nieudana wycena wysyła jedno powiadomienie price_not_confirmed bez fałszywej kwoty', async () => {
+  const deliveries = [];
+  const restore = installFetchMock({ products: { [ALLEGRO_URL]: '<html><h1>Oferta bez ceny</h1></html>' }, deliveries });
+  try {
+    const bindings = env();
+    const result = await calculate(body([{ url: ALLEGRO_URL, quantity: 2 }], {
+      city: 'Zabrze', distance: 11,
+      extraServices: [{ serviceId: 'hood_install', quantity: 1 }],
+      details: 'Proszę o kontakt po 17:00.',
+      contact: { name: 'Anna', phone: '500 111 222', email: 'anna@example.com' }
+    }), bindings, 'test-failed-attempt');
+    assert.equal(result.data.allConfirmed, false);
+    assert.equal(deliveries.length, 0, 'wynik indywidualny ma pojawić się przed osobnym wywołaniem powiadomienia');
+    const payload = await tokenPayload(result.data.notificationToken, bindings);
+    assert.equal(payload.eventType, 'price_not_confirmed');
+    assert.equal(payload.reason, 'price_not_confirmed');
+    const notification = await notify(result.data.notificationToken, bindings);
+    assert.equal(notification.response.status, 200);
+    assert.equal(notification.data.sent, true);
+    assert.equal(deliveries.length, 1);
+    assert.equal(deliveries[0]._subject, 'Nieudana próba automatycznej wyceny');
+    assert.equal(deliveries[0].typ_zdarzenia, 'NIEUDANA_PROBA_AUTOMATYCZNEJ_WYCENY');
+    assert.equal(deliveries[0].przyczyna, 'price_not_confirmed');
+    assert.match(deliveries[0].produkty, /offerId=18281158355/);
+    assert.match(deliveries[0].produkty, /Ilość: 2/);
+    assert.match(deliveries[0].uslugi_dodatkowe, /Montaż okapu/);
+    assert.equal(deliveries[0].miejscowosc, 'Zabrze');
+    assert.equal(deliveries[0].dodatkowe_informacje, 'Proszę o kontakt po 17:00.');
+    assert.equal(deliveries[0].imie, 'Anna');
+    assert.equal(deliveries[0].wynik, 'Nie wygenerowano kwoty końcowej. Wymagana jest indywidualna wycena.');
+    assert.equal('laczna_orientacyjna_wycena' in deliveries[0], false);
+    assert.equal('koszt_montazu' in deliveries[0], false);
+  } finally { restore(); }
+});
+
+test('dwa szybkie identyczne kliknięcia nie tworzą dwóch powiadomień', async () => {
+  const deliveries = [];
+  const url = 'https://www.jysk.pl/test-no-duplicate/';
+  const restore = installFetchMock({ products: { [url]: '<html><h1>Brak ceny</h1></html>' }, deliveries });
+  const realNow = Date.now;
+  try {
+    Date.now = () => 1_800_000_000_000;
+    const bindings = env();
+    const input = body([{ url, quantity: 1 }], { details: 'Ta sama próba' });
+    const first = await calculate(input, bindings, 'test-fast-double-click');
+    const second = await calculate(input, bindings, 'test-fast-double-click');
+    assert.notEqual(first.data.quoteId, second.data.quoteId);
+    const firstPayload = await tokenPayload(first.data.notificationToken, bindings);
+    const secondPayload = await tokenPayload(second.data.notificationToken, bindings);
+    assert.equal(firstPayload.notificationKey, secondPayload.notificationKey);
+    const responses = await Promise.all([
+      notify(first.data.notificationToken, bindings),
+      notify(second.data.notificationToken, bindings)
+    ]);
+    assert.equal(responses.every(item => [200, 409].includes(item.response.status)), true);
+    assert.equal(deliveries.length, 1);
+  } finally {
+    Date.now = realNow;
+    restore();
+  }
 });
 
 test('zmodyfikowany i wygasły token są odrzucane', async () => {

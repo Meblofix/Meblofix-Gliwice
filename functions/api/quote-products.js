@@ -2,7 +2,9 @@ const MAX_ITEMS = 10;
 const MAX_BYTES = 1_500_000;
 const MAX_REQUEST_BYTES = 32_000;
 const TIMEOUT_MS = 8_000;
+const MAX_REDIRECTS = 3;
 export const TOKEN_LIFETIME_MS = 20 * 60 * 1_000;
+const NOTIFICATION_DEDUPE_WINDOW_MS = 5 * 60 * 1_000;
 const QUOTE_RULES = Object.freeze({ minimumJob: 150, installationRate: 0.2, travelPerKm: 1.5 });
 // Jedna wspólna tabela dla wszystkich lokalizacji. Przeglądarka przesyła tylko
 // serviceId i quantity; nazwy oraz kwoty zawsze pochodzą z kontrolowanego backendu.
@@ -24,15 +26,26 @@ const ALLOWED_HOSTS = new Set([
   'agatameble.pl', 'www.agatameble.pl',
   'brw.pl', 'www.brw.pl',
   'jysk.pl', 'www.jysk.pl',
+  'allegro.pl', 'www.allegro.pl',
   'kitchen.planner.ikea.com'
 ]);
 
 const IKEA_PLANNER_HOSTS = ['kitchen.planner.ikea.com'];
+const ALLEGRO_HOSTS = new Set(['allegro.pl', 'www.allegro.pl']);
+const FETCH_HEADERS = Object.freeze({
+  Accept: 'text/html,application/xhtml+xml',
+  'Accept-Language': 'pl-PL,pl;q=0.9,en;q=0.5',
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36'
+});
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
 function cleanText(value, maxLength) {
   return String(value ?? '').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '').trim().slice(0, maxLength);
+}
+
+function roundMoney(value) {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
 function isGliwice(city) {
@@ -69,6 +82,76 @@ function validUrl(value) {
   } catch { return null; }
 }
 
+function allegroOfferId(url) {
+  if (!ALLEGRO_HOSTS.has(url.hostname.toLowerCase())) return null;
+  if (/^\/produkt\/[a-z0-9-]+-[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(url.pathname)) {
+    const values = url.searchParams.getAll('offerId');
+    return values.length === 1 && /^\d{8,20}$/.test(values[0]) ? values[0] : null;
+  }
+  const offerPath = url.pathname.match(/^\/oferta\/[a-z0-9-]*?(\d{8,20})\/?$/i);
+  if (!offerPath) return null;
+  const queryId = url.searchParams.get('offerId');
+  return queryId && queryId !== offerPath[1] ? null : offerPath[1];
+}
+
+function parsePrice(value) {
+  const normalized = String(value ?? '')
+    .replace(/&nbsp;|&#160;|\u00a0/gi, ' ')
+    .trim()
+    .replace(/[\s\u00a0]/g, '');
+  if (!/^\d{1,7}(?:[.,]\d{1,2})?$/.test(normalized)) return null;
+  const price = Number(normalized.replace(',', '.'));
+  return Number.isFinite(price) && price > 0 && price <= 1_000_000 ? price : null;
+}
+
+function decodeHtml(value) {
+  return String(value ?? '')
+    .replace(/&#(\d+);/g, (_, code) => String.fromCodePoint(Number(code)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, code) => String.fromCodePoint(Number.parseInt(code, 16)))
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>');
+}
+
+function tagAttributes(tag) {
+  const attributes = {};
+  for (const match of tag.matchAll(/([^\s=/>]+)\s*=\s*(["'])([\s\S]*?)\2/g)) {
+    attributes[match[1].toLowerCase()] = decodeHtml(match[3]);
+  }
+  return attributes;
+}
+
+function metaValues(html) {
+  const values = new Map();
+  for (const match of html.matchAll(/<meta\b[^>]*>/gi)) {
+    const attributes = tagAttributes(match[0]);
+    const key = String(attributes.property || attributes.name || attributes.itemprop || '').toLowerCase();
+    if (key && attributes.content != null && !values.has(key)) values.set(key, attributes.content);
+  }
+  return values;
+}
+
+function offerIdentifierMatches(value, offerId) {
+  const text = String(value ?? '').trim();
+  if (!text) return false;
+  if (text === offerId) return true;
+  try {
+    const url = new URL(text, 'https://allegro.pl');
+    return url.searchParams.get('offerId') === offerId || new RegExp(`(?:^|-)${offerId}/?$`).test(url.pathname);
+  } catch {
+    return false;
+  }
+}
+
+function jsonLdMatchesOffer(item, offer, offerId) {
+  if (!offerId) return true;
+  return [offer?.sku, offer?.offerId, offer?.productID, offer?.['@id'], offer?.url, item?.sku, item?.offerId, item?.productID]
+    .some(value => offerIdentifierMatches(value, offerId));
+}
+
 function flatten(value) {
   if (!value) return [];
   if (Array.isArray(value)) return value.flatMap(flatten);
@@ -80,7 +163,7 @@ function flatten(value) {
   return [];
 }
 
-function productFromJsonLd(html) {
+function productFromJsonLd(html, offerId = null) {
   const scripts = [...html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)];
   for (const match of scripts) {
     try {
@@ -88,27 +171,61 @@ function productFromJsonLd(html) {
       for (const item of flatten(root)) {
         const type = Array.isArray(item['@type']) ? item['@type'] : [item['@type']];
         if (!type.some(entry => String(entry).toLowerCase() === 'product')) continue;
-        const offers = Array.isArray(item.offers) ? item.offers[0] : item.offers;
-        const offer = offers && typeof offers === 'object' ? offers : null;
-        const price = Number(String(offer?.price ?? '').replace(',', '.'));
-        const currency = String(offer?.priceCurrency || '').toUpperCase();
-        if (!Number.isFinite(price) || price <= 0 || price > 1_000_000 || currency !== 'PLN') continue;
-        const name = cleanText(item.name, 240);
-        if (!name) continue;
-        return { name, price, currency };
+        const offers = Array.isArray(item.offers) ? item.offers : [item.offers];
+        for (const offer of offers) {
+          if (!offer || typeof offer !== 'object' || !jsonLdMatchesOffer(item, offer, offerId)) continue;
+          const price = parsePrice(offer.price ?? offer.priceSpecification?.price);
+          const currency = String(offer.priceCurrency || offer.priceSpecification?.priceCurrency || '').toUpperCase();
+          if (price == null || currency !== 'PLN') continue;
+          const name = cleanText(decodeHtml(item.name), 240);
+          if (!name) continue;
+          return { name, price, currency };
+        }
       }
     } catch { /* Pomijamy niepoprawny blok JSON-LD. */ }
   }
   return null;
 }
 
-function productFromMeta(html) {
-  const price = html.match(/(?:itemprop=["']price["'][^>]*content|property=["']product:price:amount["'][^>]*content)=["']([^"']+)/i)?.[1];
-  const currency = html.match(/(?:itemprop=["']priceCurrency["'][^>]*content|property=["']product:price:currency["'][^>]*content)=["']([^"']+)/i)?.[1];
-  const title = html.match(/<meta[^>]+(?:property|name)=["'](?:og:title|twitter:title)["'][^>]+content=["']([^"']+)/i)?.[1];
-  const parsed = Number(String(price || '').replace(',', '.'));
-  if (!Number.isFinite(parsed) || parsed <= 0 || String(currency || '').toUpperCase() !== 'PLN' || !title) return null;
-  return { name: cleanText(title.replace(/\s+/g, ' '), 240), price: parsed, currency: 'PLN' };
+function productFromMeta(html, offerId = null) {
+  const meta = metaValues(html);
+  const price = parsePrice(meta.get('product:price:amount') ?? meta.get('price'));
+  const currency = String(meta.get('product:price:currency') ?? meta.get('pricecurrency') ?? '').toUpperCase();
+  const title = meta.get('og:title') ?? meta.get('twitter:title');
+  if (price == null || currency !== 'PLN' || !title) return null;
+  if (offerId && ![
+    meta.get('product:retailer_item_id'), meta.get('product:sku'), meta.get('allegro:offer:id'), meta.get('og:url')
+  ].some(value => offerIdentifierMatches(value, offerId))) return null;
+  return { name: cleanText(decodeHtml(title).replace(/\s+/g, ' '), 240), price, currency: 'PLN' };
+}
+
+function visibleText(html) {
+  return decodeHtml(html
+    .replace(/<!--[\s\S]*?-->/g, ' ')
+    .replace(/<script\b[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style\b[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, ' '))
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function allegroProductFromHtml(html, offerId) {
+  if (!offerId) return null;
+  const text = visibleText(html);
+  const escapedOfferId = offerId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  if (!new RegExp(`\\bNumer oferty:\\s*${escapedOfferId}\\b`, 'i').test(text)) return null;
+  const sectionMatch = text.match(/\bWarunki oferty\b([\s\S]{0,4000}?)\bOpcje zakupu\b/i);
+  if (!sectionMatch) return null;
+  const prices = [...sectionMatch[1].matchAll(/\bcena\s+([0-9][0-9\s\u00a0]*(?:[.,][0-9]{1,2})?)\s*zł(?=\s|<|$)/gi)]
+    .map(match => parsePrice(match[1]))
+    .filter(price => price != null);
+  const uniquePrices = [...new Set(prices)];
+  if (uniquePrices.length !== 1) return null;
+  const heading = html.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/i)?.[1];
+  const title = heading ? visibleText(heading) : metaValues(html).get('og:title');
+  const name = cleanText(decodeHtml(title).replace(/\s+/g, ' '), 240);
+  if (!name) return null;
+  return { name, price: uniquePrices[0], currency: 'PLN' };
 }
 
 async function readLimited(response) {
@@ -131,9 +248,32 @@ async function readLimited(response) {
   return decoder.decode(bytes);
 }
 
+async function fetchProductHtml(startUrl, signal) {
+  let url = startUrl;
+  for (let redirectCount = 0; redirectCount <= MAX_REDIRECTS; redirectCount += 1) {
+    const response = await fetch(url, { signal, redirect: 'manual', headers: FETCH_HEADERS });
+    if ([301, 302, 303, 307, 308].includes(response.status)) {
+      if (redirectCount === MAX_REDIRECTS) throw new Error('too-many-redirects');
+      const location = response.headers.get('location');
+      const nextUrl = location ? validUrl(new URL(location, url).toString()) : null;
+      if (!nextUrl) throw new Error('unsafe-redirect');
+      url = nextUrl;
+      continue;
+    }
+    if (!response.ok || response.type === 'opaqueredirect') throw new Error('unavailable');
+    const contentType = String(response.headers.get('content-type') || '').split(';', 1)[0].trim().toLowerCase();
+    if (!['text/html', 'application/xhtml+xml'].includes(contentType)) throw new Error('unsupported-content-type');
+    return { html: await readLimited(response), finalUrl: url };
+  }
+  throw new Error('too-many-redirects');
+}
+
 async function resolveProduct(rawUrl) {
   const url = validUrl(rawUrl);
   if (!url) return { url: cleanText(rawUrl, 2048), error: 'Nieprawidłowy lub zablokowany adres URL.' };
+  const isAllegro = ALLEGRO_HOSTS.has(url.hostname.toLowerCase());
+  const offerId = isAllegro ? allegroOfferId(url) : null;
+  if (isAllegro && !offerId) return { url: url.toString(), store: 'Allegro', error: 'Nieprawidłowy link do oferty Allegro.' };
   if (isIkeaPlanner(url)) {
     const projectId = url.pathname.split('/').filter(Boolean).at(-1) || null;
     return {
@@ -147,14 +287,10 @@ async function resolveProduct(rawUrl) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
-    const response = await fetch(url, { signal: controller.signal, redirect: 'manual', headers: { Accept: 'text/html,application/xhtml+xml' } });
-    if (!response.ok || response.type === 'opaqueredirect' || response.status >= 300) throw new Error('unavailable');
-    const contentType = String(response.headers.get('content-type') || '').split(';', 1)[0].trim().toLowerCase();
-    if (!['text/html', 'application/xhtml+xml'].includes(contentType)) throw new Error('unsupported-content-type');
-    const html = await readLimited(response);
-    const product = productFromJsonLd(html) || productFromMeta(html);
+    const { html } = await fetchProductHtml(url, controller.signal);
+    const product = productFromJsonLd(html, offerId) || productFromMeta(html, offerId) || (isAllegro ? allegroProductFromHtml(html, offerId) : null);
     if (!product) return { url: url.toString(), error: 'Nie udało się automatycznie potwierdzić ceny tego produktu.' };
-    return { url: url.toString(), ...product };
+    return { url: url.toString(), ...(isAllegro ? { store: 'Allegro', offerId } : {}), ...product };
   } catch (error) {
     return { url: url.toString(), error: error.name === 'AbortError' ? 'Przekroczono czas oczekiwania.' : 'Strona produktu jest niedostępna lub cena jest niejednoznaczna.' };
   } finally { clearTimeout(timer); }
@@ -188,6 +324,11 @@ function notificationSecret(env) {
 
 async function sha256(value) {
   return bytesToBase64Url(new Uint8Array(await crypto.subtle.digest('SHA-256', encoder.encode(value))));
+}
+
+async function notificationKey(clientFingerprint, normalizedRequest, issuedAt) {
+  const window = Math.floor(issuedAt / NOTIFICATION_DEDUPE_WINDOW_MS);
+  return sha256(`${clientFingerprint}|${window}|${JSON.stringify(normalizedRequest)}`);
 }
 
 async function signQuote(payload, env) {
@@ -231,7 +372,9 @@ export async function verifyQuoteToken(token, env) {
     payload?.v !== 1
     || typeof payload.quoteId !== 'string'
     || !/^[0-9a-f-]{36}$/i.test(payload.quoteId)
-    || !payload.quote
+    || !['automatic_quote', 'price_not_confirmed'].includes(payload.eventType || (payload.quote ? 'automatic_quote' : ''))
+    || ((payload.eventType || 'automatic_quote') === 'automatic_quote' && !payload.quote)
+    || (payload.eventType === 'price_not_confirmed' && (!payload.attempt || payload.reason !== 'price_not_confirmed'))
     || !payload.context
     || !Number.isFinite(payload.issuedAt)
     || !Number.isFinite(payload.expiresAt)
@@ -298,15 +441,38 @@ export async function onRequestPost({ request, env }) {
     const products = resolved.map((product, index) => ({
       ...product,
       quantity: items[index].quantity,
-      ...(product.price ? { value: Math.round(product.price * items[index].quantity) } : {})
+      ...(product.price ? { value: roundMoney(product.price * items[index].quantity) } : {})
     }));
     const allConfirmed = products.every(product => !product.error && Number.isFinite(product.price));
-    if (!allConfirmed) return Response.json({ products, allConfirmed: false }, { headers: { 'Cache-Control': 'no-store' } });
+    const issuedAt = Date.now();
+    const clientFingerprint = await sha256(`${request.headers.get('cf-connecting-ip') || 'unknown'}|${request.headers.get('user-agent') || 'unknown'}`);
+    const quoteId = crypto.randomUUID();
+    const dedupeKey = await notificationKey(clientFingerprint, { items, extraServices, context }, issuedAt);
+    if (!allConfirmed) {
+      let notificationToken = null;
+      if (notificationSecret(env)) {
+        const attempt = {
+          products: products.map(product => ({
+            url: product.url,
+            quantity: product.quantity,
+            ...(product.name ? { name: product.name } : {}),
+            status: product.error ? 'price_not_confirmed' : 'confirmed_without_quote'
+          })),
+          extraServices
+        };
+        notificationToken = await signQuote({
+          v: 1, eventType: 'price_not_confirmed', reason: 'price_not_confirmed', quoteId,
+          notificationKey: dedupeKey, clientFingerprint, issuedAt, expiresAt: issuedAt + TOKEN_LIFETIME_MS,
+          attempt, context
+        }, env);
+      }
+      return Response.json({ products, allConfirmed: false, notificationToken, quoteId }, { headers: { 'Cache-Control': 'no-store' } });
+    }
 
-    const furniture = products.reduce((sum, product) => sum + product.value, 0);
-    const installation = Math.max(QUOTE_RULES.minimumJob, Math.round(furniture * QUOTE_RULES.installationRate));
+    const furniture = roundMoney(products.reduce((sum, product) => sum + product.value, 0));
+    const installation = Math.max(QUOTE_RULES.minimumJob, roundMoney(furniture * QUOTE_RULES.installationRate));
     const extraServicesTotal = extraServices.reduce((sum, service) => sum + service.value, 0);
-    const travel = Math.round(context.distance * 2 * QUOTE_RULES.travelPerKm);
+    const travel = roundMoney(context.distance * 2 * QUOTE_RULES.travelPerKm);
     const quote = {
       products,
       furniture,
@@ -315,20 +481,20 @@ export async function onRequestPost({ request, env }) {
       extraServicesTotal,
       distance: context.distance,
       travel,
-      total: installation + extraServicesTotal + travel
+      total: roundMoney(installation + extraServicesTotal + travel)
     };
     const clientQuote = {
       ...quote,
       extraServices: quote.extraServices.map(({ serviceId, name, quantity }) => ({ serviceId, name, quantity }))
     };
-    const issuedAt = Date.now();
-    const clientFingerprint = await sha256(`${request.headers.get('cf-connecting-ip') || 'unknown'}|${request.headers.get('user-agent') || 'unknown'}`);
     // Każde poprawne obliczenie dostaje własny identyfikator. Nie wyprowadzamy go
     // z IP, User-Agent ani treści wyceny, więc klienci za wspólnym NAT nie kolidują.
-    const quoteId = crypto.randomUUID();
     let notificationToken = null;
     if (notificationSecret(env)) {
-      notificationToken = await signQuote({ v: 1, quoteId, clientFingerprint, issuedAt, expiresAt: issuedAt + TOKEN_LIFETIME_MS, quote, context }, env);
+      notificationToken = await signQuote({
+        v: 1, eventType: 'automatic_quote', quoteId, notificationKey: dedupeKey, clientFingerprint,
+        issuedAt, expiresAt: issuedAt + TOKEN_LIFETIME_MS, quote, context
+      }, env);
     }
     return Response.json({ products, allConfirmed: true, quote: clientQuote, notificationToken, quoteId }, { headers: { 'Cache-Control': 'no-store' } });
   } catch {

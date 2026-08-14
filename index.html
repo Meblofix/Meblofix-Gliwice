@@ -5706,7 +5706,7 @@
   let calculationNoticeKey = '';
 
   function isGliwice(city) { return String(city || '').trim().toLocaleLowerCase('pl-PL') === 'gliwice'; }
-  function money(value) { return `${new Intl.NumberFormat('pl-PL', { maximumFractionDigits: 0 }).format(value)} zł`; }
+  function money(value) { const hasFraction = Math.round(Number(value) * 100) % 100 !== 0; return `${new Intl.NumberFormat('pl-PL', { minimumFractionDigits: hasFraction ? 2 : 0, maximumFractionDigits: 2 }).format(value)} zł`; }
   function syncDistance() {
     const local = isGliwice(quoteCityField.value);
     quoteDistanceField.readOnly = local;
@@ -5772,14 +5772,25 @@
       const planner = data.products.find(product => product.kind === 'ikea-project');
       if (planner) {
         showIndividualQuote(planner.error || 'Projekt IKEA został rozpoznany, ale nie możemy automatycznie odczytać jego wartości. Ten projekt wymaga indywidualnej wyceny.');
+        if (data.notificationToken) {
+          await new Promise(resolve => requestAnimationFrame(() => resolve()));
+          await sendCalculationNotice(data.notificationToken, `failure:${JSON.stringify(requestData)}`);
+        }
         return;
       }
-      if (!data.allConfirmed || data.products.some(product => product.error)) { showIndividualQuote('Nie udało się potwierdzić ceny wszystkich produktów. To zlecenie wymaga indywidualnej wyceny.'); return; }
+      if (!data.allConfirmed || data.products.some(product => product.error)) {
+        showIndividualQuote('Nie udało się potwierdzić ceny wszystkich produktów. To zlecenie wymaga indywidualnej wyceny.');
+        if (data.notificationToken) {
+          await new Promise(resolve => requestAnimationFrame(() => resolve()));
+          await sendCalculationNotice(data.notificationToken, `failure:${JSON.stringify(requestData)}`);
+        }
+        return;
+      }
       if (!data.quote) throw new Error('missing verified quote');
       const result = data.quote; lastCalculation = result; calculationKey = JSON.stringify(requestData); setResult(result); quoteProductsStatus.textContent = 'Ceny produktów potwierdzone. Wynik jest orientacyjny.';
       if (data.notificationToken) {
         await new Promise(resolve => requestAnimationFrame(() => resolve()));
-        await sendCalculationNotice(data.notificationToken, calculationKey);
+        await sendCalculationNotice(data.notificationToken, `success:${calculationKey}`);
       } else {
         console.warn('Powiadomienie o wycenie nie jest skonfigurowane. Wynik kalkulacji pozostaje dostępny.');
       }
