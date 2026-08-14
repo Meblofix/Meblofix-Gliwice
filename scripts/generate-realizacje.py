@@ -69,6 +69,11 @@ def gallery_id(item: dict) -> str:
     return SITE_URL + "#realizacja-" + item["id"]
 
 
+def gallery_name(item: dict) -> str:
+    title = item["tytul"].rstrip()
+    return title if title.endswith(item["miasto"]) else f'{title} — {item["miasto"]}'
+
+
 def image_id(item: dict, photo: dict) -> str:
     return SITE_URL + "#zdjecie-realizacji-" + photo["plik"]
 
@@ -137,6 +142,21 @@ def picture(item: dict, photo: dict, *, cover: bool, featured: bool = False) -> 
     )
 
 
+def comparison_picture(item: dict, photo: dict) -> str:
+    jpg = image_variants(item, photo, "jpg")
+    webp = image_variants(item, photo, "webp")
+    largest = jpg[-1]
+    sizes = "(max-width: 600px) calc(100vw - 5rem), (max-width: 900px) calc((100vw - 6rem) / 2), 440px"
+    return (
+        "<picture>"
+        f'<source type="image/webp" srcset="{escape(srcset(webp))}" sizes="{escape(sizes)}">'
+        f'<img class="before-after-img" src="{escape(image_path(item, photo["plik"], 800, "jpg"))}" '
+        f'srcset="{escape(srcset(jpg))}" sizes="{escape(sizes)}" alt="{escape(photo["alt"])}" '
+        f'width="{largest[1]}" height="{largest[2]}" loading="lazy" decoding="async">'
+        "</picture>"
+    )
+
+
 def render_cards(data: dict) -> str:
     items = ordered_realizations(data)
     counts = {key: sum(item["kategoria"] == key for item in items) for key in data["kategorie"]}
@@ -192,6 +212,45 @@ def render_cards(data: dict) -> str:
                 '        <p class="work-related">Powiązana usługa: '
                 f'<a class="work-related-link" href="{escape(related_page["url"])}">{escape(related_page["etykieta"])}</a></p>'
             )
+        comparisons = item.get("porownania", [])
+        if comparisons:
+            comparisons_id = f'porownania-{item["id"]}'
+            lines.extend(
+                [
+                    f'        <section class="work-comparisons" aria-labelledby="{escape(comparisons_id)}">',
+                    f'          <h3 id="{escape(comparisons_id)}">Przed i po montażu</h3>',
+                    '          <p class="work-comparisons-intro">Przeciągnij suwak albo użyj klawiszy strzałek, aby porównać efekt.</p>',
+                    '          <ul class="before-after-list">',
+                ]
+            )
+            for comparison in comparisons:
+                before = photo_by_base.get(comparison["przed"])
+                after = photo_by_base.get(comparison["po"])
+                if not before or not after:
+                    raise ValueError(f"Porównanie odwołuje się do nieznanego zdjęcia: {item['id']}")
+                name = comparison["nazwa"]
+                lines.extend(
+                    [
+                        "            <li>",
+                        f'              <figure class="before-after" data-before-after data-before="{escape(before["plik"])}" data-after="{escape(after["plik"])}">',
+                        f'                <figcaption>{escape(name)}</figcaption>',
+                        '                <div class="before-after-viewport">',
+                        '                  <div class="before-after-pane before-after-before">',
+                        f'                    {comparison_picture(item, before)}',
+                        '                    <span class="before-after-label">Przed</span>',
+                        "                  </div>",
+                        '                  <div class="before-after-pane before-after-after">',
+                        f'                    {comparison_picture(item, after)}',
+                        '                    <span class="before-after-label">Po</span>',
+                        "                  </div>",
+                        '                  <span class="before-after-divider" aria-hidden="true"></span>',
+                        f'                  <input class="before-after-control" type="range" min="0" max="100" value="50" aria-label="Porównaj zdjęcia przed i po: {escape(name)}" aria-valuetext="50% zdjęcia przed">',
+                        "                </div>",
+                        "              </figure>",
+                        "            </li>",
+                    ]
+                )
+            lines.extend(["          </ul>", "        </section>"])
         lines.append('        <ul class="work-gallery" aria-label="Zdjęcia realizacji">')
         for index, photo in enumerate(photos):
             lines.extend(
@@ -241,7 +300,7 @@ def render_image_objects(data: dict) -> str:
                 "@type": "ImageGallery",
                 "@id": gallery_id(item),
                 "url": gallery_id(item),
-                "name": f'{item["tytul"]} — {item["miasto"]}',
+                "name": gallery_name(item),
                 "description": item["opis"],
                 "inLanguage": "pl",
                 "isPartOf": SITE_URL,

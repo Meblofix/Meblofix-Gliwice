@@ -3581,6 +3581,7 @@
   /* ─── REALIZACJE ─── */
   .works-section {
     padding: 7rem 5rem;
+    scroll-margin-top: 5.5rem;
     background: var(--deep);
   }
 
@@ -3670,41 +3671,173 @@
   }
 
   /* ─── PRZED / PO ─── */
-  .ba { margin: 3.5rem 0 0; }
-  .ba-title {
+  .work-comparisons {
+    scroll-margin-top: 6rem;
+    margin: 1.5rem 1rem;
+    padding: 1rem;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--orange);
+    border-radius: 4px;
+    background: linear-gradient(135deg, rgba(232,68,10,0.09), rgba(255,255,255,0.018) 42%);
+  }
+  .work-comparisons h3 {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: 1.2rem;
-    letter-spacing: 0.05em;
+    font-size: 1.55rem;
+    line-height: 1.15;
+    letter-spacing: 0.04em;
     color: var(--cream);
-    margin-bottom: 1rem;
   }
-  .ba-pair {
+  .work-comparisons-intro {
+    display: none;
+    margin-top: 0.35rem;
+    color: var(--gray);
+    font-size: 0.78rem;
+    line-height: 1.55;
+  }
+  .work-comparisons.is-enhanced .work-comparisons-intro { display: block; }
+  .before-after-list {
     display: grid;
-    grid-template-columns: 1fr 1fr;   /* zawsze obok siebie — porownanie wymaga sasiedztwa */
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 1rem;
-    max-width: 880px;
+    margin: 1rem 0 0;
+    padding: 0;
+    list-style: none;
   }
-  .ba-item {
+  .before-after-list > li { min-width: 0; }
+  .before-after figcaption {
+    margin-bottom: 0.55rem;
+    color: var(--cream);
+    font-size: 0.82rem;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+  .before-after-viewport {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.6rem;
+  }
+  .before-after-pane {
     position: relative;
-    aspect-ratio: 3 / 4;              /* wspolna wysokosc obu kadrow, CLS zostaje 0 */
+    min-width: 0;
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    background: #181818;
+  }
+  .before-after-pane picture,
+  .before-after-img {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+  .before-after-img { object-fit: cover; }
+  .before-after-label {
+    position: absolute;
+    top: 0.6rem;
+    left: 0.6rem;
+    z-index: 3;
+    padding: 0.3rem 0.65rem;
+    border-radius: 2px;
+    background: rgba(13,13,13,0.88);
+    color: var(--white);
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    line-height: 1.2;
+    text-transform: uppercase;
+  }
+  .before-after-after .before-after-label {
+    right: 0.6rem;
+    left: auto;
+    background: var(--orange-btn);
+  }
+  .before-after-divider,
+  .before-after-control { display: none; }
+
+  .before-after.is-enhanced { --before-after-position: 50%; }
+  .before-after.is-enhanced .before-after-viewport {
+    position: relative;
+    display: block;
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
     border: 1px solid var(--border);
     border-radius: 4px;
-    overflow: hidden;
-    background: linear-gradient(135deg, #1a1a1a 0%, #242424 100%);
+    background: #181818;
   }
-  .ba-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .ba-label {
+  .before-after.is-enhanced .before-after-pane {
     position: absolute;
-    top: 0.7rem; left: 0.7rem;
-    z-index: 1;
+    inset: 0;
+    aspect-ratio: auto;
+    border: 0;
+    border-radius: 0;
+  }
+  .before-after.is-enhanced .before-after-before {
+    z-index: 2;
+    clip-path: inset(0 calc(100% - var(--before-after-position)) 0 0);
+  }
+  .before-after.is-enhanced .before-after-after { z-index: 1; }
+  .before-after.is-enhanced .before-after-divider {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: var(--before-after-position);
+    z-index: 3;
+    display: block;
+    width: 3px;
+    background: var(--white);
+    box-shadow: 0 0 0 1px rgba(13,13,13,0.28);
+    pointer-events: none;
+    transform: translateX(-50%);
+  }
+  .before-after.is-enhanced .before-after-control {
+    appearance: none;
+    -webkit-appearance: none;
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    display: block;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: ew-resize;
+    touch-action: pan-y;
+  }
+  .before-after-control::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 3px;
+    background: transparent;
+  }
+  .before-after-control::-webkit-slider-thumb {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 44px;
+    height: 44px;
+    margin-top: -20px;
+    border: 3px solid var(--white);
+    border-radius: 50%;
     background: var(--orange-btn);
-    color: var(--white);
-    font-size: 0.62rem;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    font-weight: 600;
-    padding: 0.28rem 0.75rem;
-    border-radius: 2px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.45);
+  }
+  .before-after-control::-moz-range-track {
+    height: 3px;
+    border: 0;
+    background: transparent;
+  }
+  .before-after-control::-moz-range-thumb {
+    width: 38px;
+    height: 38px;
+    border: 3px solid var(--white);
+    border-radius: 50%;
+    background: var(--orange-btn);
+    box-shadow: 0 2px 12px rgba(0,0,0,0.45);
+  }
+  .before-after-control:focus-visible {
+    outline: 3px solid var(--orange-light);
+    outline-offset: -4px;
   }
 
   /* ─── LIGHTBOX GALERII ─── */
@@ -3909,6 +4042,19 @@
     border-radius: 4px;
     background: rgba(255,255,255,0.015);
   }
+  .work-card.is-expanded:not([hidden]) {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: minmax(260px, 1fr) minmax(0, 2fr);
+    gap: 1.5rem;
+    align-items: start;
+  }
+  .work-card.is-expanded > .work-card-btn,
+  .work-card.is-expanded > .work-details { min-width: 0; }
+  .work-card.is-expanded > .work-details {
+    margin-top: 0;
+  }
+  .work-card.is-featured.is-expanded .work-thumb { aspect-ratio: 4 / 3; }
   .work-details summary {
     min-height: 44px;
     padding: 0.75rem 1rem;
@@ -3939,23 +4085,31 @@
   .work-related a { color: var(--orange); }
   .work-gallery {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-    gap: 0.65rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.85rem;
     margin: 0;
     padding: 0 1rem 1rem;
     list-style: none;
   }
+  .work-gallery > li { min-width: 0; }
   .work-photo-link {
     display: block;
+    width: 100%;
+    aspect-ratio: 4 / 3;
     overflow: hidden;
     border: 1px solid var(--border);
     border-radius: 3px;
     background: #181818;
   }
+  .work-photo-link picture {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
   .work-gallery-img {
     display: block;
     width: 100%;
-    aspect-ratio: 4 / 3;
+    height: 100%;
     object-fit: cover;
     transition: transform 0.2s;
   }
@@ -4053,6 +4207,12 @@
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 1rem;
     }
+    .work-card.is-expanded:not([hidden]) {
+      grid-column: 1 / -1;
+      display: block;
+    }
+    .work-card.is-expanded > .work-details { margin-top: 0.75rem; }
+    .work-gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .work-card.is-featured { grid-column: auto; }
     .work-card.is-featured .work-thumb { aspect-ratio: 4 / 3; }
     .lb-overlay { padding: 1rem 0.75rem; }
@@ -4199,6 +4359,13 @@
     }
     .quote-custom-cta { width: 100%; }
     .works-grid { grid-template-columns: 1fr; }
+    .work-gallery {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 0.75rem;
+    }
+    .work-comparisons { padding: 0.85rem; }
+    .before-after-list { grid-template-columns: minmax(0, 1fr); }
+    .before-after-viewport { grid-template-columns: minmax(0, 1fr); }
     .work-meta { padding: 1rem 1.1rem 1.15rem; }
     .work-title { font-size: 1.2rem; }
     .works-cta {
@@ -4327,6 +4494,7 @@
     <ul class="nav-links">
       <li><a href="#uslugi">Usługi</a></li>
       <li><a href="#cennik">Cennik</a></li>
+      <li><a href="/#realizacje">Realizacje</a></li>
       <li><a href="#opinie">Opinie</a></li>
       <li><a href="#faq">FAQ</a></li>
       <li><a href="#blog">Blog</a></li>
@@ -5553,7 +5721,7 @@
     <a href="#faq">FAQ</a>
     <a href="#blog">Blog</a>
     <a href="blog/">Blog SEO</a>
-    <a href="#realizacje">Realizacje</a>
+    <a href="/#realizacje">Realizacje</a>
     <a href="licencja-zdjec/">Licencja zdjęć</a>
     <a href="montaz-mebli-gliwice/">Gliwice</a>
     <a href="#cennik">Cennik</a>
@@ -6207,6 +6375,21 @@
     const statusEl = sec.querySelector('.works-status');
     const emptyEl  = sec.querySelector('.works-empty');
 
+    cards.forEach(card => {
+      const details = card.querySelector('.work-details');
+      if (!details) return;
+      const comparisons = details.querySelector('.work-comparisons');
+      const syncExpandedState = event => {
+        card.classList.toggle('is-expanded', details.open);
+        if (!event || !details.open || !comparisons) return;
+        requestAnimationFrame(() => {
+          comparisons.scrollIntoView({ block: 'start', behavior: 'auto' });
+        });
+      };
+      details.addEventListener('toggle', syncExpandedState);
+      syncExpandedState();
+    });
+
     // Nazwy do wyswietlenia — klucze w danych sa bez polskich znakow
     const NAZWY = {
       'kuchnia': 'kuchnia', 'sypialnia': 'sypialnia',
@@ -6278,6 +6461,29 @@
     });
 
     odswiez();
+  })();
+
+  // ─── REALIZACJE: porównania przed / po ───
+  (function () {
+    document.querySelectorAll('.work-comparisons').forEach(section => {
+      let enhanced = false;
+      section.querySelectorAll('[data-before-after]').forEach(comparison => {
+        const control = comparison.querySelector('.before-after-control');
+        if (!control) return;
+
+        const update = () => {
+          const value = Math.min(100, Math.max(0, Number(control.value) || 0));
+          comparison.style.setProperty('--before-after-position', `${value}%`);
+          control.setAttribute('aria-valuetext', `${value}% zdjęcia przed`);
+        };
+
+        control.addEventListener('input', update);
+        comparison.classList.add('is-enhanced');
+        update();
+        enhanced = true;
+      });
+      section.classList.toggle('is-enhanced', enhanced);
+    });
   })();
 
   // ─── GALERIA: lightbox ───

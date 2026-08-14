@@ -8,7 +8,8 @@
     "kuchnia-kedzierzyn",
     "zabudowa-wneki-jastrzebie",
     "zabudowa-i-lozko-gliwice",
-    "pokoj-dzieciecy-zabrze"
+    "pokoj-dzieciecy-zabrze",
+    "kuchnia-obi-gliwice"
   ],
   "realizacje": [
     {
@@ -115,6 +116,50 @@
         { "plik": "lozko-dla-dziecka", "alt": "Zmontowane łóżko dziecięce — Zabrze" },
 
         { "plik": "szafka-ikea-otwarta", "alt": "Szafka IKEA z otwartymi drzwiami — Zabrze" }
+      ]
+    },
+    {
+      "id": "kuchnia-obi-gliwice",
+      "tytul": "Montaż pięknej kuchni OBI – Gliwice",
+      "kategoria": "sieciowe",
+      "miasto": "Gliwice",
+      "pomieszczenie": "kuchnia",
+      "marka": "OBI",
+      "data": "2026-08",
+      "czas": null,
+      "opis": "Kompleksowy montaż kuchni OBI w Gliwicach obejmował ustawienie szafek dolnych, zawieszenie szafek górnych i okapu oraz montaż blatu z dopasowanym otworem pod zlew. Następnie zamontowałem zlew, piekarnik i płytę gazową, a ryflowane fronty zostały starannie osadzone i wyregulowane. Połączenie drewnianych frontów, jasnego blatu i białych szafek górnych stworzyło estetyczną i funkcjonalną zabudowę.",
+      "okladka": "13-efekt-koncowy-strefa-zlewu",
+      "powiazanaStrona": {
+        "url": "montaz-mebli-gliwice/",
+        "etykieta": "Montaż mebli w Gliwicach"
+      },
+      "porownania": [
+        {
+          "nazwa": "Strefa piekarnika i płyty",
+          "przed": "01-stan-poczatkowy-strefa-agd",
+          "po": "12-efekt-koncowy-widok-kuchni"
+        },
+        {
+          "nazwa": "Strefa zlewu",
+          "przed": "02-stan-poczatkowy-strefa-zlewu",
+          "po": "13-efekt-koncowy-strefa-zlewu"
+        }
+      ],
+      "zdjecia": [
+        { "plik": "01-stan-poczatkowy-strefa-agd", "alt": "Pusta wykafelkowana ściana w strefie piekarnika przed rozpoczęciem montażu kuchni — Gliwice" },
+        { "plik": "02-stan-poczatkowy-strefa-zlewu", "alt": "Pusta strefa pod szafki i zlew z ustawioną zmywarką przed montażem kuchni — Gliwice" },
+        { "plik": "03-montaz-szafek-dolnych-agd", "alt": "Białe korpusy dolnych szafek z ułożonym blatem podczas montażu strefy piekarnika — Gliwice" },
+        { "plik": "04-montaz-szafek-dolnych-zlew", "alt": "Dolne szafki kuchenne z blatem podczas składania ciągu przy oknie — Gliwice" },
+        { "plik": "05-montaz-pierwszej-szafki-gornej", "alt": "Pierwsza biała szafka górna zawieszona na szynie i sprawdzana poziomicą — Gliwice" },
+        { "plik": "06-montaz-szafek-gornych-i-okapu", "alt": "Zamontowane korpusy szafek górnych z czarnym okapem nad blatem — Gliwice" },
+        { "plik": "07-wyciecie-blatu-pod-zlew", "alt": "Jasny blat kuchenny z przygotowanym otworem pod czarny zlew — Gliwice" },
+        { "plik": "08-montaz-frontow-i-agd", "alt": "Montaż piekarnika, płyty gazowej i drewnianych frontów w kuchni OBI — Gliwice" },
+        { "plik": "09-regulacja-frontow", "alt": "Piekarnik, płyta gazowa i ryflowane fronty podczas końcowego dopasowania — Gliwice" },
+        { "plik": "10-montaz-zlewu-i-porzadkowanie", "alt": "Czarny zlew z czarno-złotą baterią i zamontowane ryflowane fronty przy oknie — Gliwice" },
+        { "plik": "11-efekt-koncowy-strefa-agd", "alt": "Gotowy ciąg kuchenny z piekarnikiem, płytą gazową, okapem i białymi szafkami górnymi — Gliwice" },
+        { "plik": "12-efekt-koncowy-widok-kuchni", "alt": "Widok gotowej kuchni OBI z dwoma ciągami zabudowy i ryflowanymi frontami — Gliwice" },
+        { "plik": "13-efekt-koncowy-strefa-zlewu", "alt": "Gotowy ciąg ze zlewem, czarno-złotą baterią, zmywarką i ryflowanymi frontami — Gliwice" },
+        { "plik": "14-detal-frontow-ryflowanych", "alt": "Detal drewnianych ryflowanych frontów dolnej zabudowy pod jasnym blatem — Gliwice" }
       ]
     }
   ]

@@ -32,6 +32,10 @@ class RealizationsParser(HTMLParser):
         self.related_links: dict[str, dict[str, str | None]] = {}
         self.gallery_links: list[dict[str, str | None]] = []
         self.gallery_images: list[dict[str, str | None]] = []
+        self.comparison_sections: list[str] = []
+        self.comparisons: dict[str, list[dict]] = {}
+        self.current_comparison: dict | None = None
+        self.current_comparison_side: str | None = None
         self.current_card: str | None = None
         self.card_li_depth = 0
         self.current_gallery_link: dict[str, str | None] | None = None
@@ -64,12 +68,32 @@ class RealizationsParser(HTMLParser):
         if tag == "a" and "work-related-link" in classes(attrs) and self.current_card:
             self.related_links[self.current_card] = attrs
 
+        if tag == "section" and "work-comparisons" in classes(attrs) and self.current_card:
+            self.comparison_sections.append(self.current_card)
+
+        if tag == "figure" and "before-after" in classes(attrs) and self.current_card:
+            self.current_comparison = {"attrs": attrs, "images": {}, "control": None}
+            self.comparisons.setdefault(self.current_card, []).append(self.current_comparison)
+
+        if tag == "div" and self.current_comparison:
+            pane_classes = classes(attrs)
+            if "before-after-before" in pane_classes:
+                self.current_comparison_side = "przed"
+            elif "before-after-after" in pane_classes:
+                self.current_comparison_side = "po"
+
         if tag == "a" and "work-photo-link" in classes(attrs):
             self.current_gallery_link = attrs
             self.gallery_links.append(attrs)
 
         if tag == "img" and self.current_gallery_link is not None:
             self.gallery_images.append(attrs)
+
+        if tag == "img" and self.current_comparison and self.current_comparison_side:
+            self.current_comparison["images"][self.current_comparison_side] = attrs
+
+        if tag == "input" and "before-after-control" in classes(attrs) and self.current_comparison:
+            self.current_comparison["control"] = attrs
 
         if tag == "script":
             self.script_id = attrs.get("id")
@@ -83,6 +107,11 @@ class RealizationsParser(HTMLParser):
                 self.current_card = None
         if tag == "a" and self.current_gallery_link is not None:
             self.current_gallery_link = None
+        if tag == "div" and self.current_comparison_side:
+            self.current_comparison_side = None
+        if tag == "figure":
+            self.current_comparison = None
+            self.current_comparison_side = None
         if tag == "script":
             payload = "".join(self.script_text).strip()
             if self.script_id == "works-data":
@@ -112,6 +141,11 @@ def gallery_id(item: dict) -> str:
     return SITE_URL + "#realizacja-" + item["id"]
 
 
+def gallery_name(item: dict) -> str:
+    title = item["tytul"].rstrip()
+    return title if title.endswith(item["miasto"]) else f'{title} — {item["miasto"]}'
+
+
 def image_id(item: dict, photo: dict) -> str:
     return SITE_URL + "#zdjecie-realizacji-" + photo["plik"]
 
@@ -132,8 +166,8 @@ def main() -> None:
 
     data = json.loads(DATA_PATH.read_text(encoding="utf-8"))
     items = data.get("realizacje", [])
-    require(len(items) == 5, f"Oczekiwano 5 realizacji, jest {len(items)}")
-    require(sum(len(item.get("zdjecia", [])) for item in items) == 22, "Oczekiwano 22 zdjęć logicznych")
+    require(len(items) == 6, f"Oczekiwano 6 realizacji, jest {len(items)}")
+    require(sum(len(item.get("zdjecia", [])) for item in items) == 36, "Oczekiwano 36 zdjęć logicznych")
 
     ids = [item.get("id") for item in items]
     require(all(ids), "Każda realizacja musi mieć ID")
@@ -141,6 +175,7 @@ def main() -> None:
     require(set(data.get("kolejnosc", [])) == set(ids), "Pole 'kolejnosc' nie odpowiada realizacjom")
 
     expected_photos: dict[tuple[str, int], dict] = {}
+    expected_comparisons: dict[str, list[dict]] = {}
     all_titles: list[str] = []
     all_descriptions: list[str] = []
     all_alts: list[str] = []
@@ -152,6 +187,7 @@ def main() -> None:
         all_titles.append(normalized(item["tytul"]))
         all_descriptions.append(normalized(item["opis"]))
         photos = item.get("zdjecia", [])
+        photos_by_base = {photo.get("plik"): photo for photo in photos}
         require(any(photo.get("plik") == item.get("okladka") for photo in photos), f"Błędna okładka: {item['id']}")
         related_page = item.get("powiazanaStrona")
         if related_page:
@@ -170,6 +206,20 @@ def main() -> None:
                 for extension in EXTENSIONS:
                     path = ROOT / image_relative(item, photo["plik"], size, extension)
                     require(path.is_file(), f"Brak obrazu: {path.relative_to(ROOT)}")
+
+        comparisons = item.get("porownania", [])
+        expected_comparisons[item["id"]] = comparisons
+        seen_comparison_pairs: set[tuple[str, str]] = set()
+        for comparison_index, comparison in enumerate(comparisons):
+            require(bool(comparison.get("nazwa", "").strip()), f"Brak nazwy porównania: {item['id']} #{comparison_index + 1}")
+            before = comparison.get("przed")
+            after = comparison.get("po")
+            require(before in photos_by_base, f"Zdjęcie przed nie należy do realizacji: {item['id']} #{comparison_index + 1}")
+            require(after in photos_by_base, f"Zdjęcie po nie należy do realizacji: {item['id']} #{comparison_index + 1}")
+            require(before != after, f"Porównanie używa tego samego zdjęcia przed i po: {item['id']} #{comparison_index + 1}")
+            pair = (before, after)
+            require(pair not in seen_comparison_pairs, f"Powtórzona para porównawcza: {item['id']} #{comparison_index + 1}")
+            seen_comparison_pairs.add(pair)
 
     require(len(all_titles) == len(set(all_titles)), "Tytuły realizacji nie są unikalne")
     require(len(all_descriptions) == len(set(all_descriptions)), "Opisy realizacji nie są unikalne")
@@ -190,10 +240,10 @@ def main() -> None:
 
     duplicates = sorted(item_id for item_id, count in Counter(html_parser.ids).items() if count > 1)
     require(not duplicates, f"Zduplikowane ID w HTML: {', '.join(duplicates)}")
-    require(len(html_parser.cards) == 5, f"HTML powinien mieć 5 realizacji, ma {len(html_parser.cards)}")
+    require(len(html_parser.cards) == 6, f"HTML powinien mieć 6 realizacji, ma {len(html_parser.cards)}")
     require(set(html_parser.cards) == set(ids), "Lista realizacji w HTML nie odpowiada źródłu")
-    require(len(html_parser.gallery_links) == 22, f"HTML powinien mieć 22 linki zdjęć, ma {len(html_parser.gallery_links)}")
-    require(len(html_parser.gallery_images) == 22, f"HTML powinien mieć 22 obrazy galerii, ma {len(html_parser.gallery_images)}")
+    require(len(html_parser.gallery_links) == 36, f"HTML powinien mieć 36 linków zdjęć, ma {len(html_parser.gallery_links)}")
+    require(len(html_parser.gallery_images) == 36, f"HTML powinien mieć 36 obrazów galerii, ma {len(html_parser.gallery_images)}")
     require(all((image.get("alt") or "").strip() for image in html_parser.gallery_images), "Co najmniej jeden obraz galerii nie ma alt")
 
     by_id = {item["id"]: item for item in items}
@@ -215,6 +265,25 @@ def main() -> None:
             require(related_target.is_file(), f"Powiązany link nie istnieje przy sprawdzanym HTML: {item_id}")
         else:
             require(related_link is None, f"Nadmiarowy powiązany link: {item_id}")
+
+        expected_item_comparisons = expected_comparisons[item_id]
+        actual_item_comparisons = html_parser.comparisons.get(item_id, [])
+        require(len(actual_item_comparisons) == len(expected_item_comparisons), f"Błędna liczba porównań: {item_id}")
+        require(html_parser.comparison_sections.count(item_id) == (1 if expected_item_comparisons else 0), f"Błędna sekcja porównań: {item_id}")
+        photos_by_base = {photo["plik"]: photo for photo in item["zdjecia"]}
+        for comparison_index, (expected, actual) in enumerate(zip(expected_item_comparisons, actual_item_comparisons, strict=True)):
+            attrs = actual["attrs"]
+            require(attrs.get("data-before") == expected["przed"], f"Błędne data-before: {item_id} #{comparison_index + 1}")
+            require(attrs.get("data-after") == expected["po"], f"Błędne data-after: {item_id} #{comparison_index + 1}")
+            images = actual["images"]
+            require(set(images) == {"przed", "po"}, f"Fallback porównania nie zawiera obu zdjęć: {item_id} #{comparison_index + 1}")
+            require(images["przed"].get("alt") == photos_by_base[expected["przed"]]["alt"], f"Błędny alt zdjęcia przed: {item_id} #{comparison_index + 1}")
+            require(images["po"].get("alt") == photos_by_base[expected["po"]]["alt"], f"Błędny alt zdjęcia po: {item_id} #{comparison_index + 1}")
+            require(images["przed"].get("loading") == "lazy" and images["po"].get("loading") == "lazy", f"Obrazy porównania nie są ładowane leniwie: {item_id} #{comparison_index + 1}")
+            control = actual["control"] or {}
+            require(control.get("type") == "range", f"Brak suwaka porównania: {item_id} #{comparison_index + 1}")
+            require(control.get("min") == "0" and control.get("max") == "100" and control.get("value") == "50", f"Błędny zakres suwaka: {item_id} #{comparison_index + 1}")
+            require(bool((control.get("aria-label") or "").strip()), f"Suwak nie ma etykiety dostępności: {item_id} #{comparison_index + 1}")
 
     seen_links: set[tuple[str, int]] = set()
     for link, image in zip(html_parser.gallery_links, html_parser.gallery_images, strict=True):
@@ -238,7 +307,7 @@ def main() -> None:
     require(html_parser.works_data is not None, "Brak #works-data")
     runtime = json.loads(html_parser.works_data or "{}")
     require(set(runtime) == set(ids), "#works-data nie odpowiada realizacjom źródłowym")
-    require(sum(len(item["zdjecia"]) for item in runtime.values()) == 22, "#works-data nie zawiera 22 zdjęć")
+    require(sum(len(item["zdjecia"]) for item in runtime.values()) == 36, "#works-data nie zawiera 36 zdjęć")
 
     image_objects = []
     image_galleries = []
@@ -247,22 +316,22 @@ def main() -> None:
         if isinstance(block, dict) and isinstance(block.get("@graph"), list):
             image_objects.extend(node for node in block["@graph"] if node.get("@type") == "ImageObject")
             image_galleries.extend(node for node in block["@graph"] if node.get("@type") == "ImageGallery")
-    require(len(image_objects) == 22, f"Oczekiwano 22 ImageObject, jest {len(image_objects)}")
-    require(len(image_galleries) == 5, f"Oczekiwano 5 ImageGallery, jest {len(image_galleries)}")
+    require(len(image_objects) == 36, f"Oczekiwano 36 ImageObject, jest {len(image_objects)}")
+    require(len(image_galleries) == 6, f"Oczekiwano 6 ImageGallery, jest {len(image_galleries)}")
 
     image_objects_by_id = {node.get("@id"): node for node in image_objects}
     image_galleries_by_id = {node.get("@id"): node for node in image_galleries}
-    require(len(image_objects_by_id) == 22 and None not in image_objects_by_id, "ImageObject nie mają unikalnych @id")
-    require(len(image_galleries_by_id) == 5 and None not in image_galleries_by_id, "ImageGallery nie mają unikalnych @id")
+    require(len(image_objects_by_id) == 36 and None not in image_objects_by_id, "ImageObject nie mają unikalnych @id")
+    require(len(image_galleries_by_id) == 6 and None not in image_galleries_by_id, "ImageGallery nie mają unikalnych @id")
     all_nodes_by_id = {**image_galleries_by_id, **image_objects_by_id}
-    require(len(all_nodes_by_id) == 27, "@id nie są unikalne w całym grafie realizacji")
+    require(len(all_nodes_by_id) == 42, "@id nie są unikalne w całym grafie realizacji")
 
     for item in items:
         expected_gallery_id = gallery_id(item)
         gallery = image_galleries_by_id.get(expected_gallery_id)
         require(gallery is not None, f"Brak ImageGallery: {item['id']}")
         require(gallery.get("url") == expected_gallery_id, f"Błędny URL ImageGallery: {item['id']}")
-        require(gallery.get("name") == f'{item["tytul"]} — {item["miasto"]}', f"Błędna nazwa ImageGallery: {item['id']}")
+        require(gallery.get("name") == gallery_name(item), f"Błędna nazwa ImageGallery: {item['id']}")
         require(gallery.get("description") == item["opis"], f"Błędny opis ImageGallery: {item['id']}")
         require(gallery.get("inLanguage") == "pl", f"Brak języka ImageGallery: {item['id']}")
         require(gallery.get("isPartOf") == SITE_URL, f"ImageGallery nie jest powiązana ze stroną: {item['id']}")
@@ -304,12 +373,13 @@ def main() -> None:
         require(not (html_path.parent / "data" / "realizacje.json").exists(), "Źródłowy realizacje.json trafił do dist")
         require(not (html_path.parent / "data" / "cennik.json").exists(), "Prywatny cennik trafił do dist")
 
-    print("OK: źródło — 5 realizacji, 22 zdjęcia")
-    print("OK: HTML — 5 realizacji, 22 linki i 22 obrazy galerii")
+    print("OK: źródło — 6 realizacji, 36 zdjęć")
+    print("OK: HTML — 6 realizacji, 36 linków i 36 obrazów galerii")
     print("OK: unikalne ID, kompletne tytuły, opisy i alty")
     print("OK: wszystkie warianty obrazów i odnośniki istnieją")
-    print("OK: unikalne tytuły, opisy i 22 teksty alt są zgodne ze źródłem")
-    print("OK: #works-data, 5 ImageGallery.hasPart i 22 ImageObject.isPartOf są zgodne ze źródłem")
+    print("OK: unikalne tytuły, opisy i 36 tekstów alt są zgodne ze źródłem")
+    print("OK: porównania przed/po mają prawidłowe referencje, fallback i suwaki")
+    print("OK: #works-data, 6 ImageGallery.hasPart i 36 ImageObject.isPartOf są zgodne ze źródłem")
 
 
 if __name__ == "__main__":
