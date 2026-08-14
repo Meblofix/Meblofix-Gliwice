@@ -1,6 +1,7 @@
 const MAX_ITEMS = 10;
 const MAX_BYTES = 1_500_000;
 const MAX_REQUEST_BYTES = 32_000;
+const MAX_REQUESTS_PER_MINUTE = 15;
 const TIMEOUT_MS = 8_000;
 const MAX_REDIRECTS = 3;
 export const TOKEN_LIFETIME_MS = 20 * 60 * 1_000;
@@ -40,6 +41,50 @@ const FETCH_HEADERS = Object.freeze({
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
+const API_SECURITY_HEADERS = Object.freeze({
+  'Cache-Control': 'no-store',
+  'Content-Security-Policy': "default-src 'none'; base-uri 'none'; frame-ancestors 'none'",
+  'Cross-Origin-Resource-Policy': 'same-origin',
+  'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+  'Referrer-Policy': 'no-referrer',
+  'Strict-Transport-Security': 'max-age=31536000',
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY'
+});
+
+function jsonResponse(body, init = {}) {
+  const headers = new Headers(API_SECURITY_HEADERS);
+  for (const [name, value] of new Headers(init.headers)) headers.set(name, value);
+  return Response.json(body, { ...init, headers });
+}
+
+async function readLimitedRequest(request) {
+  const declaredLength = Number(request.headers.get('content-length') || 0);
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_REQUEST_BYTES) throw new Error('request-too-large');
+  const reader = request.body?.getReader();
+  if (!reader) return '';
+  const chunks = [];
+  let total = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > MAX_REQUEST_BYTES) {
+      await reader.cancel().catch(() => {});
+      throw new Error('request-too-large');
+    }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+  return decoder.decode(bytes);
+}
+
+function acceptsJson(request) {
+  return String(request.headers.get('content-type') || '').split(';', 1)[0].trim().toLowerCase() === 'application/json';
+}
+
 function cleanText(value, maxLength) {
   return String(value ?? '').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '').trim().slice(0, maxLength);
 }
@@ -73,10 +118,8 @@ function isPrivateHost(hostname) {
 function validUrl(value) {
   try {
     const url = new URL(value);
-    if (!['http:', 'https:'].includes(url.protocol) || isPrivateHost(url.hostname) || url.port && !['80', '443'].includes(url.port)) return null;
+    if (url.protocol !== 'https:' || url.username || url.password || isPrivateHost(url.hostname) || url.port && url.port !== '443') return null;
     if (!ALLOWED_HOSTS.has(url.hostname.toLowerCase())) return null;
-    url.username = '';
-    url.password = '';
     url.hash = '';
     return url;
   } catch { return null; }
@@ -326,6 +369,22 @@ async function sha256(value) {
   return bytesToBase64Url(new Uint8Array(await crypto.subtle.digest('SHA-256', encoder.encode(value))));
 }
 
+async function withinRequestRateLimit(env, request) {
+  if (!env?.QUOTE_NOTIFICATION_KV) return true;
+  try {
+    const minute = Math.floor(Date.now() / 60_000);
+    const client = await sha256(request.headers.get('cf-connecting-ip') || 'unknown');
+    const key = `quote-products-rate:${client}:${minute}`;
+    const count = Number(await env.QUOTE_NOTIFICATION_KV.get(key) || 0);
+    if (!Number.isFinite(count) || count >= MAX_REQUESTS_PER_MINUTE) return false;
+    await env.QUOTE_NOTIFICATION_KV.put(key, String(count + 1), { expirationTtl: 120 });
+    return true;
+  } catch {
+    // Limiter KV jest ochroną best-effort i nie może wyłączyć kalkulatora przy awarii magazynu.
+    return true;
+  }
+}
+
 async function notificationKey(clientFingerprint, normalizedRequest, issuedAt) {
   const window = Math.floor(issuedAt / NOTIFICATION_DEDUPE_WINDOW_MS);
   return sha256(`${clientFingerprint}|${window}|${JSON.stringify(normalizedRequest)}`);
@@ -387,10 +446,12 @@ export async function verifyQuoteToken(token, env) {
 function normalizeRequest(body) {
   const rawItems = Array.isArray(body?.items) ? body.items : [];
   if (!rawItems.length || rawItems.length > MAX_ITEMS) throw new Error('items');
+  const seenUrls = new Set();
   const items = rawItems.map(item => {
     const url = cleanText(item?.url, 2048);
     const quantity = Number(item?.quantity);
-    if (!url || !Number.isInteger(quantity) || quantity < 1 || quantity > 100) throw new Error('items');
+    if (!url || seenUrls.has(url) || !Number.isInteger(quantity) || quantity < 1 || quantity > 100) throw new Error('items');
+    seenUrls.add(url);
     return { url, quantity };
   });
   const city = cleanText(body?.city, 80);
@@ -432,10 +493,17 @@ function normalizeRequest(body) {
 
 export async function onRequestPost({ request, env }) {
   try {
-    const declaredLength = Number(request.headers.get('content-length') || 0);
-    if (declaredLength > MAX_REQUEST_BYTES) return Response.json({ error: 'Żądanie jest zbyt duże.' }, { status: 413 });
-    const rawBody = await request.text();
-    if (encoder.encode(rawBody).byteLength > MAX_REQUEST_BYTES) return Response.json({ error: 'Żądanie jest zbyt duże.' }, { status: 413 });
+    if (!acceptsJson(request)) return jsonResponse({ error: 'Wymagany jest format JSON.' }, { status: 415 });
+    if (!await withinRequestRateLimit(env, request)) {
+      return jsonResponse({ error: 'Zbyt wiele żądań. Spróbuj ponownie za chwilę.' }, { status: 429, headers: { 'Retry-After': '60' } });
+    }
+    let rawBody;
+    try {
+      rawBody = await readLimitedRequest(request);
+    } catch (error) {
+      if (error?.message === 'request-too-large') return jsonResponse({ error: 'Żądanie jest zbyt duże.' }, { status: 413 });
+      throw error;
+    }
     const { items, extraServices, context } = normalizeRequest(JSON.parse(rawBody));
     const resolved = await Promise.all(items.map(item => resolveProduct(item.url)));
     const products = resolved.map((product, index) => ({
@@ -466,7 +534,7 @@ export async function onRequestPost({ request, env }) {
           attempt, context
         }, env);
       }
-      return Response.json({ products, allConfirmed: false, notificationToken, quoteId }, { headers: { 'Cache-Control': 'no-store' } });
+      return jsonResponse({ products, allConfirmed: false, notificationToken, quoteId });
     }
 
     const furniture = roundMoney(products.reduce((sum, product) => sum + product.value, 0));
@@ -496,8 +564,8 @@ export async function onRequestPost({ request, env }) {
         issuedAt, expiresAt: issuedAt + TOKEN_LIFETIME_MS, quote, context
       }, env);
     }
-    return Response.json({ products, allConfirmed: true, quote: clientQuote, notificationToken, quoteId }, { headers: { 'Cache-Control': 'no-store' } });
+    return jsonResponse({ products, allConfirmed: true, quote: clientQuote, notificationToken, quoteId });
   } catch {
-    return Response.json({ error: 'Nieprawidłowe żądanie.' }, { status: 400, headers: { 'Cache-Control': 'no-store' } });
+    return jsonResponse({ error: 'Nieprawidłowe żądanie.' }, { status: 400 });
   }
 }

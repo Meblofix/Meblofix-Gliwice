@@ -53,6 +53,19 @@ function request(path, value, userAgent = 'Meblofix test') {
   });
 }
 
+function rawRequest(path, rawBody, contentType = 'application/json', origin = 'https://meblofix-gliwice.pl') {
+  return new Request(`https://meblofix-gliwice.pl${path}`, {
+    method: 'POST',
+    headers: {
+      'content-type': contentType,
+      origin,
+      'user-agent': 'Meblofix security test',
+      'cf-connecting-ip': '203.0.113.20'
+    },
+    body: rawBody
+  });
+}
+
 async function tokenPayload(token, bindings) { return verifyQuoteToken(token, bindings); }
 
 function installFetchMock({ products = {}, deliveries, deliveryStatus = 200, requests = [] }) {
@@ -763,4 +776,154 @@ test('CTA jest w polach kalkulatora przed kontaktem i awaria powiadomienia nie c
   const notificationFailure = html.slice(html.indexOf('async function sendCalculationNotice'), html.indexOf('function validateContact'));
   assert.doesNotMatch(notificationFailure, /setResult\(null\)|lastCalculation\s*=\s*null/);
   assert.match(notificationFailure, /console\.warn/);
+});
+
+test('SSRF przez prywatny IPv6 i nieszyfrowany URL oficjalnego hosta są blokowane przed fetch', async () => {
+  const deliveries = [];
+  const requests = [];
+  const restore = installFetchMock({ deliveries, requests });
+  try {
+    const privateIpv6 = await calculate(body([{ url: 'https://[::1]/produkt', quantity: 1 }]), env(), 'test-ssrf-ipv6');
+    const insecureOfficial = await calculate(body([{ url: 'http://www.ikea.com/pl/pl/p/test-http/', quantity: 1 }]), env(), 'test-http-url');
+    assert.equal(privateIpv6.response.status, 200);
+    assert.equal(privateIpv6.data.allConfirmed, false);
+    assert.equal(insecureOfficial.response.status, 200);
+    assert.equal(insecureOfficial.data.allConfirmed, false);
+    assert.equal(requests.length, 0);
+  } finally { restore(); }
+});
+
+test('redirect do prywatnego IP i downgrade do HTTP są odrzucane', async () => {
+  const deliveries = [];
+  const requests = [];
+  const privateRedirect = 'https://www.ikea.com/pl/pl/p/test-private-redirect/';
+  const httpRedirect = 'https://www.ikea.com/pl/pl/p/test-http-redirect/';
+  const restore = installFetchMock({
+    products: {
+      [privateRedirect]: { status: 302, headers: { location: 'https://127.0.0.1/metadata' } },
+      [httpRedirect]: { status: 302, headers: { location: 'http://www.ikea.com/pl/pl/p/downgrade/' } }
+    },
+    deliveries,
+    requests
+  });
+  try {
+    const first = await calculate(body([{ url: privateRedirect, quantity: 1 }]), env(), 'test-private-redirect');
+    const second = await calculate(body([{ url: httpRedirect, quantity: 1 }]), env(), 'test-http-redirect');
+    assert.equal(first.data.allConfirmed, false);
+    assert.equal(second.data.allConfirmed, false);
+    assert.deepEqual(requests.map(item => item.url), [privateRedirect, httpRedirect]);
+  } finally { restore(); }
+});
+
+test('body większe niż 32 KB jest odrzucane strumieniowo przez oba API', async () => {
+  const oversized = JSON.stringify({ token: 'x'.repeat(33_000) });
+  const productResponse = await calculateQuote({
+    request: rawRequest('/api/quote-products', oversized),
+    env: env()
+  });
+  const notificationResponse = await notifyQuote({
+    request: rawRequest('/api/quote-notification', oversized),
+    env: env()
+  });
+  assert.equal(productResponse.status, 413);
+  assert.equal(notificationResponse.status, 413);
+  assert.equal((await productResponse.json()).error, 'Żądanie jest zbyt duże.');
+  assert.equal((await notificationResponse.json()).error, 'request-too-large');
+});
+
+test('więcej niż 10 produktów, duplikaty i skrajna ilość są odrzucane przed fetch', async () => {
+  const deliveries = [];
+  const requests = [];
+  const restore = installFetchMock({ deliveries, requests });
+  try {
+    const eleven = Array.from({ length: 11 }, (_, index) => ({
+      url: `https://www.ikea.com/pl/pl/p/test-limit-${index}/`,
+      quantity: 1
+    }));
+    const duplicateUrl = 'https://www.ikea.com/pl/pl/p/test-duplicate/';
+    const tooMany = await calculate(body(eleven), env(), 'test-items-limit');
+    const duplicate = await calculate(body([
+      { url: duplicateUrl, quantity: 1 },
+      { url: duplicateUrl, quantity: 2 }
+    ]), env(), 'test-items-duplicate');
+    const extremeQuantity = await calculate(body([{ url: duplicateUrl, quantity: 101 }]), env(), 'test-items-quantity');
+    assert.equal(tooMany.response.status, 400);
+    assert.equal(duplicate.response.status, 400);
+    assert.equal(extremeQuantity.response.status, 400);
+    assert.equal(requests.length, 0);
+  } finally { restore(); }
+});
+
+test('API wymaga application/json, nie udostępnia CORS i zwraca nagłówki bezpieczeństwa', async () => {
+  const value = JSON.stringify(body([{ url: 'https://www.ikea.com/pl/pl/p/test-cors/', quantity: 1 }]));
+  const productResponse = await calculateQuote({
+    request: rawRequest('/api/quote-products', value, 'text/plain', 'https://attacker.example'),
+    env: env()
+  });
+  const notificationResponse = await notifyQuote({
+    request: rawRequest('/api/quote-notification', JSON.stringify({ token: 'x' }), 'text/plain', 'https://attacker.example'),
+    env: env()
+  });
+  assert.equal(productResponse.status, 415);
+  assert.equal(notificationResponse.status, 415);
+  for (const response of [productResponse, notificationResponse]) {
+    assert.equal(response.headers.get('access-control-allow-origin'), null);
+    assert.equal(response.headers.get('x-content-type-options'), 'nosniff');
+    assert.equal(response.headers.get('cross-origin-resource-policy'), 'same-origin');
+    assert.match(response.headers.get('content-security-policy'), /default-src 'none'/);
+  }
+});
+
+test('wstrzyknięcia odbiorcy, endpointu, nagłówków, HTML i znaków bidi nie przechodzą do pól technicznych', async () => {
+  const deliveries = [];
+  const url = 'https://www.ikea.com/pl/pl/p/test-mail-injection/';
+  const restore = installFetchMock({ products: { [url]: PRODUCT_HTML('<b>Szafa</b>\u202E', 1000) }, deliveries });
+  try {
+    const bindings = env();
+    const result = await calculate(body([{ url, quantity: 1 }], {
+      details: '<img src=x onerror=alert(1)>\r\nBcc: attacker@example.com',
+      contact: {
+        name: 'Anna\r\nBcc: attacker@example.com',
+        phone: '500 000 000',
+        email: 'anna@example.com\r\nReply-To: attacker@example.com'
+      }
+    }), bindings, 'test-mail-injection');
+    const notification = await notify(result.data.notificationToken, bindings, {
+      endpoint: 'https://attacker.example/collect',
+      recipient: 'attacker@example.com',
+      _subject: 'Podmieniony temat',
+      _replyto: 'attacker@example.com'
+    });
+    assert.equal(notification.response.status, 200);
+    assert.equal(deliveries.length, 1);
+    assert.equal(deliveries[0]._subject, 'Nowa wycena z kalkulatora Meblofix');
+    assert.equal(deliveries[0].recipient, undefined);
+    assert.equal(deliveries[0].endpoint, undefined);
+    assert.equal(deliveries[0]._replyto, undefined);
+    assert.doesNotMatch(deliveries[0].produkty, /[<>\u202E]/);
+    assert.doesNotMatch(deliveries[0].dodatkowe_informacje, /[<>]/);
+    assert.match(deliveries[0].imie, /Bcc: attacker@example\.com/);
+  } finally { restore(); }
+});
+
+test('limity wejściowe zatrzymują burst przed kosztownym przetwarzaniem', async () => {
+  const productBindings = env();
+  const productStatuses = [];
+  for (let index = 0; index < 16; index += 1) {
+    const response = await calculateQuote({
+      request: rawRequest('/api/quote-products', '{}'),
+      env: productBindings
+    });
+    productStatuses.push(response.status);
+  }
+  assert.deepEqual(productStatuses.slice(0, 15), Array(15).fill(400));
+  assert.equal(productStatuses[15], 429);
+
+  const notificationBindings = env();
+  const notificationStatuses = [];
+  for (let index = 0; index < 21; index += 1) {
+    notificationStatuses.push((await notify(`invalid-${index}`, notificationBindings)).response.status);
+  }
+  assert.deepEqual(notificationStatuses.slice(0, 20), Array(20).fill(400));
+  assert.equal(notificationStatuses[20], 429);
 });

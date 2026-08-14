@@ -88,6 +88,8 @@ trap 'rm -rf -- "$FUNCTIONS_TEMP_DIR"' EXIT
 cp -a -- "$FUNCTIONS_TEMP_DIR/_worker.js" "$DIST_DIR/_worker.js"
 cp -p -- "$FUNCTIONS_TEMP_DIR/_routes.json" "$DIST_DIR/_routes.json"
 
+node "$PROJECT_DIR/scripts/test-security-dist.js" "$DIST_DIR"
+
 echo "Cloudflare Pages build gotowy: $DIST_DIR"
 echo "Liczba plików: $(find "$DIST_DIR" -type f | wc -l)"
 echo "Rozmiar: $(du -sh "$DIST_DIR" | cut -f1)"
