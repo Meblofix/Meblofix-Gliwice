@@ -32,7 +32,7 @@ copy_directory() {
 rm -rf -- "$DIST_DIR"
 mkdir -p -- "$DIST_DIR"
 
-for required_file in index.html 404.html _headers _redirects robots.txt sitemap.xml favicon.ico; do
+for required_file in index.html 404.html _headers _redirects robots.txt sitemap.xml favicon.ico favicon-48.png favicon-96.png apple-touch-icon.png; do
   copy_file "$required_file"
 done
 
