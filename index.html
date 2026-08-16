@@ -5728,6 +5728,7 @@
   </div>
 </footer>
 
+<script src="analytics.js"></script>
 <script>
   // ─── MOBILNE MENU ───
   const navToggle = document.querySelector('.nav-toggle');
@@ -5868,6 +5869,8 @@
   let lastCalculation = null;
   let calculationKey = '';
   let calculationNoticeKey = '';
+  let quoteAnalyticsAttempt = 0;
+  let lastQuoteStartedAt = 0;
 
   function isGliwice(city) { return String(city || '').trim().toLocaleLowerCase('pl-PL') === 'gliwice'; }
   function money(value) { const hasFraction = Math.round(Number(value) * 100) % 100 !== 0; return `${new Intl.NumberFormat('pl-PL', { minimumFractionDigits: hasFraction ? 2 : 0, maximumFractionDigits: 2 }).format(value)} zł`; }
@@ -5919,6 +5922,15 @@
   }
   async function calculateFromLinks() {
     const items = rows().filter(item => item.url);
+    const now = Date.now();
+    if (quoteCalculate.disabled || now - lastQuoteStartedAt < 750) return;
+    lastQuoteStartedAt = now;
+    const analyticsAttempt = ++quoteAnalyticsAttempt;
+    const analyticsProperties = {
+      productCount: items.length,
+      hasExtraServices: selectedExtraServices().length > 0
+    };
+    window.MeblofixAnalytics?.track('quote_started', analyticsProperties, `quote:${analyticsAttempt}:started`);
     if (!items.length || items.some(item => !Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 100)) { setFormStatus(quoteProductsStatus, 'Podaj poprawny link i ilość każdego produktu.', 'error'); return; }
     const requestData = {
       items,
@@ -5936,6 +5948,7 @@
       const planner = data.products.find(product => product.kind === 'ikea-project');
       if (planner) {
         showIndividualQuote(planner.error || 'Projekt IKEA został rozpoznany, ale nie możemy automatycznie odczytać jego wartości. Ten projekt wymaga indywidualnej wyceny.');
+        window.MeblofixAnalytics?.track('quote_individual', { ...analyticsProperties, reason: 'ikea_project' }, `quote:${analyticsAttempt}:individual`);
         if (data.notificationToken) {
           await new Promise(resolve => requestAnimationFrame(() => resolve()));
           await sendCalculationNotice(data.notificationToken, `failure:${JSON.stringify(requestData)}`);
@@ -5944,6 +5957,7 @@
       }
       if (!data.allConfirmed || data.products.some(product => product.error)) {
         showIndividualQuote('Nie udało się potwierdzić ceny wszystkich produktów. To zlecenie wymaga indywidualnej wyceny.');
+        window.MeblofixAnalytics?.track('quote_individual', { ...analyticsProperties, reason: 'price_not_confirmed' }, `quote:${analyticsAttempt}:individual`);
         if (data.notificationToken) {
           await new Promise(resolve => requestAnimationFrame(() => resolve()));
           await sendCalculationNotice(data.notificationToken, `failure:${JSON.stringify(requestData)}`);
@@ -5952,13 +5966,17 @@
       }
       if (!data.quote) throw new Error('missing verified quote');
       const result = data.quote; lastCalculation = result; calculationKey = JSON.stringify(requestData); setResult(result); quoteProductsStatus.textContent = 'Ceny produktów potwierdzone. Wynik jest orientacyjny.';
+      window.MeblofixAnalytics?.track('quote_success', analyticsProperties, `quote:${analyticsAttempt}:success`);
       if (data.notificationToken) {
         await new Promise(resolve => requestAnimationFrame(() => resolve()));
         await sendCalculationNotice(data.notificationToken, `success:${calculationKey}`);
       } else {
         console.warn('Powiadomienie o wycenie nie jest skonfigurowane. Wynik kalkulacji pozostaje dostępny.');
       }
-    } catch { showIndividualQuote('Nie udało się automatycznie potwierdzić ceny. To zlecenie wymaga indywidualnej wyceny.'); }
+    } catch {
+      showIndividualQuote('Nie udało się automatycznie potwierdzić ceny. To zlecenie wymaga indywidualnej wyceny.');
+      window.MeblofixAnalytics?.track('quote_individual', { ...analyticsProperties, reason: 'request_failed' }, `quote:${analyticsAttempt}:individual`);
+    }
     finally { quoteCalculate.disabled = false; quoteCalculate.textContent = 'PRZELICZ WYCENĘ'; }
   }
   async function sendCalculationNotice(token, key) {
@@ -5981,7 +5999,7 @@
   async function handleQuoteSubmit(event) {
     event.preventDefault(); if (document.getElementById('quoteWebsite').value || !validateContact()) return; const form = event.currentTarget, status = document.getElementById('quoteFormStatus'), submit = document.getElementById('quoteSubmit'); submit.disabled = true; submit.textContent = 'Wysyłam zapytanie…';
     quoteEventType.value = 'ZAPYTANIE'; quoteSubject.value = 'Nowe zapytanie Meblofix'; const payload = new FormData(form); payload.set('klient_przeslal_formularz', 'TAK'); payload.set('data_i_godzina', new Date().toISOString());
-    try { const response = await fetch(form.action, { method: 'POST', body: payload, headers: { Accept: 'application/json' } }); if (!response.ok) throw new Error('send failed'); setFormStatus(status, 'Zapytanie zostało wysłane. Skontaktuję się, aby potwierdzić zakres montażu.', 'success'); submit.textContent = '✓ Zapytanie wysłane'; } catch { setFormStatus(status, 'Nie udało się wysłać zapytania. Zadzwoń: +48 784 878 197.', 'error'); submit.disabled = false; submit.textContent = 'Wyślij zapytanie o montaż'; }
+    try { const response = await fetch(form.action, { method: 'POST', body: payload, headers: { Accept: 'application/json' } }); if (!response.ok) throw new Error('send failed'); setFormStatus(status, 'Zapytanie zostało wysłane. Skontaktuję się, aby potwierdzić zakres montażu.', 'success'); submit.textContent = '✓ Zapytanie wysłane'; window.MeblofixAnalytics?.track('contact_submit', { formKind: 'quote' }); } catch { setFormStatus(status, 'Nie udało się wysłać zapytania. Zadzwoń: +48 784 878 197.', 'error'); submit.disabled = false; submit.textContent = 'Wyślij zapytanie o montaż'; }
   }
   document.querySelectorAll('[data-extra-service]').forEach(row => {
     const checkbox = row.querySelector('input[data-service-id]');
@@ -6380,6 +6398,9 @@
       const comparisons = details.querySelector('.work-comparisons');
       const syncExpandedState = event => {
         card.classList.toggle('is-expanded', details.open);
+        if (event && details.open) {
+          window.MeblofixAnalytics?.track('realization_open', { realizationId: card.dataset.realizacja });
+        }
         if (!event || !details.open || !comparisons) return;
         requestAnimationFrame(() => {
           comparisons.scrollIntoView({ block: 'start', behavior: 'auto' });
@@ -6466,7 +6487,7 @@
   (function () {
     document.querySelectorAll('.work-comparisons').forEach(section => {
       let enhanced = false;
-      section.querySelectorAll('[data-before-after]').forEach(comparison => {
+      section.querySelectorAll('[data-before-after]').forEach((comparison, comparisonIndex) => {
         const control = comparison.querySelector('.before-after-control');
         if (!control) return;
 
@@ -6477,6 +6498,14 @@
         };
 
         control.addEventListener('input', update);
+        control.addEventListener('input', () => {
+          const realizationId = comparison.closest('[data-realizacja]')?.dataset.realizacja;
+          if (!realizationId) return;
+          window.MeblofixAnalytics?.track('before_after_use', {
+            realizationId,
+            comparisonIndex: comparisonIndex + 1
+          }, `before-after:${realizationId}:${comparisonIndex + 1}`);
+        }, { once: true });
         comparison.classList.add('is-enhanced');
         update();
         enhanced = true;
@@ -6690,6 +6719,7 @@
         form.reset();
         [nameField, phoneField, emailField].forEach(clearFieldError);
         setFormStatus(status, 'Dziękujemy! Zapytanie zostało wysłane.', 'success');
+        window.MeblofixAnalytics?.track('contact_submit', { formKind: 'contact' });
         setTimeout(() => {
           btn.textContent = originalText;
           btn.style.background = '';

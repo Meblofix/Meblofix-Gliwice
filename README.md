@@ -101,6 +101,50 @@ npx --no-install wrangler pages deploy dist \
 Ręczny deploy również korzysta z lokalnego `wrangler@4.120.0`. Nie zmienia DNS,
 domeny ani konfiguracji istniejących sekretów i KV projektu Pages.
 
+## Jak sprawdzać ruch Meblofix
+
+### Wizyty, odsłony i źródła ruchu
+
+W panelu Cloudflare wybierz `Analytics & Logs → Web Analytics`, a następnie
+witrynę `meblofix-gliwice.pl`. Dla danych możliwie zbliżonych do ruchu klientów
+ustaw filtr `Exclude Bots: Yes` i właściwy zakres dat.
+
+- `Visits` pokazuje wizyty; jedna wizyta może obejmować kilka odsłon.
+- `Page views` pokazuje odsłony dokumentów HTML.
+- `Path` pozwala sprawdzić najpopularniejsze podstrony.
+- `Referer` pokazuje zewnętrzne źródła wejść, w tym wyszukiwarki, gdy
+  przeglądarka przekazała referrer. Brak referrera jest ruchem direct/unknown.
+- `Device type`, `Browser` i `Operating system` opisują urządzenia.
+- `Country` pokazuje kraj na poziomie zagregowanym.
+
+Cloudflare Web Analytics nie zapisuje query stringów, dlatego parametry
+`utm_source`, `utm_medium` i `utm_campaign` nie zmieniają ścieżki raportowanej w
+Web Analytics. Strona zachowuje je w adresie wejścia, ale canonical zawsze
+wskazuje czysty URL bez parametrów.
+
+`HTTP Requests` nie oznacza liczby klientów. Jeden człowiek generuje wiele
+requestów do HTML, CSS, JavaScriptu, zdjęć i API; requesty mogą też pochodzić od
+botów. Do oceny ruchu używaj `Visits` i `Page views`, nie licznika requestów.
+
+### Konwersje
+
+W panelu strefy `meblofix-gliwice.pl` wybierz `Zaraz → Monitoring → Events`.
+First-party moduł `analytics.js` przekazuje przez `zaraz.track()` wyłącznie:
+
+- `quote_started` — rozpoczęcie przeliczenia,
+- `quote_success` — pokazanie potwierdzonej automatycznej wyceny,
+- `quote_individual` — przejście do wyceny indywidualnej,
+- `phone_click` — kliknięcie linku telefonicznego,
+- `contact_submit` — formularz przyjęty przez Formspree,
+- `realization_open` — rozwinięcie realizacji,
+- `before_after_use` — pierwsza interakcja z konkretnym porównaniem Przed/Po.
+
+Zdarzenia mogą zawierać tylko techniczne, zamknięte właściwości: liczbę
+produktów, informację o usługach dodatkowych, rodzaj formularza, bezpieczny
+identyfikator realizacji, numer porównania albo kod przyczyny fallbacku. Nie są
+wysyłane imiona, telefony, e-maile, treści formularzy, linki produktów, tokeny,
+kwoty ani identyfikatory wycen.
+
 ## Powiadomienia automatycznej wyceny
 
 Cloudflare Pages musi mieć skonfigurowane:
