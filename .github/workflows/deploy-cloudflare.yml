@@ -1,0 +1,58 @@
+name: Deploy Cloudflare Pages
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: meblofix-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Pobierz repozytorium
+        uses: actions/checkout@v6
+
+      - name: Ustaw Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Zainstaluj zależności
+        run: npm ci
+
+      - name: Uruchom testy kalkulatora i API
+        run: npm run test:quote
+
+      - name: Zbuduj artefakt Cloudflare Pages
+        run: bash scripts/build-cloudflare.sh
+
+      - name: Sprawdź format diffu
+        run: git diff --check
+
+      - name: Sprawdź zawartość dist
+        run: bash scripts/check-cloudflare-dist.sh
+
+      - name: Wdróż produkcję z SHA GitHub
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          : "${CLOUDFLARE_API_TOKEN:?Brak sekretu CLOUDFLARE_API_TOKEN}"
+          : "${CLOUDFLARE_ACCOUNT_ID:?Brak sekretu CLOUDFLARE_ACCOUNT_ID}"
+          npx --no-install wrangler pages deploy dist \
+            --project-name=meblofix-gliwice-prod \
+            --branch=main \
+            --commit-hash="$GITHUB_SHA"

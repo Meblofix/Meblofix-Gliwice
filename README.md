@@ -39,6 +39,68 @@ npx --no-install wrangler pages deploy dist \
   --commit-hash="$(git rev-parse HEAD)"
 ```
 
+## Automatyczny deployment
+
+Push do gałęzi `main` uruchamia workflow GitHub Actions
+`.github/workflows/deploy-cloudflare.yml`. Workflow:
+
+1. pobiera dokładny commit z GitHub,
+2. ustawia Node.js 22 i cache npm,
+3. instaluje zależności przez `npm ci`,
+4. uruchamia `npm run test:quote`,
+5. buduje `dist` przez `bash scripts/build-cloudflare.sh`,
+6. sprawdza `git diff --check` i zawartość `dist`,
+7. wdraża `dist` do istniejącego projektu `meblofix-gliwice-prod`, przekazując
+   Cloudflare pełny identyfikator `GITHUB_SHA`.
+
+Każdy krok musi zakończyć się powodzeniem. Błąd instalacji, testów, buildu,
+formatu diffu albo kontroli `dist` zatrzymuje job przed deploymentem. Workflow
+nie wykonuje automatycznego deploymentu z innych gałęzi. Grupa concurrency
+`meblofix-production` anuluje starszy, trwający run po kolejnym pushu do `main`.
+
+Repozytorium GitHub wymaga dwóch Actions secrets:
+
+- `CLOUDFLARE_API_TOKEN` — własny token CI ograniczony do uprawnienia
+  `Account / Cloudflare Pages / Edit` dla właściwego konta,
+- `CLOUDFLARE_ACCOUNT_ID` — `14ae31cb57787d648c3c1013507580a4`.
+
+Nie używaj Global API Key ani tokenu z prawami DNS. Sekrety projektu Pages
+`QUOTE_NOTIFICATION_SECRET`, `QUOTE_NOTIFICATION_FORMSPREE_ENDPOINT` oraz
+binding `QUOTE_NOTIFICATION_KV` pozostają w konfiguracji Cloudflare i nie są
+kopiowane do GitHub.
+
+Sekrety można dodać w GitHub: `Settings → Secrets and variables → Actions`, albo
+przez zalogowane GitHub CLI bez umieszczania tokenu w historii poleceń:
+
+```bash
+gh secret set CLOUDFLARE_API_TOKEN --repo Meblofix/Meblofix-Gliwice
+printf '%s' '14ae31cb57787d648c3c1013507580a4' | \
+  gh secret set CLOUDFLARE_ACCOUNT_ID --repo Meblofix/Meblofix-Gliwice
+```
+
+Pierwsza komenda oczekuje bezpiecznego wprowadzenia tokenu przez standardowe
+wejście. Nie zapisuj tokenu w pliku, argumencie polecenia ani logu workflow.
+
+### Awaryjny ręczny deployment
+
+Ręczny deployment wykonuj tylko z `main`, gdy `HEAD` jest zgodny z
+`origin/main`, po przejściu tych samych bramek co w CI:
+
+```bash
+npm ci
+npm run test:quote
+bash scripts/build-cloudflare.sh
+git diff --check
+bash scripts/check-cloudflare-dist.sh
+npx --no-install wrangler pages deploy dist \
+  --project-name=meblofix-gliwice-prod \
+  --branch=main \
+  --commit-hash="$(git rev-parse HEAD)"
+```
+
+Ręczny deploy również korzysta z lokalnego `wrangler@4.120.0`. Nie zmienia DNS,
+domeny ani konfiguracji istniejących sekretów i KV projektu Pages.
+
 ## Powiadomienia automatycznej wyceny
 
 Cloudflare Pages musi mieć skonfigurowane:
