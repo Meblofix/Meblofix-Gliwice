@@ -40,11 +40,15 @@ def main() -> None:
         require(html.escape(item["opis"]) in source, f"{item['id']}: brak pełnego opisu")
         require("Wyceń podobny montaż" in source, f"{item['id']}: brak CTA")
         require('"@type": "BreadcrumbList"' in source, f"{item['id']}: brak BreadcrumbList")
+        require('<dialog class="case-lightbox"' in source, f"{item['id']}: brak dostępnego lightboxa")
+        require('src="../../js/realizacje.js"' in source, f"{item['id']}: brak wspólnego skryptu galerii")
         for photo in item["zdjecia"]:
             require(html.escape(photo["alt"], quote=True) in source, f"{item['id']}: brak alt {photo['plik']}")
             require(f'{photo["plik"]}-1200.jpg' in source, f"{item['id']}: brak pełnego zdjęcia {photo['plik']}")
         for comparison in item.get("porownania", []):
             require(html.escape(comparison["nazwa"]) in source, f"{item['id']}: brak porównania {comparison['nazwa']}")
+            require('data-before-after' in source, f"{item['id']}: brak suwaka przed/po")
+            require('type="range"' in source, f"{item['id']}: porównanie nie ma sterowania suwakiem")
         if item.get("przed_po"):
             require("Porównanie realizacji" in source, f"{item['id']}: brak porównania przed/po")
 

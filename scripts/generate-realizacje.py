@@ -293,6 +293,55 @@ def render_runtime_data(data: dict) -> str:
     return f'<script type="application/json" id="works-data">{payload}</script>'
 
 
+def render_homepage_cards(data: dict) -> str:
+    items = ordered_realizations(data)
+    counts = {key: sum(item["kategoria"] == key for item in items) for key in data["kategorie"]}
+    lines = [
+        '  <div class="works-filters" role="group" aria-label="Filtruj realizacje">',
+        f'    <button type="button" class="works-filter is-active" aria-pressed="true" data-filter="wszystkie">Wszystkie <span>{len(items)}</span></button>',
+    ]
+    for key, label in data["kategorie"].items():
+        lines.append(
+            f'    <button type="button" class="works-filter" aria-pressed="false" data-filter="{escape(key)}">{escape(label)} <span>{counts[key]}</span></button>'
+        )
+    lines.extend([
+        '    <span class="works-chip-wrap"></span>',
+        '  </div>',
+        f'  <p class="works-status" role="status" aria-live="polite">Pokazuję {len(items)} realizacji</p>',
+        '  <p class="works-empty" hidden>Żadna realizacja nie spełnia obu warunków naraz. Usuń znacznik pomieszczenia albo wybierz inną kategorię.</p>',
+        '  <ul class="works-grid">',
+    ])
+    for position, item in enumerate(items):
+        photos = item["zdjecia"]
+        cover = next(photo for photo in photos if photo["plik"] == item["okladka"])
+        count_label = f"{len(photos)} zdjęć" if len(photos) != 1 else "1 zdjęcie"
+        featured = " is-featured" if position == 0 else ""
+        lines.extend([
+            f'    <li class="work-card{featured}" id="realizacja-{escape(item["id"])}" data-kat="{escape(item["kategoria"])}" data-pomieszczenie="{escape(item["pomieszczenie"])}" data-realizacja="{escape(item["id"])}">',
+            f'      <a class="work-card-btn" href="realizacje/{escape(item["id"])}/" data-id="{escape(item["id"])}" aria-label="{escape(item["tytul"])} — {escape(item["miasto"])} — opis i {count_label}">',
+            '        <span class="work-thumb">',
+            f'          {picture(item, cover, cover=True, featured=position == 0)}',
+            f'          <span class="work-badge">{escape(data["kategorie"][item["kategoria"]])}</span>',
+            '        </span>',
+            '        <span class="work-meta">',
+            f'          <span class="work-title">{escape(item["tytul"])}</span>',
+            f'          <span class="work-city">{escape(item["miasto"])}</span>',
+            f'          <span class="work-count">{count_label}</span>',
+            '          <span class="work-case-link">Opis i wszystkie zdjęcia</span>',
+            '        </span>',
+            '      </a>',
+            '    </li>',
+        ])
+    lines.extend([
+        '  </ul>',
+        '  <div class="works-cta">',
+        '    <p>Podoba Ci się podobna realizacja?</p>',
+        '    <a class="btn-primary" href="#kontakt">Wyceń podobny montaż</a>',
+        '  </div>',
+    ])
+    return "\n".join(lines)
+
+
 def render_image_objects(data: dict) -> str:
     graph = []
     for item in ordered_realizations(data):
@@ -415,9 +464,11 @@ def render_case_page(data: dict, item: dict) -> str:
             comparison_items.append(
                 '<li><figure class="comparison">'
                 f'<figcaption>{escape(comparison["nazwa"])}</figcaption>'
-                '<div class="comparison-grid">'
-                f'<figure>{case_picture(item, before)}<span>Przed</span></figure>'
-                f'<figure>{case_picture(item, after)}<span>Po</span></figure>'
+                '<div class="before-after-frame" data-before-after>'
+                f'<div class="before-after-before">{case_picture(item, before)}<span>Przed</span></div>'
+                f'<div class="before-after-after">{case_picture(item, after)}<span>Po</span></div>'
+                '<span class="before-after-divider" aria-hidden="true"></span>'
+                f'<input type="range" min="0" max="100" value="50" aria-label="Porównaj zdjęcia przed i po: {escape(comparison["nazwa"])}" aria-valuetext="50% zdjęcia przed">'
                 "</div></figure></li>"
             )
         comparisons_html = (
@@ -488,8 +539,17 @@ def render_case_page(data: dict, item: dict) -> str:
     <section class="section"><div class="wrap"><h2>Podobny montaż</h2><p class="section-intro">Podeślij zdjęcia, instrukcję lub linki do produktów, aby otrzymać orientacyjną wycenę.</p><div class="links"><a class="cta" href="../../#kalkulator">Wyceń podobny montaż</a>{"".join(unique_links)}</div></div></section>
   </article>
 </main>
+<dialog class="case-lightbox" id="caseLightbox" aria-label="Podgląd zdjęć realizacji">
+  <button class="case-lightbox-close" type="button" data-lightbox-close aria-label="Zamknij podgląd">×</button>
+  <button class="case-lightbox-nav case-lightbox-previous" type="button" data-lightbox-previous aria-label="Poprzednie zdjęcie">←</button>
+  <div class="case-lightbox-media" data-lightbox-media></div>
+  <button class="case-lightbox-nav case-lightbox-next" type="button" data-lightbox-next aria-label="Następne zdjęcie">→</button>
+  <p class="case-lightbox-caption" data-lightbox-caption></p>
+  <p class="case-lightbox-counter" data-lightbox-counter role="status" aria-live="polite"></p>
+</dialog>
 <footer><span>© 2026 MebloFix Gliwice</span><a href="../../#realizacje">Wszystkie realizacje</a></footer>
 <script src="../../analytics.js"></script>
+<script src="../../js/realizacje.js"></script>
 </body>
 </html>
 '''
@@ -520,9 +580,9 @@ def main() -> None:
 
     data = json.loads(DATA_PATH.read_text(encoding="utf-8"))
     document = args.template.read_text(encoding="utf-8")
-    document = replace_generated(document, "image_objects", render_image_objects(data))
-    document = replace_generated(document, "cards", render_cards(data))
-    document = replace_generated(document, "runtime_data", render_runtime_data(data))
+    document = replace_generated(document, "image_objects", "<!-- Dane zdjęć są na stronach poszczególnych realizacji. -->")
+    document = replace_generated(document, "cards", render_homepage_cards(data))
+    document = replace_generated(document, "runtime_data", "<!-- Galeria została przeniesiona na trwałe strony realizacji. -->")
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(document, encoding="utf-8")
     if args.pages_dir:
