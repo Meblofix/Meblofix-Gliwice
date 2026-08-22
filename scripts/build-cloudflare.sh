@@ -52,7 +52,7 @@ for icon_file in "${icon_files[@]}"; do
   cp -p -- "$icon_file" "$DIST_DIR/"
 done
 
-for required_directory in blog licencja-zdjec cennik-montazu-mebli fonts css js; do
+for required_directory in blog licencja-zdjec cennik-montazu-mebli obszar-dzialania fonts css js; do
   copy_directory "$required_directory"
 done
 
@@ -78,6 +78,7 @@ done < <(find "$PROJECT_DIR/img" -type f ! -path "$PROJECT_DIR/img/realizacje/_s
 python3 "$PROJECT_DIR/scripts/test-realizacje.py" --html "$DIST_DIR/index.html"
 python3 "$PROJECT_DIR/scripts/test-case-studies.py" --dist "$DIST_DIR"
 python3 "$PROJECT_DIR/scripts/test-homepage-content.py" --html "$DIST_DIR/index.html"
+python3 "$PROJECT_DIR/scripts/test-city-pages.py" --dist "$DIST_DIR"
 python3 "$PROJECT_DIR/scripts/test-cennik.py"
 python3 "$PROJECT_DIR/scripts/test-seo.py" --dist "$DIST_DIR"
 
