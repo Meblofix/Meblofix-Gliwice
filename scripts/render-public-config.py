@@ -21,6 +21,13 @@ def replacements(config: dict) -> dict[str, str]:
     rates = config["publicRates"]
     travel = rates["travel"]
     rate = money(travel["outsideGliwicePerKilometer"])
+    one_installer_two_hours = max(rates["minimumJob"], rates["hourlyOneInstaller"] * 2)
+    two_installers_two_hours = max(rates["minimumJob"], rates["hourlyTwoInstallers"] * 2)
+    travel_ten_kilometers = (
+        travel["outsideGliwicePerKilometer"]
+        * travel["roundTripMultiplier"]
+        * 10
+    )
     return {
         "[[MINIMUM_JOB]]": money(rates["minimumJob"]),
         "[[HOURLY_ONE]]": money(rates["hourlyOneInstaller"], hourly=True),
@@ -30,6 +37,9 @@ def replacements(config: dict) -> dict[str, str]:
         "[[HOURLY_ONE_NUMBER]]": str(rates["hourlyOneInstaller"]),
         "[[HOURLY_TWO_NUMBER]]": str(rates["hourlyTwoInstallers"]),
         "[[TRAVEL_RATE]]": f"{rate}/km",
+        "[[EXAMPLE_ONE_TWO_HOURS]]": money(one_installer_two_hours),
+        "[[EXAMPLE_TWO_TWO_HOURS]]": money(two_installers_two_hours),
+        "[[EXAMPLE_TRAVEL_TEN_KM]]": money(travel_ten_kilometers),
         "[[TRAVEL_RULE]]": (
             f"Dojazd poza Gliwicami kosztuje {rate} za kilometr liczony "
             f"w obie strony."

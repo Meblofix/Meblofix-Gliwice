@@ -49,6 +49,7 @@ price_pages = [
     "montaz-mebli-agata-gliwice/index.html",
     "montaz-mebli-brw-gliwice/index.html",
     "montaz-mebli-jysk-gliwice/index.html",
+    "cennik-montazu-mebli/index.html",
 ]
 for relative in price_pages:
     source = (ROOT / relative).read_text(encoding="utf-8")
@@ -71,5 +72,10 @@ require("minimumJob: 150" not in backend and "travelPerKm: 1.5" not in backend, 
 
 for html_path in DIST.rglob("*.html"):
     require("[[" not in html_path.read_text(encoding="utf-8"), f"Niewypełniony marker w {html_path.relative_to(DIST)}")
+
+cennik_source = (ROOT / "cennik-montazu-mebli" / "index.html").read_text(encoding="utf-8")
+cennik_rendered = render_public_config.render_document(cennik_source, altered)
+for expected in ("917 zł", "1564 zł", "55 zł"):
+    require(expected in cennik_rendered, f"Przykład cennika nie wynika matematycznie z configu: {expected}")
 
 print(f"OK: wspólny config zasila {len(price_pages)} stron, {len(travel_sources)} reguł dojazdu i kalkulator")

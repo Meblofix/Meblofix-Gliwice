@@ -52,7 +52,7 @@ for icon_file in "${icon_files[@]}"; do
   cp -p -- "$icon_file" "$DIST_DIR/"
 done
 
-for required_directory in blog licencja-zdjec fonts css js; do
+for required_directory in blog licencja-zdjec cennik-montazu-mebli fonts css js; do
   copy_directory "$required_directory"
 done
 
