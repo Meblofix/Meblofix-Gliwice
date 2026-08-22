@@ -29,6 +29,8 @@ class PageParser(HTMLParser):
         self.robots = ""
         self.canonicals: list[str] = []
         self.links: list[str] = []
+        self.empty_hrefs: list[str] = []
+        self.images: list[dict[str, str]] = []
         self.ids: set[str] = set()
         self.json_ld_raw: list[str] = []
         self.visible_parts: list[str] = []
@@ -56,8 +58,14 @@ class PageParser(HTMLParser):
                 self.robots = values.get("content", "").strip()
         elif tag == "link" and "canonical" in values.get("rel", "").lower().split():
             self.canonicals.append(values.get("href", "").strip())
-        elif tag == "a" and values.get("href"):
-            self.links.append(values["href"].strip())
+        elif tag == "a" and "href" in values:
+            href = values["href"].strip()
+            if not href or href == "#":
+                self.empty_hrefs.append(href)
+            else:
+                self.links.append(href)
+        elif tag == "img":
+            self.images.append(values)
         if tag == "script" and values.get("type", "").lower() == "application/ld+json":
             self._json_ld = True
             self._json_parts = []
@@ -171,14 +179,21 @@ def main() -> int:
     schemas_by_page: dict[str, list[object]] = defaultdict(list)
     schema_types: Counter[str] = Counter()
     image_objects: list[tuple[str, dict]] = []
+    titles: dict[str, list[str]] = defaultdict(list)
+    h1_values: dict[str, list[str]] = defaultdict(list)
+    canonical_values: dict[str, list[str]] = defaultdict(list)
+    local_business_nodes: list[tuple[str, dict]] = []
     for html_file in html_files:
         path = page_path(html_file, dist)
+        raw_source = html_file.read_text(encoding="utf-8")
         parsed_page = PageParser()
-        parsed_page.feed(html_file.read_text(encoding="utf-8"))
+        parsed_page.feed(raw_source)
         pages[path] = parsed_page
         expected_canonical = SITE_ORIGIN + path
         if not parsed_page.title:
             errors.append(f"{path}: brak title")
+        else:
+            titles[parsed_page.title.casefold()].append(path)
         if not parsed_page.description:
             errors.append(f"{path}: brak meta description")
         is_noindex = "noindex" in parsed_page.robots.lower()
@@ -188,8 +203,23 @@ def main() -> int:
             warnings.append(f"{path}: nietypowe meta robots: {parsed_page.robots}")
         if parsed_page.canonicals != [expected_canonical]:
             errors.append(f"{path}: canonical {parsed_page.canonicals!r}, oczekiwano {expected_canonical}")
+        for canonical in parsed_page.canonicals:
+            canonical_values[canonical].append(path)
         if len(parsed_page.h1s) != 1 or not parsed_page.h1s[0]:
             errors.append(f"{path}: oczekiwano jednego niepustego H1, znaleziono {parsed_page.h1s!r}")
+        elif parsed_page.h1s:
+            h1_values[parsed_page.h1s[0].casefold()].append(path)
+        if parsed_page.empty_hrefs:
+            errors.append(f"{path}: pusty href lub href=\"#\"")
+        for image in parsed_page.images:
+            if not image.get("src", "").strip():
+                errors.append(f"{path}: obraz bez src ({image.get('alt', 'bez alt')})")
+            if not image.get("alt", "").strip():
+                errors.append(f"{path}: obraz bez alt ({image.get('src', 'bez src')})")
+        if re.search(r"\{\{[^{}]+\}\}", raw_source):
+            errors.append(f"{path}: niewypełniony placeholder {{{{...}}}}")
+        if re.search(r"\[\[[^\[\]]+\]\]", raw_source):
+            errors.append(f"{path}: niewypełniony marker [[...]]")
         if not is_noindex and path not in sitemap_paths:
             errors.append(f"{path}: publiczna strona nieobecna w sitemapie")
         for raw in parsed_page.json_ld_raw:
@@ -209,14 +239,7 @@ def main() -> int:
                     if schema_type == "ImageObject":
                         image_objects.append((path, node))
                     elif schema_type == "FAQPage":
-                        for question in node.get("mainEntity", []):
-                            name = normalized_text(str(question.get("name", "")))
-                            answer = normalized_text(str(question.get("acceptedAnswer", {}).get("text", "")))
-                            page_text = normalized_text(parsed_page.text)
-                            if not name or name not in page_text:
-                                errors.append(f"{path}: pytanie FAQ z JSON-LD nie występuje w treści: {question.get('name')}")
-                            if not answer or answer not in page_text:
-                                errors.append(f"{path}: odpowiedź FAQ z JSON-LD nie występuje w treści: {question.get('name')}")
+                        errors.append(f"{path}: niedozwolony FAQPage JSON-LD")
                     elif schema_type == "BreadcrumbList":
                         items = node.get("itemListElement", [])
                         positions = [item.get("position") for item in items if isinstance(item, dict)]
@@ -224,10 +247,26 @@ def main() -> int:
                             errors.append(f"{path}: BreadcrumbList ma mniej niż 2 elementy")
                         if positions != list(range(1, len(items) + 1)):
                             errors.append(f"{path}: nieciągłe pozycje BreadcrumbList: {positions}")
+                    if schema_type == "LocalBusiness":
+                        local_business_nodes.append((path, node))
+                        for forbidden in ("aggregateRating", "review", "serviceArea", "geo"):
+                            if forbidden in node:
+                                errors.append(f"{path}: LocalBusiness zawiera niedozwolone pole {forbidden}")
+                        if node.get("@id") != f"{SITE_ORIGIN}/#business":
+                            errors.append(f"{path}: LocalBusiness nie ma stabilnego @id")
+                if "serviceArea" in node:
+                    errors.append(f"{path}: schema zawiera przestarzałe serviceArea")
                 for key, value in node.items():
                     if key in {"url", "@id", "contentUrl", "thumbnailUrl", "license", "acquireLicensePage", "item"} and isinstance(value, str):
                         if "pages.dev" in value or "www.meblofix-gliwice.pl" in value or value.startswith("http://meblofix-gliwice.pl"):
                             errors.append(f"{path}: niekanoniczny URL w JSON-LD ({key}): {value}")
+
+    for label, values in (("title", titles), ("H1", h1_values), ("canonical", canonical_values)):
+        for value, paths in values.items():
+            if len(paths) > 1:
+                errors.append(f"nieunikalny {label} na {', '.join(paths)}: {value}")
+    if len(local_business_nodes) != 1 or local_business_nodes[0][0] != "/":
+        errors.append(f"oczekiwano jednego LocalBusiness na homepage, znaleziono {len(local_business_nodes)}")
 
     for path in sitemap_paths:
         if path not in pages:
@@ -236,6 +275,7 @@ def main() -> int:
     redirects_path = dist / "_redirects"
     redirect_sources: list[str] = []
     if redirects_path.is_file():
+        redirect_targets: dict[str, str] = {}
         for line in redirects_path.read_text(encoding="utf-8").splitlines():
             stripped = line.strip()
             if not stripped or stripped.startswith("#"):
@@ -245,6 +285,10 @@ def main() -> int:
                 errors.append(f"nieprawidłowa reguła w _redirects: {line}")
                 continue
             redirect_sources.append(parts[0])
+            redirect_targets[parts[0]] = parts[1]
+        for source, target in redirect_targets.items():
+            if target in redirect_sources:
+                errors.append(f"łańcuch przekierowań: {source} → {target}")
     for path in sitemap_paths:
         for source in redirect_sources:
             matched = path == source
@@ -264,6 +308,11 @@ def main() -> int:
                 parsed = urlparse(value)
                 if parsed.netloc == "meblofix-gliwice.pl" and not target_file(parsed.path, dist).is_file():
                     errors.append(f"{path}: {field} prowadzi do brakującego pliku: {value}")
+
+    robots_source = (dist / "robots.txt").read_text(encoding="utf-8")
+    for protected_path in ("/css", "/js", "/img", "/cennik-montazu-mebli", "/realizacje"):
+        if re.search(rf"^Disallow:\s*{re.escape(protected_path)}", robots_source, re.MULTILINE | re.IGNORECASE):
+            errors.append(f"robots.txt blokuje zasób lub stronę: {protected_path}")
 
     inbound_sources: dict[str, set[str]] = defaultdict(set)
     broken_links: set[tuple[str, str]] = set()
