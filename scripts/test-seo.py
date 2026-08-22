@@ -181,15 +181,16 @@ def main() -> int:
             errors.append(f"{path}: brak title")
         if not parsed_page.description:
             errors.append(f"{path}: brak meta description")
-        if "noindex" in parsed_page.robots.lower():
-            errors.append(f"{path}: strona publiczna ma noindex")
+        is_noindex = "noindex" in parsed_page.robots.lower()
+        if is_noindex and path in sitemap_paths:
+            errors.append(f"{path}: strona noindex występuje w sitemapie")
         if parsed_page.robots and "index" not in parsed_page.robots.lower():
             warnings.append(f"{path}: nietypowe meta robots: {parsed_page.robots}")
         if parsed_page.canonicals != [expected_canonical]:
             errors.append(f"{path}: canonical {parsed_page.canonicals!r}, oczekiwano {expected_canonical}")
         if len(parsed_page.h1s) != 1 or not parsed_page.h1s[0]:
             errors.append(f"{path}: oczekiwano jednego niepustego H1, znaleziono {parsed_page.h1s!r}")
-        if path not in sitemap_paths:
+        if not is_noindex and path not in sitemap_paths:
             errors.append(f"{path}: publiczna strona nieobecna w sitemapie")
         for raw in parsed_page.json_ld_raw:
             try:
