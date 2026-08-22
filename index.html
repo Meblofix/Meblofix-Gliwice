@@ -23,8 +23,6 @@
 <meta name="author" content="MebloFix Gliwice">
 <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
 <meta name="googlebot" content="index, follow">
-<meta name="geo.region" content="PL-SL">
-<meta name="geo.placename" content="Gliwice, Śląsk">
 <meta name="language" content="pl">
 <meta name="revisit-after" content="7 days">
 <meta name="rating" content="general">
@@ -49,13 +47,14 @@
 {
   "@context": "https://schema.org",
   "@type": ["LocalBusiness", "HomeAndConstructionBusiness"],
+  "@id": "https://meblofix-gliwice.pl/#business",
   "name": "MebloFix Gliwice",
-  "alternateName": ["Montaż Mebli Gliwice", "MebloFix", "Montażysta Mebli Gliwice"],
-  "description": "Profesjonalny montaż mebli IKEA, Agata Meble, Black Red White, Jysk i innych w Gliwicach i okolicznych miejscowościach w promieniu do 40 km. Szafy, łóżka, kuchnie, biurka — szybko, solidnie, bez bałaganu.",
-  "url": "https://meblofix-gliwice.pl",
+  "description": "Montaż mebli z paczek, kuchni i zabudowy na wymiar w Gliwicach oraz przyjmowanie zapytań z okolicznych miejscowości.",
+  "url": "https://meblofix-gliwice.pl/",
+  "logo": "https://meblofix-gliwice.pl/favicon-96.png",
+  "image": "https://meblofix-gliwice.pl/img/realizacje/sieciowe/13-efekt-koncowy-strefa-zlewu-1200.jpg",
   "telephone": "+48784878197",
-  "currenciesAccepted": "PLN",
-  "paymentAccepted": "Cash, Bank Transfer",
+  "serviceType": "Montaż i składanie mebli",
   "openingHoursSpecification": [
     { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday"], "opens": "08:00", "closes": "20:00" },
     { "@type": "OpeningHoursSpecification", "dayOfWeek": "Saturday", "opens": "09:00", "closes": "17:00" }
@@ -121,11 +120,7 @@
   "@type": "Service",
   "name": "Montaż mebli Gliwice",
   "serviceType": "Montaż i składanie mebli",
-  "provider": {
-    "@type": "LocalBusiness",
-    "name": "MebloFix Gliwice",
-    "telephone": "+48784878197"
-  },
+  "provider": {"@id": "https://meblofix-gliwice.pl/#business"},
   "areaServed": [
     {"@type": "City", "name": "Gliwice"},
     {"@type": "City", "name": "Zabrze"},
@@ -145,51 +140,6 @@
     "@type": "Offer",
     "description": "Minimalna wartość zlecenia wynosi [[MINIMUM_JOB]]. Stawka jednego montera to [[HOURLY_ONE]], a dwóch monterów [[HOURLY_TWO]]. Wycena na podstawie zdjęć, instrukcji lub linków jest bezpłatna."
   }
-}
-</script>
-
-<!-- Schema.org: FAQPage (rozszerzone) -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  "mainEntity": [
-    {
-      "@type": "Question",
-      "name": "Ile kosztuje montaż mebli IKEA w Gliwicach?",
-      "acceptedAnswer": {"@type": "Answer", "text": "Minimalna wartość zlecenia wynosi [[MINIMUM_JOB]]. Stawka jednego montera to [[HOURLY_ONE]], a dwóch monterów [[HOURLY_TWO]]. Wycena na podstawie zdjęć, instrukcji lub linków jest bezpłatna."}
-    },
-    {
-      "@type": "Question",
-      "name": "Jak szybko możesz przyjechać?",
-      "acceptedAnswer": {"@type": "Answer", "text": "Zazwyczaj mogę przyjechać w ciągu 24 godzin od kontaktu, często jeszcze tego samego dnia. Dokładny termin potwierdzam telefonicznie lub przez WhatsApp."}
-    },
-    {
-      "@type": "Question",
-      "name": "Czy montujesz meble z każdego sklepu?",
-      "acceptedAnswer": {"@type": "Answer", "text": "Tak — montuję meble z IKEA, Agata Meble, Black Red White, Jysk, Bodzio, Abra, VOX, Forte i innych sklepów. Przed wizytą przygotuj kompletne paczki i instrukcję."}
-    },
-    {
-      "@type": "Question",
-      "name": "Co robić, jeśli brakuje części w zestawie?",
-      "acceptedAnswer": {"@type": "Answer", "text": "Sprawdź kompletność paczek przed wizytą. Jeśli brakuje elementów, skontaktuj się ze sklepem i podaj numer artykułu; IKEA i większość sklepów bezpłatnie dosyła brakujące części. Po ich dostawie możemy ustalić nowy termin bez dodatkowej opłaty za dojazd w Gliwicach."}
-    },
-    {
-      "@type": "Question",
-      "name": "Czy dojeżdżasz poza Gliwice?",
-      "acceptedAnswer": {"@type": "Answer", "text": "Tak. Działam w Gliwicach i okolicznych miejscowościach w promieniu do 40 km, m.in. w Zabrzu, Bytomiu, Katowicach, Rybniku, Tychach, Chorzowie i Mikołowie. Dojazd w Gliwicach jest bezpłatny. [[TRAVEL_RULE]]"}
-    },
-    {
-      "@type": "Question",
-      "name": "Czy muszę być obecny podczas montażu?",
-      "acceptedAnswer": {"@type": "Answer", "text": "Nie. Wystarczy, że zapewnisz dostęp do mieszkania i wskażesz, gdzie mają stanąć meble. Po zakończeniu wspólnie sprawdzimy efekt."}
-    },
-    {
-      "@type": "Question",
-      "name": "Czy wiercisz w ścianie? Co ze ścianami z karton-gipsu?",
-      "acceptedAnswer": {"@type": "Answer", "text": "Tak. Montuję półki, szafki wiszące i lustra także na ścianach z karton-gipsu, używając odpowiednich kołków. Wiercę precyzyjnie i korzystam z poziomicy."}
-    }
-  ]
 }
 </script>
 
