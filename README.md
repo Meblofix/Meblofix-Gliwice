@@ -155,6 +155,25 @@ Cloudflare Pages musi mieć skonfigurowane:
 - zaszyfrowaną zmienną `QUOTE_NOTIFICATION_FORMSPREE_ENDPOINT` z pełnym adresem
   osobnego formularza Formspree przeznaczonego tylko do automatycznych powiadomień.
 
+Opcjonalny, równoległy kanał Telegram wymaga dwóch zaszyfrowanych zmiennych:
+
+- `QUOTE_NOTIFICATION_TELEGRAM_BOT_TOKEN` — token bota otrzymany od BotFather,
+- `QUOTE_NOTIFICATION_TELEGRAM_CHAT_ID` — identyfikator prywatnego czatu,
+  grupy albo nazwa kanału w formacie `@nazwa`.
+
+Kanał włącza się tylko wtedy, gdy obie wartości są obecne i mają poprawny
+format. Brak jednej z nich pozostawia Telegram nieaktywny i nie zmienia
+działania Formspree. Wiadomości są wysyłane jako zwykły tekst metodą
+`sendMessage`, bez formatowania i bez podglądu linków. Nie zapisuj tokenu ani
+identyfikatora czatu w repozytorium.
+
+Konfiguracja przez panel Cloudflare: `Workers & Pages` →
+`meblofix-gliwice-prod` → `Settings` → `Variables and Secrets`. Najpierw wybierz
+środowisko Preview, a po osobnej zgodzie na produkcję dodaj obie nazwy jako
+sekrety, używając wartości `<TOKEN_BOTA_Z_BOTFATHER>` oraz `<ID_CZATU_TELEGRAM>`.
+Właściciel musi wcześniej rozpocząć rozmowę z botem albo dodać go do docelowej
+grupy lub kanału. Nie konfiguruj `NOTIFICATION_DRY_RUN` w produkcji.
+
 Opcjonalna zmienna `NOTIFICATION_DRY_RUN=1` jest przeznaczona wyłącznie dla
 preview. Pomija wymóg endpointu Formspree i samą wysyłkę, ale nadal wymaga
 `QUOTE_NOTIFICATION_SECRET` oraz `QUOTE_NOTIFICATION_KV`, aby sprawdzić tę samą
