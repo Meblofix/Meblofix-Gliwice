@@ -39,6 +39,13 @@ def main() -> None:
         title_match = re.search(r"<title>(.*?)</title>", source)
         require(title_match is not None, f"{item['id']}: brak title")
         title = html.unescape(title_match.group(1))
+        description_match = re.search(r'<meta name="description" content="([^"]*)">', source)
+        require(description_match is not None, f"{item['id']}: brak meta description")
+        description = html.unescape(description_match.group(1))
+        require(
+            f'{item["miasto"]} w {item["miasto"]}' not in description,
+            f"{item['id']}: meta description mechanicznie powiela miasto",
+        )
         if item.get("title_seo"):
             require(title == item["title_seo"], f"{item['id']}: generator zmienił ręczne title_seo")
         require(len(title) <= 60, f"{item['id']}: title ma {len(title)} znaków")
@@ -56,6 +63,12 @@ def main() -> None:
         schemas = [json.loads(payload) for payload in re.findall(
             r'<script type="application/ld\+json">\s*(.*?)\s*</script>', source, flags=re.DOTALL
         )]
+        breadcrumb = next(schema for schema in schemas if schema.get("@type") == "BreadcrumbList")
+        require(item["tytul"].count(item["miasto"]) <= 1, f"{item['id']}: H1 powiela miasto")
+        require(
+            breadcrumb["itemListElement"][-1]["name"].count(item["miasto"]) <= 1,
+            f"{item['id']}: breadcrumb powiela miasto",
+        )
         image_objects = [
             node
             for schema in schemas
@@ -68,6 +81,7 @@ def main() -> None:
             require(image_object.get("license") == "https://meblofix-gliwice.pl/licencja-zdjec/", f"{item['id']}: błędna licencja")
             require(image_object.get("acquireLicensePage") == "https://meblofix-gliwice.pl/licencja-zdjec/", f"{item['id']}: błędna strona pozyskania licencji")
         for photo in item["zdjecia"]:
+            require(photo["alt"].count(item["miasto"]) <= 1, f"{item['id']}: alt {photo['plik']} powiela miasto")
             require(html.escape(photo["alt"], quote=True) in source, f"{item['id']}: brak alt {photo['plik']}")
             require(f'{photo["plik"]}-1200.jpg' in source, f"{item['id']}: brak pełnego zdjęcia {photo['plik']}")
         for comparison in item.get("porownania", []):

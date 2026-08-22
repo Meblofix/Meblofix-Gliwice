@@ -75,6 +75,16 @@ def gallery_name(item: dict) -> str:
     return title if title.endswith(item["miasto"]) else f'{title} — {item["miasto"]}'
 
 
+def case_service_title(item: dict) -> str:
+    service = item["tytul"].strip()
+    for separator in (" — ", " – ", " - "):
+        city_suffix = separator + item["miasto"]
+        if service.endswith(city_suffix):
+            service = service[: -len(city_suffix)].rstrip()
+            break
+    return service
+
+
 def case_page_title(item: dict) -> str:
     if "title_seo" in item:
         title_seo = item["title_seo"]
@@ -85,12 +95,7 @@ def case_page_title(item: dict) -> str:
     available = MAX_CASE_TITLE_LENGTH - len(suffix)
     if available < 12:
         raise ValueError(f'Miasto jest za długie dla title realizacji: {item["miasto"]}')
-    service = item["tytul"].strip()
-    for separator in (" — ", " – ", " - "):
-        city_suffix = separator + item["miasto"]
-        if service.endswith(city_suffix):
-            service = service[: -len(city_suffix)].rstrip()
-            break
+    service = case_service_title(item)
     if len(service) > available:
         service = service[:available].rsplit(" ", 1)[0].rstrip(".,;:—-")
         while service and len(service.rsplit(" ", 1)[-1]) < 3:
@@ -494,7 +499,7 @@ def render_case_page(data: dict, item: dict) -> str:
     slug = item["id"]
     page_url = f"{SITE_URL}realizacje/{slug}/"
     title = case_page_title(item)
-    description = f'{item["tytul"]} w {item["miasto"]}. {item["opis"]}'
+    description = f'{case_service_title(item)} w {item["miasto"]}. {item["opis"]}'
     if len(description) > 158:
         description = description[:155].rsplit(" ", 1)[0] + "…"
     cover_url = SITE_URL + image_path(item, cover["plik"], 1200, "jpg")
