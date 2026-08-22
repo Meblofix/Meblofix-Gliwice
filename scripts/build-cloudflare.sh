@@ -75,10 +75,12 @@ while IFS= read -r -d '' image_file; do
   cp -p -- "$image_file" "$target_path"
 done < <(find "$PROJECT_DIR/img" -type f ! -path "$PROJECT_DIR/img/realizacje/_surowe/*" -print0)
 
+python3 "$PROJECT_DIR/scripts/render-social-meta.py" --dist "$DIST_DIR"
 python3 "$PROJECT_DIR/scripts/test-realizacje.py" --html "$DIST_DIR/index.html"
 python3 "$PROJECT_DIR/scripts/test-case-studies.py" --dist "$DIST_DIR"
 python3 "$PROJECT_DIR/scripts/test-homepage-content.py" --html "$DIST_DIR/index.html"
 python3 "$PROJECT_DIR/scripts/test-city-pages.py" --dist "$DIST_DIR"
+python3 "$PROJECT_DIR/scripts/test-social-meta.py" --dist "$DIST_DIR"
 python3 "$PROJECT_DIR/scripts/test-cennik.py"
 python3 "$PROJECT_DIR/scripts/test-seo.py" --dist "$DIST_DIR"
 
