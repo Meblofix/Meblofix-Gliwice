@@ -3355,6 +3355,13 @@
     color: #f5a623;
   }
 
+  .review-stars span {
+    color: #f5a623;
+    font-size: 0.9rem;
+    letter-spacing: 2px;
+    line-height: 1;
+  }
+
   .review-text {
     font-size: 0.88rem;
     color: var(--mid);
@@ -4499,7 +4506,7 @@
       <li><a href="#blog">Blog</a></li>
       <li><a href="#kontakt">Kontakt</a></li>
     </ul>
-    <a href="#" class="nav-cta" onclick="showCallModal(event)">📞 Zadzwoń</a>
+    <a href="tel:+48784878197" class="nav-cta">📞 Zadzwoń</a>
   </div>
 </nav>
 
@@ -5233,10 +5240,7 @@
   <div class="lb-box">
     <div class="lb-stage">
       <button type="button" class="lb-nav lb-prev" aria-label="Poprzednie zdjęcie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M15 18l-6-6 6-6"/></svg></button>
-      <picture>
-        <source id="lb-source" type="image/webp">
-        <img id="lb-img" alt="" loading="lazy" decoding="async">
-      </picture>
+      <picture id="lb-picture"></picture>
       <button type="button" class="lb-nav lb-next" aria-label="Następne zdjęcie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 18l6-6-6-6"/></svg></button>
     </div>
     <div class="lb-info">
@@ -5257,7 +5261,7 @@
   <div class="section-label">Co mówią klienci</div>
   <h2 class="section-title">Opinie klientów — montaż mebli Gliwice</h2>
 
-  <div class="reviews-summary" id="reviewsSummary" role="status" aria-live="polite" aria-atomic="true" aria-busy="true">
+  <div class="reviews-summary" id="reviewsSummary" role="status" aria-live="polite" aria-atomic="true" aria-busy="false">
     <div class="reviews-score" id="avgScore" aria-hidden="true">5,0</div>
     <div class="reviews-score-sub">
       <div class="stars-display" id="avgStars" aria-hidden="true">
@@ -5267,12 +5271,26 @@
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
       </div>
-      <div class="reviews-count-label" id="reviewsCountLabel">Ładowanie opinii…</div>
+      <div class="reviews-count-label" id="reviewsCountLabel">5,0 na 5 na podstawie 3 opinii</div>
     </div>
   </div>
 
-  <ul class="reviews-grid" id="reviewsGrid" aria-live="polite" aria-busy="true">
-    <!-- opinie ładowane przez JS -->
+  <ul class="reviews-grid" id="reviewsGrid" aria-live="polite" aria-busy="false">
+    <li class="review-card">
+      <div class="review-stars" role="img" aria-label="Ocena 5 na 5"><span aria-hidden="true">★★★★★</span></div>
+      <blockquote class="review-text">Polecam, montaż zabudowy kuchennej został wykonany starannie i sprawnie. Usługa w przystępnej cenie.</blockquote>
+      <div class="review-author"><div class="review-avatar" aria-hidden="true">K</div><div><cite class="review-name">Karolina</cite><div class="review-city">Gliwice</div></div></div>
+    </li>
+    <li class="review-card">
+      <div class="review-stars" role="img" aria-label="Ocena 5 na 5"><span aria-hidden="true">★★★★★</span></div>
+      <blockquote class="review-text">Szafka RTV złożona błyskawicznie ok 45 min miało być 200 dałam 300 za szybkie przybycie i montaż. Napewno jeszcze nie raz będę korzystałą z usług. Pozdrawiam</blockquote>
+      <div class="review-author"><div class="review-avatar" aria-hidden="true">A</div><div><cite class="review-name">Aneta</cite><div class="review-city">Zabrze</div></div></div>
+    </li>
+    <li class="review-card">
+      <div class="review-stars" role="img" aria-label="Ocena 5 na 5"><span aria-hidden="true">★★★★★</span></div>
+      <blockquote class="review-text">Bardzo polecam. Łóżko zostało zmontowane szybko, solidnie i bez żadnych problemów. Widać doświadczenie, wszystko stabilne i dokładnie zrobione. Pełen profesjonalizm!</blockquote>
+      <div class="review-author"><div class="review-avatar" aria-hidden="true">KB</div><div><cite class="review-name">Katarzyna B</cite><div class="review-city">Bytom</div></div></div>
+    </li>
   </ul>
 
   <div class="reviews-toggle-wrap">
@@ -5790,9 +5808,9 @@
 
   // ─── OPINIE ───
   const DEFAULT_REVIEWS = [
-    { name: 'Karolina W.', city: 'Gliwice', stars: 5, text: 'Polecam z czystym sumieniem! Szybko, czysto i bez zbędnego gadania. Szafa PAX złożona perfekcyjnie.' },
-    { name: 'Marek T.', city: 'Zabrze', stars: 5, text: 'Profesjonalne podejście. Złożył mi całą kuchnię z Agaty — szafki wiszą równo, drzwiczki domykają się cicho. Pełen szacun.' },
-    { name: 'Ania S.', city: 'Katowice', stars: 5, text: 'Kontakt błyskawiczny, przyjechał następnego dnia. Łóżko i dwie szafy z IKEA — wszystko działa jak należy. Na pewno wrócę.' },
+    { name: 'Karolina', city: 'Gliwice', stars: 5, text: 'Polecam, montaż zabudowy kuchennej został wykonany starannie i sprawnie. Usługa w przystępnej cenie.' },
+    { name: 'Aneta', city: 'Zabrze', stars: 5, text: 'Szafka RTV złożona błyskawicznie ok 45 min miało być 200 dałam 300 za szybkie przybycie i montaż. Napewno jeszcze nie raz będę korzystałą z usług. Pozdrawiam' },
+    { name: 'Katarzyna B', city: 'Bytom', stars: 5, text: 'Bardzo polecam. Łóżko zostało zmontowane szybko, solidnie i bez żadnych problemów. Widać doświadczenie, wszystko stabilne i dokładnie zrobione. Pełen profesjonalizm!' },
   ];
 
   let selectedStars = 5;
@@ -6124,10 +6142,6 @@
   async function loadReviews() {
     const grid = document.getElementById('reviewsGrid');
     const summary = document.getElementById('reviewsSummary');
-    const loading = document.createElement('li');
-    loading.className = 'reviews-loading';
-    loading.textContent = 'Ładowanie opinii…';
-    grid.replaceChildren(loading);
     grid.setAttribute('aria-busy', 'true');
     summary.setAttribute('aria-busy', 'true');
     let reviews = [...DEFAULT_REVIEWS];
@@ -6521,8 +6535,9 @@
     if (!lb || !dataEl) return;
 
     const DANE     = JSON.parse(dataEl.textContent);
-    const source   = document.getElementById('lb-source');
-    const img      = document.getElementById('lb-img');
+    const picture  = document.getElementById('lb-picture');
+    let source     = null;
+    let img        = null;
     const elTytul  = document.getElementById('lb-title');
     const elMeta   = document.getElementById('lb-meta');
     const elOpis   = document.getElementById('lb-desc');
@@ -6540,7 +6555,18 @@
 
     const SIZES = '(max-width: 900px) 100vw, 1100px';
 
+    function przygotujObraz() {
+      if (img) return;
+      source = document.createElement('source');
+      source.type = 'image/webp';
+      img = document.createElement('img');
+      img.loading = 'lazy';
+      img.decoding = 'async';
+      picture.append(source, img);
+    }
+
     function pokaz(i) {
+      przygotujObraz();
       const z = realizacja.zdjecia[i];
       idx = i;
       img.width     = z.w;
