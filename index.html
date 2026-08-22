@@ -74,6 +74,29 @@
     {"@type": "City", "name": "Gierałtowice"},
     {"@type": "City", "name": "Rudziniec"}
   ],
+  "makesOffer": [
+    {
+      "@type": "Offer",
+      "name": "Minimalna wartość zlecenia",
+      "price": "[[MINIMUM_JOB_NUMBER]]",
+      "priceCurrency": "PLN",
+      "itemOffered": {"@type": "Service", "name": "Montaż mebli"}
+    },
+    {
+      "@type": "Offer",
+      "name": "Praca jednego montera — godzina",
+      "price": "[[HOURLY_ONE_NUMBER]]",
+      "priceCurrency": "PLN",
+      "itemOffered": {"@type": "Service", "name": "Montaż mebli przez jednego montera"}
+    },
+    {
+      "@type": "Offer",
+      "name": "Praca dwóch monterów — godzina",
+      "price": "[[HOURLY_TWO_NUMBER]]",
+      "priceCurrency": "PLN",
+      "itemOffered": {"@type": "Service", "name": "Montaż mebli przez dwóch monterów"}
+    }
+  ],
   "hasOfferCatalog": {
     "@type": "OfferCatalog",
     "name": "Usługi montażu mebli Gliwice",
@@ -117,10 +140,10 @@
     {"@type": "City", "name": "Gierałtowice"},
     {"@type": "City", "name": "Rudziniec"}
   ],
-  "description": "Profesjonalny montaż mebli w Gliwicach i okolicznych miejscowościach w promieniu do 40 km. Minimalna wartość zlecenia wynosi 150 zł. Stawka jednego montera to 100 zł/h, a dwóch monterów 180 zł/h. Wycena na podstawie zdjęć, instrukcji lub linków jest bezpłatna.",
+  "description": "Profesjonalny montaż mebli w Gliwicach i okolicznych miejscowościach w promieniu do 40 km. Minimalna wartość zlecenia wynosi [[MINIMUM_JOB]]. Stawka jednego montera to [[HOURLY_ONE]], a dwóch monterów [[HOURLY_TWO]]. Wycena na podstawie zdjęć, instrukcji lub linków jest bezpłatna.",
   "offers": {
     "@type": "Offer",
-    "description": "Minimalna wartość zlecenia wynosi 150 zł. Stawka jednego montera to 100 zł/h, a dwóch monterów 180 zł/h. Wycena na podstawie zdjęć, instrukcji lub linków jest bezpłatna."
+    "description": "Minimalna wartość zlecenia wynosi [[MINIMUM_JOB]]. Stawka jednego montera to [[HOURLY_ONE]], a dwóch monterów [[HOURLY_TWO]]. Wycena na podstawie zdjęć, instrukcji lub linków jest bezpłatna."
   }
 }
 </script>
@@ -134,7 +157,7 @@
     {
       "@type": "Question",
       "name": "Ile kosztuje montaż mebli IKEA w Gliwicach?",
-      "acceptedAnswer": {"@type": "Answer", "text": "Minimalna wartość zlecenia wynosi 150 zł. Stawka jednego montera to 100 zł/h, a dwóch monterów 180 zł/h. Wycena na podstawie zdjęć, instrukcji lub linków jest bezpłatna."}
+      "acceptedAnswer": {"@type": "Answer", "text": "Minimalna wartość zlecenia wynosi [[MINIMUM_JOB]]. Stawka jednego montera to [[HOURLY_ONE]], a dwóch monterów [[HOURLY_TWO]]. Wycena na podstawie zdjęć, instrukcji lub linków jest bezpłatna."}
     },
     {
       "@type": "Question",
@@ -154,7 +177,7 @@
     {
       "@type": "Question",
       "name": "Czy dojeżdżasz poza Gliwice?",
-      "acceptedAnswer": {"@type": "Answer", "text": "Tak. Działam w Gliwicach i okolicznych miejscowościach w promieniu do 40 km, m.in. w Zabrzu, Bytomiu, Katowicach, Rybniku, Tychach, Chorzowie i Mikołowie. Dojazd jest bezpłatny tylko w Gliwicach; poza miastem doliczany jest koszt."}
+      "acceptedAnswer": {"@type": "Answer", "text": "Tak. Działam w Gliwicach i okolicznych miejscowościach w promieniu do 40 km, m.in. w Zabrzu, Bytomiu, Katowicach, Rybniku, Tychach, Chorzowie i Mikołowie. Dojazd w Gliwicach jest bezpłatny. [[TRAVEL_RULE]]"}
     },
     {
       "@type": "Question",
@@ -176,7 +199,7 @@
   "@context": "https://schema.org",
   "@type": "WebPage",
   "name": "Montaż Mebli Gliwice — MebloFix",
-  "description": "Profesjonalny montaż mebli IKEA, Agata, BRW w Gliwicach i okolicznych miejscowościach do 40 km. Minimalna wartość zlecenia 150 zł, termin 24h.",
+  "description": "Profesjonalny montaż mebli IKEA, Agata, BRW w Gliwicach i okolicznych miejscowościach do 40 km. Minimalna wartość zlecenia [[MINIMUM_JOB]], termin 24h.",
   "url": "https://meblofix-gliwice.pl/",
   "inLanguage": "pl",
   "isPartOf": {
@@ -4819,25 +4842,25 @@
     <article class="price-card featured">
       <div class="price-badge">Minimum zlecenia</div>
       <h3 class="price-type">Minimalna wartość zlecenia</h3>
-      <div class="price-num">150<span class="price-unit">zł</span></div>
+      <div class="price-num">[[MINIMUM_JOB]]</div>
       <div class="price-divider"></div>
       <p class="price-desc">Minimalna wartość całego zlecenia, niezależnie od liczby pojedynczych elementów.</p>
     </article>
     <article class="price-card">
       <h3 class="price-type">1 monter</h3>
-      <div class="price-num">100<span class="price-unit">zł/h</span></div>
+      <div class="price-num">[[HOURLY_ONE]]</div>
       <div class="price-divider"></div>
       <p class="price-desc">Stawka za godzinę pracy jednego montera.</p>
     </article>
     <article class="price-card">
       <h3 class="price-type">2 monterów</h3>
-      <div class="price-num">180<span class="price-unit">zł/h</span></div>
+      <div class="price-num">[[HOURLY_TWO]]</div>
       <div class="price-divider"></div>
       <p class="price-desc">Łączna stawka za godzinę pracy dwóch monterów.</p>
     </article>
     <article class="price-card">
       <h3 class="price-type">Bezpłatna wycena</h3>
-      <div class="price-num">0<span class="price-unit">zł</span></div>
+      <div class="price-num">[[FREE_ESTIMATE]]</div>
       <div class="price-divider"></div>
       <p class="price-desc">Orientacyjna wycena przed rozpoczęciem pracy jest bezpłatna.</p>
     </article>
@@ -5402,7 +5425,7 @@
         <span class="faq-q-text">Ile kosztuje montaż mebli IKEA w Gliwicach?</span>
         <span class="faq-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
       </button>
-      <div class="faq-answer" id="faq-answer-1" role="region" aria-labelledby="faq-question-1" aria-hidden="true"><div class="faq-answer-inner">Minimalna wartość zlecenia wynosi <strong>150 zł</strong>. Stawka jednego montera to <strong>100 zł/h</strong>, a dwóch monterów <strong>180 zł/h</strong>. Wycena na podstawie zdjęć, instrukcji lub linków jest bezpłatna.</div></div>
+      <div class="faq-answer" id="faq-answer-1" role="region" aria-labelledby="faq-question-1" aria-hidden="true"><div class="faq-answer-inner">Minimalna wartość zlecenia wynosi <strong>[[MINIMUM_JOB]]</strong>. Stawka jednego montera to <strong>[[HOURLY_ONE]]</strong>, a dwóch monterów <strong>[[HOURLY_TWO]]</strong>. Wycena na podstawie zdjęć, instrukcji lub linków jest bezpłatna.</div></div>
     </div>
 
     <div class="faq-item">
@@ -5434,7 +5457,7 @@
         <span class="faq-q-text">Czy dojeżdżasz poza Gliwice?</span>
         <span class="faq-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
       </button>
-      <div class="faq-answer" id="faq-answer-5" role="region" aria-labelledby="faq-question-5" aria-hidden="true"><div class="faq-answer-inner">Tak. Działam w Gliwicach i okolicznych miejscowościach w promieniu do 40 km, m.in. w Zabrzu, Bytomiu, Katowicach, Rybniku, Tychach, Chorzowie i Mikołowie. Dojazd jest bezpłatny tylko w Gliwicach; poza miastem doliczany jest koszt.</div></div>
+      <div class="faq-answer" id="faq-answer-5" role="region" aria-labelledby="faq-question-5" aria-hidden="true"><div class="faq-answer-inner">Tak. Działam w Gliwicach i okolicznych miejscowościach w promieniu do 40 km, m.in. w Zabrzu, Bytomiu, Katowicach, Rybniku, Tychach, Chorzowie i Mikołowie. Dojazd w Gliwicach jest bezpłatny. [[TRAVEL_RULE]]</div></div>
     </div>
 
     <div class="faq-item">
@@ -5707,7 +5730,7 @@
       </div>
       <div>
         <h3 style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:0.06em;color:#E8440A;margin-bottom:0.7rem;">Składanie mebli Zabrze, Bytom, Katowice</h3>
-        <p style="font-size:0.82rem;color:#888;line-height:1.8;font-weight:300;">Usługi montażu mebli świadczymy w Gliwicach i okolicznych miejscowościach w promieniu do 40 km, m.in.: Zabrze, Bytom, Katowice, Rybnik, Tychy, Chorzów, Mikołów, Knurów, Pyskowice, Gierałtowice i Rudziniec. Dojazd na terenie Gliwic gratis — poza miastem doliczamy koszt dojazdu.</p>
+        <p style="font-size:0.82rem;color:#888;line-height:1.8;font-weight:300;">Usługi montażu mebli świadczymy w Gliwicach i okolicznych miejscowościach w promieniu do 40 km, m.in.: Zabrze, Bytom, Katowice, Rybnik, Tychy, Chorzów, Mikołów, Knurów, Pyskowice, Gierałtowice i Rudziniec. Dojazd na terenie Gliwic jest bezpłatny. [[TRAVEL_RULE]]</p>
       </div>
       <div>
         <h3 style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:0.06em;color:#E8440A;margin-bottom:0.7rem;">Montaż szafy Gliwice — szafy przesuwne i tradycyjne</h3>
@@ -5896,7 +5919,7 @@
     const local = isGliwice(quoteCityField.value);
     quoteDistanceField.readOnly = local;
     if (local) { quoteDistanceField.value = '0'; quoteDistanceHint.textContent = 'W Gliwicach dojazd jest bez dodatkowej opłaty.'; }
-    else { if (quoteDistanceField.value === '0') quoteDistanceField.value = ''; quoteDistanceHint.textContent = 'Poza Gliwicami podaj odległość w jedną stronę.'; }
+    else { if (quoteDistanceField.value === '0') quoteDistanceField.value = ''; quoteDistanceHint.textContent = 'Poza Gliwicami podaj odległość w jedną stronę. [[TRAVEL_RULE]]'; }
   }
   function addProductRow() {
     if (quoteProducts.children.length >= QUOTE_MAX_LINKS) return;

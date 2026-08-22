@@ -64,6 +64,8 @@ for service_directory in "${service_directories[@]}"; do
   cp -a -- "$service_directory" "$DIST_DIR/"
 done
 
+python3 "$PROJECT_DIR/scripts/render-public-config.py" --dist "$DIST_DIR"
+
 mkdir -p -- "$DIST_DIR/img"
 while IFS= read -r -d '' image_file; do
   relative_path="${image_file#"$PROJECT_DIR/"}"
@@ -73,6 +75,7 @@ while IFS= read -r -d '' image_file; do
 done < <(find "$PROJECT_DIR/img" -type f ! -path "$PROJECT_DIR/img/realizacje/_surowe/*" -print0)
 
 python3 "$PROJECT_DIR/scripts/test-realizacje.py" --html "$DIST_DIR/index.html"
+python3 "$PROJECT_DIR/scripts/test-cennik.py"
 python3 "$PROJECT_DIR/scripts/test-seo.py" --dist "$DIST_DIR"
 
 FUNCTIONS_TEMP_DIR="$(mktemp -d)"

@@ -1,3 +1,5 @@
+import pricingConfig from '../../data/cennik.json' with { type: 'json' };
+
 const MAX_ITEMS = 10;
 const MAX_BYTES = 1_500_000;
 const MAX_REQUEST_BYTES = 32_000;
@@ -6,7 +8,12 @@ const TIMEOUT_MS = 8_000;
 const MAX_REDIRECTS = 3;
 export const TOKEN_LIFETIME_MS = 20 * 60 * 1_000;
 const NOTIFICATION_DEDUPE_WINDOW_MS = 5 * 60 * 1_000;
-const QUOTE_RULES = Object.freeze({ minimumJob: 150, installationRate: 0.2, travelPerKm: 1.5 });
+const QUOTE_RULES = Object.freeze({
+  minimumJob: pricingConfig.publicRates.minimumJob,
+  installationRate: pricingConfig.calculator.installationRate,
+  travelPerKm: pricingConfig.publicRates.travel.outsideGliwicePerKilometer,
+  roundTripMultiplier: pricingConfig.publicRates.travel.roundTripMultiplier
+});
 // Jedna wspólna tabela dla wszystkich lokalizacji. Przeglądarka przesyła tylko
 // serviceId i quantity; nazwy oraz kwoty zawsze pochodzą z kontrolowanego backendu.
 const EXTRA_SERVICE_CATALOG = Object.freeze({
@@ -540,7 +547,7 @@ export async function onRequestPost({ request, env }) {
     const furniture = roundMoney(products.reduce((sum, product) => sum + product.value, 0));
     const installation = Math.max(QUOTE_RULES.minimumJob, roundMoney(furniture * QUOTE_RULES.installationRate));
     const extraServicesTotal = extraServices.reduce((sum, service) => sum + service.value, 0);
-    const travel = roundMoney(context.distance * 2 * QUOTE_RULES.travelPerKm);
+    const travel = roundMoney(context.distance * QUOTE_RULES.roundTripMultiplier * QUOTE_RULES.travelPerKm);
     const quote = {
       products,
       furniture,
