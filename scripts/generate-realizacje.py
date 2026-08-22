@@ -76,6 +76,11 @@ def gallery_name(item: dict) -> str:
 
 
 def case_page_title(item: dict) -> str:
+    if "title_seo" in item:
+        title_seo = item["title_seo"]
+        if not isinstance(title_seo, str) or not title_seo.strip():
+            raise ValueError(f'Nieprawidłowe title_seo realizacji: {item["id"]}')
+        return title_seo
     suffix = f' — {item["miasto"]} | MebloFix'
     available = MAX_CASE_TITLE_LENGTH - len(suffix)
     if available < 12:

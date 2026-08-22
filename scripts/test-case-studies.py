@@ -39,6 +39,8 @@ def main() -> None:
         title_match = re.search(r"<title>(.*?)</title>", source)
         require(title_match is not None, f"{item['id']}: brak title")
         title = html.unescape(title_match.group(1))
+        if item.get("title_seo"):
+            require(title == item["title_seo"], f"{item['id']}: generator zmienił ręczne title_seo")
         require(len(title) <= 60, f"{item['id']}: title ma {len(title)} znaków")
         require(item["miasto"] in title, f"{item['id']}: title nie zawiera miasta")
         require(title.count(item["miasto"]) == 1, f"{item['id']}: title powiela miasto")
