@@ -6,6 +6,9 @@ import { onRequestPost as notifyQuote } from '../functions/api/quote-notificatio
 
 const SECRET = 'testowy-sekret-powiadomien-ma-co-najmniej-32-znaki';
 const NOTIFICATION_ENDPOINT = 'https://formspree.io/f/testquoteendpoint';
+const TELEGRAM_TOKEN = '123456789:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
+const TELEGRAM_CHAT_ID = '-1001234567890';
+const TELEGRAM_ENDPOINT = `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`;
 const ALLEGRO_URL = 'https://allegro.pl/produkt/lozko-pojedyncze-ikea-hemnes-drewniane-biale-80x200-z-pojemnikiem-34f7722e-546b-437d-a88d-2d618d6728d0?offerId=18281158355';
 const ALLEGRO_NAME = 'IKEA HEMNES łóżko składane, leżanka 3 szufladami biały 80x200';
 const PLANNER_MESSAGE = 'Projekt z planera IKEA wyceniamy indywidualnie. Prześlij dane kontaktowe, a przygotujemy ręczną wycenę na podstawie projektu.';
@@ -70,13 +73,24 @@ function rawRequest(path, rawBody, contentType = 'application/json', origin = 'h
 
 async function tokenPayload(token, bindings) { return verifyQuoteToken(token, bindings); }
 
-function installFetchMock({ products = {}, deliveries, deliveryStatus = 200, requests = [] }) {
+function installFetchMock({
+  products = {},
+  deliveries,
+  deliveryStatus = 200,
+  requests = [],
+  telegramDeliveries = [],
+  telegramStatus = 200
+}) {
   const original = globalThis.fetch;
   globalThis.fetch = async (input, init = {}) => {
     const url = String(input);
     if (url === NOTIFICATION_ENDPOINT) {
       deliveries.push(Object.fromEntries(init.body.entries()));
       return Response.json({ ok: deliveryStatus < 400 }, { status: deliveryStatus });
+    }
+    if (url === TELEGRAM_ENDPOINT) {
+      telegramDeliveries.push(JSON.parse(init.body));
+      return Response.json({ ok: telegramStatus < 400 }, { status: telegramStatus });
     }
     if (url in products) {
       requests.push({ url, init });
@@ -148,6 +162,29 @@ test('kilka produktów zachowuje wszystkie linki, ilości i potwierdzone ceny', 
     assert.match(products, /test-second/);
     assert.match(products, /Ilość: 3/);
     assert.match(products, /Potwierdzona cena sztuki: 500 zł/);
+    assert.match(products, /Sklep: IKEA/);
+    assert.match(products, /Sklep: BRW/);
+    assert.doesNotMatch(products, /https?:\/\//i);
+  } finally { restore(); }
+});
+
+test('pole produktów zachowuje identyfikatory bez surowych protokołów i bez duplikowania adresów', async () => {
+  const deliveries = [];
+  const url = 'https://www.ikea.com/pl/pl/p/metod-szafka-12345678/?utm_source=test';
+  const reference = 'ikea.com/pl/pl/p/metod-szafka-12345678/?utm_source=test';
+  const restore = installFetchMock({ products: { [url]: PRODUCT_HTML('Szafka METOD', 750) }, deliveries });
+  try {
+    const bindings = env();
+    const result = await calculate(body([{ url, quantity: 2 }]), bindings, 'test-no-raw-product-url');
+    await notify(result.data.notificationToken, bindings);
+    const products = deliveries[0].produkty;
+    assert.match(products, /Sklep: IKEA/);
+    assert.match(products, /Produkt: Szafka METOD/);
+    assert.match(products, /Ilość: 2/);
+    assert.match(products, /Potwierdzona cena sztuki: 750 zł/);
+    assert.match(products, /Identyfikator produktu: ikea\.com\/pl\/pl\/p\/metod-szafka-12345678\/\?utm_source=test/);
+    assert.doesNotMatch(products, /https?:\/\//i);
+    assert.equal(products.split(reference).length - 1, 1);
   } finally { restore(); }
 });
 
@@ -301,9 +338,11 @@ test('link z planera kuchni IKEA uruchamia wycenę indywidualną i poprawnie ozn
     assert.equal(notification.response.status, 200);
     assert.equal(deliveries.length, 1);
     assert.equal(deliveries[0]._subject, 'Nowe zapytanie o wycenę indywidualną');
-    assert.equal(deliveries[0].typ_zdarzenia, 'ZAPYTANIE_O_WYCENE_INDYWIDUALNA');
+    assert.equal(deliveries[0].typ_zdarzenia, 'Zapytanie o wycenę indywidualną');
     assert.equal(deliveries[0].przyczyna, 'ikea_planner');
-    assert.equal(deliveries[0].linki_do_planera_ikea, url);
+    assert.match(deliveries[0].pozycje_zgloszenia, /Identyfikator produktu: kitchen\.planner\.ikea\.com\/pl\/pl\/planner\/Projekt_Kuchni-123\/\?ref=share/);
+    assert.doesNotMatch(deliveries[0].pozycje_zgloszenia, /https?:\/\//i);
+    assert.equal(deliveries[0].pozycje_zgloszenia.split('kitchen.planner.ikea.com').length - 1, 1);
     assert.equal(deliveries[0].miejscowosc, 'Zabrze');
     assert.equal(deliveries[0].odleglosc_od_gliwic_km, '11');
     assert.equal(deliveries[0].dodatkowe_informacje, 'Montaż całej kuchni.');
@@ -384,7 +423,8 @@ test('mieszany zestaw produktu i planera przechodzi jedną ścieżką wyceny ind
     await notify(result.data.notificationToken, bindings);
     assert.match(deliveries[0].pozycje_zgloszenia, /test-produkt-mieszany/);
     assert.match(deliveries[0].pozycje_zgloszenia, /mixed-project/);
-    assert.equal(deliveries[0].linki_do_planera_ikea, plannerUrl);
+    assert.doesNotMatch(deliveries[0].pozycje_zgloszenia, /https?:\/\//i);
+    assert.equal(deliveries[0].pozycje_zgloszenia.split('mixed-project').length - 1, 1);
   } finally { restore(); }
 });
 
@@ -456,10 +496,11 @@ test('nieudana wycena wysyła jedno powiadomienie price_not_confirmed bez fałsz
     assert.equal(notification.data.sent, true);
     assert.equal(deliveries.length, 1);
     assert.equal(deliveries[0]._subject, 'Nieudana próba automatycznej wyceny');
-    assert.equal(deliveries[0].typ_zdarzenia, 'NIEUDANA_PROBA_AUTOMATYCZNEJ_WYCENY');
+    assert.equal(deliveries[0].typ_zdarzenia, 'Nieudana próba automatycznej wyceny');
     assert.equal(deliveries[0].przyczyna, 'price_not_confirmed');
     assert.match(deliveries[0].produkty, /offerId=18281158355/);
     assert.match(deliveries[0].produkty, /Ilość: 2/);
+    assert.doesNotMatch(deliveries[0].produkty, /https?:\/\//i);
     assert.match(deliveries[0].uslugi_dodatkowe, /Montaż okapu/);
     assert.equal(deliveries[0].miejscowosc, 'Zabrze');
     assert.equal(deliveries[0].dodatkowe_informacje, 'Proszę o kontakt po 17:00.');
@@ -877,6 +918,78 @@ test('awaria Formspree zwraca techniczny błąd bez fałszywego sukcesu', async 
     assert.equal(notification.response.status, 502);
     assert.equal(notification.data.error, 'delivery-failed');
     assert.equal(deliveries.length, 1);
+  } finally { restore(); }
+});
+
+test('skonfigurowany Telegram działa równolegle z Formspree', async () => {
+  const deliveries = [];
+  const telegramDeliveries = [];
+  const url = 'https://www.ikea.com/pl/pl/p/test-telegram-parallel/';
+  const restore = installFetchMock({
+    products: { [url]: PRODUCT_HTML('Stolik', 400) },
+    deliveries,
+    telegramDeliveries
+  });
+  try {
+    const bindings = env({
+      QUOTE_NOTIFICATION_TELEGRAM_BOT_TOKEN: TELEGRAM_TOKEN,
+      QUOTE_NOTIFICATION_TELEGRAM_CHAT_ID: TELEGRAM_CHAT_ID
+    });
+    const result = await calculate(body([{ url, quantity: 1 }]), bindings, 'test-telegram-parallel');
+    const notification = await notify(result.data.notificationToken, bindings);
+    assert.equal(notification.response.status, 200);
+    assert.deepEqual(notification.data.channels, { formspree: 'sent', telegram: 'sent' });
+    assert.equal(deliveries.length, 1);
+    assert.equal(telegramDeliveries.length, 1);
+    assert.equal(telegramDeliveries[0].chat_id, TELEGRAM_CHAT_ID);
+    assert.match(telegramDeliveries[0].text, /Nowa wycena z kalkulatora Meblofix/);
+    assert.match(telegramDeliveries[0].text, /Identyfikator produktu: ikea\.com\/pl\/pl\/p\/test-telegram-parallel\//);
+    assert.doesNotMatch(telegramDeliveries[0].text, /https?:\/\//i);
+    assert.deepEqual(telegramDeliveries[0].link_preview_options, { is_disabled: true });
+  } finally { restore(); }
+});
+
+test('brak jednej zmiennej Telegram pozostawia kanał nieaktywny', async () => {
+  const deliveries = [];
+  const telegramDeliveries = [];
+  const url = 'https://www.ikea.com/pl/pl/p/test-telegram-inactive/';
+  const restore = installFetchMock({
+    products: { [url]: PRODUCT_HTML('Półka', 300) },
+    deliveries,
+    telegramDeliveries
+  });
+  try {
+    const bindings = env({ QUOTE_NOTIFICATION_TELEGRAM_BOT_TOKEN: TELEGRAM_TOKEN });
+    const result = await calculate(body([{ url, quantity: 1 }]), bindings, 'test-telegram-inactive');
+    const notification = await notify(result.data.notificationToken, bindings);
+    assert.equal(notification.response.status, 200);
+    assert.deepEqual(notification.data.channels, { formspree: 'sent', telegram: 'inactive' });
+    assert.equal(deliveries.length, 1);
+    assert.equal(telegramDeliveries.length, 0);
+  } finally { restore(); }
+});
+
+test('Telegram podtrzymuje powiadomienie przy odrzuceniu przez Formspree', async () => {
+  const deliveries = [];
+  const telegramDeliveries = [];
+  const url = 'https://www.ikea.com/pl/pl/p/test-telegram-fallback/';
+  const restore = installFetchMock({
+    products: { [url]: PRODUCT_HTML('Biurko', 500) },
+    deliveries,
+    deliveryStatus: 500,
+    telegramDeliveries
+  });
+  try {
+    const bindings = env({
+      QUOTE_NOTIFICATION_TELEGRAM_BOT_TOKEN: TELEGRAM_TOKEN,
+      QUOTE_NOTIFICATION_TELEGRAM_CHAT_ID: TELEGRAM_CHAT_ID
+    });
+    const result = await calculate(body([{ url, quantity: 1 }]), bindings, 'test-telegram-fallback');
+    const notification = await notify(result.data.notificationToken, bindings);
+    assert.equal(notification.response.status, 200);
+    assert.deepEqual(notification.data.channels, { formspree: 'failed', telegram: 'sent' });
+    assert.equal(deliveries.length, 1);
+    assert.equal(telegramDeliveries.length, 1);
   } finally { restore(); }
 });
 

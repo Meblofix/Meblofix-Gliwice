@@ -92,6 +92,18 @@ function configuredFormspreeEndpoint(env) {
   }
 }
 
+function configuredTelegram(env) {
+  const token = String(env?.QUOTE_NOTIFICATION_TELEGRAM_BOT_TOKEN || '').trim();
+  const chatId = String(env?.QUOTE_NOTIFICATION_TELEGRAM_CHAT_ID || '').trim();
+  if (!token || !chatId) return null;
+  if (!/^\d{5,20}:[A-Za-z0-9_-]{20,}$/.test(token)) return null;
+  if (!/^-?\d{1,20}$/.test(chatId) && !/^@[A-Za-z][A-Za-z0-9_]{4,31}$/.test(chatId)) return null;
+  return {
+    endpoint: `https://api.telegram.org/bot${token}/sendMessage`,
+    chatId
+  };
+}
+
 function money(value) {
   const hasFraction = Math.round(Number(value) * 100) % 100 !== 0;
   return `${new Intl.NumberFormat('pl-PL', {
@@ -119,13 +131,40 @@ function setMailField(fields, name, value, maxLength) {
   fields.set(name, mailField(value, maxLength));
 }
 
+function withoutUrlProtocols(value) {
+  return String(value ?? '').replace(/https?:\/\//gi, '');
+}
+
+function productReference(value) {
+  try {
+    const url = new URL(value);
+    const hostname = url.hostname.toLowerCase().replace(/^www\./, '');
+    return withoutUrlProtocols(`${hostname}${url.pathname}${url.search}${url.hash}`);
+  } catch {
+    return withoutUrlProtocols(value);
+  }
+}
+
+function productStore(product) {
+  try {
+    const hostname = new URL(product.url).hostname.toLowerCase().replace(/^www\./, '');
+    if (hostname === 'ikea.com' || hostname === 'ikea.pl' || hostname === 'kitchen.planner.ikea.com') return 'IKEA';
+    if (hostname === 'agatameble.pl') return 'Agata';
+    if (hostname === 'brw.pl') return 'BRW';
+    if (hostname === 'jysk.pl') return 'Jysk';
+    if (hostname === 'allegro.pl') return 'Allegro';
+  } catch {}
+  return withoutUrlProtocols(product.store || 'Inny sklep');
+}
+
 function productLines(products) {
   return products.map((product, index) => [
-    `${index + 1}. ${product.name}`,
-    `Link: ${product.url}`,
+    `${index + 1}. Sklep: ${productStore(product)}`,
+    `Produkt: ${withoutUrlProtocols(product.name)}`,
     `Ilość: ${product.quantity}`,
     `Potwierdzona cena sztuki: ${money(product.price)}`,
-    `Wartość pozycji: ${money(product.value)}`
+    `Wartość pozycji: ${money(product.value)}`,
+    `Identyfikator produktu: ${productReference(product.url)}`
   ].join('\n')).join('\n\n');
 }
 
@@ -142,10 +181,11 @@ function extraServiceLines(services) {
 
 function attemptProductLines(products) {
   return products.map((product, index) => [
-    `${index + 1}. ${product.name || 'Produkt bez potwierdzonej nazwy'}`,
-    `Link: ${product.url}`,
+    `${index + 1}. Sklep: ${productStore(product)}`,
+    `Produkt: ${withoutUrlProtocols(product.name || 'Nazwa nie została potwierdzona')}`,
     `Ilość: ${product.quantity}`,
-    'Status: cena niepotwierdzona'
+    'Status: cena niepotwierdzona',
+    `Identyfikator produktu: ${productReference(product.url)}`
   ].join('\n')).join('\n\n');
 }
 
@@ -157,16 +197,12 @@ function individualProductLines(products) {
     price_confirmed: 'cena produktu potwierdzona'
   };
   return products.map((product, index) => [
-    `${index + 1}. ${product.name || 'Pozycja bez potwierdzonej nazwy'}`,
-    `Link: ${product.url}`,
+    `${index + 1}. Sklep: ${productStore(product)}`,
+    `Produkt: ${withoutUrlProtocols(product.name || 'Nazwa nie została potwierdzona')}`,
     `Ilość: ${product.quantity}`,
-    `Status: ${statuses[product.status] || 'wycena indywidualna'}`
+    `Status: ${statuses[product.status] || 'wycena indywidualna'}`,
+    `Identyfikator produktu: ${productReference(product.url)}`
   ].join('\n')).join('\n\n');
-}
-
-function ikeaPlannerLinks(products) {
-  const links = products.filter(product => product.status === 'ikea_planner').map(product => product.url);
-  return links.length ? links.join('\n') : 'Nie dotyczy';
 }
 
 function attemptExtraServiceLines(services) {
@@ -182,7 +218,7 @@ export function automaticNotificationFields(payload) {
   const { quote, context } = payload;
   const fields = new FormData();
   setMailField(fields, '_subject', 'Nowa wycena z kalkulatora Meblofix');
-  setMailField(fields, 'typ_zdarzenia', 'AUTOMATYCZNA_WYCENA');
+  setMailField(fields, 'typ_zdarzenia', 'Automatyczna wycena');
   setMailField(fields, 'data_i_godzina', polishDate(payload.issuedAt));
   setMailField(fields, 'identyfikator_wyceny', payload.quoteId);
   setMailField(fields, 'produkty', productLines(quote.products));
@@ -208,7 +244,7 @@ export function failedAttemptNotificationFields(payload) {
   const { attempt, context } = payload;
   const fields = new FormData();
   setMailField(fields, '_subject', 'Nieudana próba automatycznej wyceny');
-  setMailField(fields, 'typ_zdarzenia', 'NIEUDANA_PROBA_AUTOMATYCZNEJ_WYCENY');
+  setMailField(fields, 'typ_zdarzenia', 'Nieudana próba automatycznej wyceny');
   setMailField(fields, 'data_i_godzina', polishDate(payload.issuedAt));
   setMailField(fields, 'identyfikator_proby', payload.quoteId);
   setMailField(fields, 'przyczyna', 'price_not_confirmed');
@@ -229,12 +265,11 @@ export function individualQuoteNotificationFields(payload) {
   const { inquiry, context } = payload;
   const fields = new FormData();
   setMailField(fields, '_subject', 'Nowe zapytanie o wycenę indywidualną');
-  setMailField(fields, 'typ_zdarzenia', 'ZAPYTANIE_O_WYCENE_INDYWIDUALNA');
+  setMailField(fields, 'typ_zdarzenia', 'Zapytanie o wycenę indywidualną');
   setMailField(fields, 'data_i_godzina', polishDate(payload.issuedAt));
   setMailField(fields, 'identyfikator_zapytania', payload.quoteId);
   setMailField(fields, 'przyczyna', payload.reason);
   setMailField(fields, 'pozycje_zgloszenia', individualProductLines(inquiry.products));
-  setMailField(fields, 'linki_do_planera_ikea', ikeaPlannerLinks(inquiry.products));
   setMailField(fields, 'uslugi_dodatkowe', attemptExtraServiceLines(inquiry.extraServices));
   setMailField(fields, 'miejscowosc', context.city, 80);
   setMailField(fields, 'odleglosc_od_gliwic_km', String(context.distance), 32);
@@ -251,6 +286,48 @@ function notificationFields(payload) {
   if (payload.eventType === 'price_not_confirmed') return failedAttemptNotificationFields(payload);
   if (payload.eventType === 'individual_quote') return individualQuoteNotificationFields(payload);
   return automaticNotificationFields(payload);
+}
+
+function telegramMessage(fields) {
+  const subject = fields.get('_subject') || 'Powiadomienie z kalkulatora Meblofix';
+  const rows = [subject, ''];
+  for (const [name, value] of fields) {
+    if (name === '_subject') continue;
+    rows.push(`${name.replaceAll('_', ' ')}:\n${value}`, '');
+  }
+  const text = rows.join('\n').trim();
+  return text.length <= 4096 ? text : `${text.slice(0, 4093)}…`;
+}
+
+async function sendFormspree(endpoint, fields) {
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      body: fields,
+      headers: { Accept: 'application/json' }
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function sendTelegram(config, fields) {
+  try {
+    const response = await fetch(config.endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({
+        chat_id: config.chatId,
+        text: telegramMessage(fields),
+        link_preview_options: { is_disabled: true }
+      })
+    });
+    const result = await response.json().catch(() => null);
+    return response.ok && result?.ok === true;
+  } catch {
+    return false;
+  }
 }
 
 function cleanupMemory(now) {
@@ -288,7 +365,7 @@ async function checkRateLimit(env, clientFingerprint, now) {
   return true;
 }
 
-async function deliver(payload, env, endpoint) {
+async function deliver(payload, env, endpoint, telegram) {
   const now = Date.now();
   cleanupMemory(now);
   if (await alreadySent(env, payload)) return jsonResponse({ sent: false, error: 'notification-already-sent' }, { status: 409 });
@@ -296,13 +373,17 @@ async function deliver(payload, env, endpoint) {
 
   const fields = notificationFields(payload);
   const dryRun = env.NOTIFICATION_DRY_RUN === '1';
-  if (!dryRun && env.QUOTE_NOTIFICATION_MODE !== 'test') {
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      body: fields,
-      headers: { Accept: 'application/json' }
-    });
-    if (!response.ok) return jsonResponse({ sent: false, error: 'delivery-failed' }, { status: 502 });
+  const testMode = env.QUOTE_NOTIFICATION_MODE === 'test';
+  let formspreeSent = false;
+  let telegramSent = false;
+  if (!dryRun && !testMode) {
+    [formspreeSent, telegramSent] = await Promise.all([
+      sendFormspree(endpoint, fields),
+      telegram ? sendTelegram(telegram, fields) : Promise.resolve(false)
+    ]);
+    if (!formspreeSent && !telegramSent) {
+      return jsonResponse({ sent: false, error: 'delivery-failed' }, { status: 502 });
+    }
   }
 
   const key = deliveryKey(payload);
@@ -316,10 +397,18 @@ async function deliver(payload, env, endpoint) {
       sent: false,
       dryRun: true,
       mode: 'notification-dry-run',
-      fields: [...fields.keys()]
+      fields: [...fields.keys()],
+      channels: { formspree: 'dry-run', telegram: telegram ? 'dry-run' : 'inactive' }
     }, { status: 200 });
   }
-  return jsonResponse({ sent: true, testMode: env.QUOTE_NOTIFICATION_MODE === 'test' }, { status: 200 });
+  return jsonResponse({
+    sent: true,
+    testMode,
+    channels: {
+      formspree: testMode ? 'test' : formspreeSent ? 'sent' : 'failed',
+      telegram: !telegram ? 'inactive' : testMode ? 'test' : telegramSent ? 'sent' : 'failed'
+    }
+  }, { status: 200 });
 }
 
 export async function onRequestPost({ request, env }) {
@@ -334,6 +423,7 @@ export async function onRequestPost({ request, env }) {
   if (!env?.QUOTE_NOTIFICATION_KV) return jsonResponse({ sent: false, error: 'notification-not-configured' }, { status: 503 });
   const dryRun = env.NOTIFICATION_DRY_RUN === '1';
   const endpoint = configuredFormspreeEndpoint(env);
+  const telegram = configuredTelegram(env);
   if (!dryRun && !endpoint) return jsonResponse({ sent: false, error: 'notification-not-configured' }, { status: 503 });
 
   let allowed;
@@ -358,7 +448,7 @@ export async function onRequestPost({ request, env }) {
   try {
     const key = deliveryKey(payload);
     if (inFlight.has(key)) return (await inFlight.get(key)).clone();
-    const delivery = deliver(payload, env, endpoint).finally(() => inFlight.delete(key));
+    const delivery = deliver(payload, env, endpoint, telegram).finally(() => inFlight.delete(key));
     inFlight.set(key, delivery);
     return await delivery;
   } catch {
