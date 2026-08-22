@@ -966,6 +966,9 @@ test('CTA jest w polach kalkulatora przed kontaktem i awaria powiadomienia nie c
   const notificationFailure = html.slice(html.indexOf('async function sendCalculationNotice'), html.indexOf('function validateContact'));
   assert.doesNotMatch(notificationFailure, /setResult\(null\)|lastCalculation\s*=\s*null/);
   assert.match(notificationFailure, /console\.warn/);
+  assert.match(html, /individualQuoteReady = true/);
+  assert.match(html, /if \(!lastCalculation && !individualQuoteReady\)/);
+  assert.match(html, /link\.href = '#quoteContact'/);
 });
 
 test('SSRF przez prywatny IPv6 i nieszyfrowany URL oficjalnego hosta są blokowane przed fetch', async () => {

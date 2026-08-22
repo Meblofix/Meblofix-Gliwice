@@ -4252,7 +4252,7 @@
     </div>
 
     <fieldset class="quote-contact">
-      <legend>Dane do kontaktu</legend>
+      <legend id="quoteContact">Dane do kontaktu</legend>
       <div class="quote-field">
         <label class="quote-label" for="quoteName">Imię <span class="quote-required" aria-hidden="true">*</span></label>
         <input type="text" id="quoteName" name="imie" maxlength="80" autocomplete="name" required>
@@ -4927,6 +4927,7 @@
   const quotePhoneField = document.getElementById('quotePhone');
   const quoteEmailField = document.getElementById('quoteEmail');
   let lastCalculation = null;
+  let individualQuoteReady = false;
   let calculationKey = '';
   let calculationNoticeKey = '';
   let quoteAnalyticsAttempt = 0;
@@ -4958,8 +4959,8 @@
     });
   }
   function invalidateQuoteAfterServiceChange() {
-    if (!lastCalculation) return;
-    lastCalculation = null; calculationKey = ''; calculationNoticeKey = ''; setResult(null);
+    if (!lastCalculation && !individualQuoteReady) return;
+    lastCalculation = null; individualQuoteReady = false; calculationKey = ''; calculationNoticeKey = ''; setResult(null);
     quoteProductsStatus.textContent = 'Zmieniono usługi dodatkowe. Kliknij „PRZELICZ WYCENĘ”, aby zaktualizować wynik.';
   }
   function syncExtraService(row) {
@@ -4977,8 +4978,8 @@
     quoteProductResults.replaceChildren(...result.products.map(product => { const li = document.createElement('li'); const link = document.createElement('a'); link.href = product.url; link.target = '_blank'; link.rel = 'noopener noreferrer'; link.textContent = `${product.name} — ${money(product.price)} × ${product.quantity} = ${money(product.value)}`; li.append(link); return li; }));
   }
   function showIndividualQuote(message) {
-    lastCalculation = null; setResult(null); quoteProductsStatus.textContent = message;
-    const li = document.createElement('li'); const link = document.createElement('a'); link.className = 'quote-individual-button'; link.href = '#kontakt'; link.textContent = 'Poproś o indywidualną wycenę'; li.append(link); quoteProductResults.replaceChildren(li);
+    lastCalculation = null; individualQuoteReady = true; setResult(null); quoteProductsStatus.textContent = message;
+    const li = document.createElement('li'); const link = document.createElement('a'); link.className = 'quote-individual-button'; link.href = '#quoteContact'; link.textContent = 'Przejdź do danych kontaktowych'; li.append(link); quoteProductResults.replaceChildren(li);
   }
   async function calculateFromLinks() {
     const items = rows().filter(item => item.url);
@@ -5005,13 +5006,12 @@
     try {
       const response = await fetch('/api/quote-products', { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(requestData) });
       const data = await response.json(); if (!response.ok || !Array.isArray(data.products)) throw new Error('product lookup failed');
-      const planner = data.products.find(product => product.kind === 'ikea-project');
-      if (planner) {
-        showIndividualQuote(planner.error || 'Projekt IKEA został rozpoznany, ale nie możemy automatycznie odczytać jego wartości. Ten projekt wymaga indywidualnej wyceny.');
-        window.MeblofixAnalytics?.track('quote_individual', { ...analyticsProperties, reason: 'ikea_project' }, `quote:${analyticsAttempt}:individual`);
+      if (data.individualQuote) {
+        showIndividualQuote(data.individualQuote.message);
+        window.MeblofixAnalytics?.track('quote_individual', { ...analyticsProperties, reason: data.individualQuote.reason }, `quote:${analyticsAttempt}:individual`);
         if (data.notificationToken) {
           await new Promise(resolve => requestAnimationFrame(() => resolve()));
-          await sendCalculationNotice(data.notificationToken, `failure:${JSON.stringify(requestData)}`);
+          await sendCalculationNotice(data.notificationToken, `individual:${JSON.stringify(requestData)}`);
         }
         return;
       }
@@ -5025,7 +5025,7 @@
         return;
       }
       if (!data.quote) throw new Error('missing verified quote');
-      const result = data.quote; lastCalculation = result; calculationKey = JSON.stringify(requestData); setResult(result); quoteProductsStatus.textContent = 'Ceny produktów potwierdzone. Wynik jest orientacyjny.';
+      const result = data.quote; lastCalculation = result; individualQuoteReady = false; calculationKey = JSON.stringify(requestData); setResult(result); quoteProductsStatus.textContent = 'Ceny produktów potwierdzone. Wynik jest orientacyjny.';
       window.MeblofixAnalytics?.track('quote_success', analyticsProperties, `quote:${analyticsAttempt}:success`);
       if (data.notificationToken) {
         await new Promise(resolve => requestAnimationFrame(() => resolve()));
@@ -5052,7 +5052,7 @@
   }
   function validateContact() {
     const name = document.getElementById('quoteName'), phone = document.getElementById('quotePhone'), email = document.getElementById('quoteEmail'); [name, phone, email].forEach(clearFieldError); const invalid = [];
-    if (!lastCalculation) { setFormStatus(document.getElementById('quoteFormStatus'), 'Najpierw oblicz cenę na podstawie linków do produktów lub wybierz wycenę indywidualną.', 'error'); return false; }
+    if (!lastCalculation && !individualQuoteReady) { setFormStatus(document.getElementById('quoteFormStatus'), 'Najpierw oblicz cenę na podstawie linków do produktów lub wybierz wycenę indywidualną.', 'error'); return false; }
     if (!name.value.trim()) { setFieldError(name, 'Podaj imię.'); invalid.push(name); } if (phone.value.replace(/\D/g, '').length < 7) { setFieldError(phone, 'Podaj poprawny numer telefonu.'); invalid.push(phone); } if (email.value && !email.validity.valid) { setFieldError(email, 'Podaj poprawny adres e-mail.'); invalid.push(email); }
     invalid[0]?.focus(); return !invalid.length;
   }

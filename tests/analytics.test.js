@@ -100,7 +100,7 @@ test('integracja formularzy i kalkulatora emituje konwersje dopiero w poprawnych
   assert.equal((calculate.match(/track\('quote_success'/g) || []).length, 1);
   assert.equal((calculate.match(/track\('quote_individual'/g) || []).length, 3);
   assert.ok(calculate.indexOf("if (!data.quote) throw") < calculate.indexOf("track('quote_success'"));
-  assert.ok(calculate.indexOf("showIndividualQuote(planner.error") < calculate.indexOf("reason: 'ikea_project'"));
+  assert.ok(calculate.indexOf('showIndividualQuote(data.individualQuote.message)') < calculate.indexOf("sendCalculationNotice(data.notificationToken, `individual:"));
   assert.ok(calculate.indexOf("showIndividualQuote('Nie udało się potwierdzić ceny wszystkich produktów") < calculate.indexOf("reason: 'price_not_confirmed'"));
 
   const quoteSubmitStart = homepage.indexOf('async function handleQuoteSubmit');

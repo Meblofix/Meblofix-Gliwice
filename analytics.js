@@ -11,7 +11,7 @@
       hasExtraServices: value => value === true || value === false
     }),
     quote_individual: Object.freeze({
-      reason: value => ['ikea_project', 'price_not_confirmed', 'request_failed'].includes(value),
+      reason: value => ['ikea_planner', 'unsupported_url', 'price_not_confirmed', 'request_failed'].includes(value),
       productCount: value => Number.isInteger(value) && value >= 1 && value <= 10,
       hasExtraServices: value => value === true || value === false
     }),
