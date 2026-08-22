@@ -25,6 +25,7 @@ def main() -> None:
     args = parser.parse_args()
     data = json.loads(DATA.read_text(encoding="utf-8"))
     ids = {item["id"] for item in data["realizacje"]}
+    ordered = [next(item for item in data["realizacje"] if item["id"] == item_id) for item_id in data["kolejnosc"]]
     require(len(ids) == len(data["realizacje"]), "ID realizacji nie są unikalne")
 
     pages_dir = args.dist / "realizacje"
@@ -59,6 +60,16 @@ def main() -> None:
             require('type="range"' in source, f"{item['id']}: porównanie nie ma sterowania suwakiem")
         if item.get("przed_po"):
             require("Porównanie realizacji" in source, f"{item['id']}: brak porównania przed/po")
+        others = [candidate for candidate in ordered if candidate["id"] != item["id"]]
+        expected_related = [candidate for candidate in others if candidate["kategoria"] == item["kategoria"]]
+        expected_related += [candidate for candidate in others if candidate["kategoria"] != item["kategoria"]]
+        expected_ids = [candidate["id"] for candidate in expected_related[:3]]
+        related_ids = re.findall(r'class="related-case" href="\.\./([^/]+)/"', source)
+        require(related_ids == expected_ids, f"{item['id']}: błędna kolejność podobnych realizacji {related_ids}")
+        for related in expected_related[:3]:
+            require(html.escape(related["tytul"]) in source, f"{item['id']}: brak tytułu podobnej realizacji")
+            require(html.escape(related["miasto"]) in source, f"{item['id']}: brak miasta podobnej realizacji")
+            require(f'{related["okladka"]}-800.jpg' in source, f"{item['id']}: brak miniatury podobnej realizacji")
 
     redirects = (args.dist / "_redirects").read_text(encoding="utf-8")
     require("/realizacje/*" not in redirects, "Wildcard nadal przechwytuje strony realizacji")

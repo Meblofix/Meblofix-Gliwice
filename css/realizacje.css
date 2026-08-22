@@ -130,9 +130,21 @@ h1 { max-width: 900px; margin: 0; font-size: clamp(3rem, 8vw, 6.3rem); }
   font-weight: 700;
 }
 .cta-secondary { background: transparent; border: 1px solid var(--border); color: var(--cream); }
+.related-cases-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; padding: 0; margin: 0; list-style: none; }
+.related-case { display: block; height: 100%; overflow: hidden; border: 1px solid var(--border); background: var(--card); text-decoration: none; transition: border-color 0.2s ease, transform 0.2s ease; }
+.related-case-image { display: block; aspect-ratio: 4 / 3; overflow: hidden; background: var(--black); }
+.related-case-image picture,
+.related-case-image img { display: block; width: 100%; height: 100%; }
+.related-case-image img { object-fit: cover; transition: transform 0.2s ease; }
+.related-case-copy { display: grid; gap: 0.25rem; padding: 1rem; }
+.related-case-copy strong { line-height: 1.35; }
+.related-case-copy span { color: var(--mid); font-size: 0.9rem; }
+.related-case:hover { border-color: rgba(255, 106, 47, 0.65); transform: translateY(-2px); }
+.related-case:hover img { transform: scale(1.02); }
 .cta:focus-visible,
 .nav a:focus-visible,
 .gallery a:focus-visible,
+.related-case:focus-visible,
 .breadcrumbs a:focus-visible { outline: 3px solid var(--orange-light); outline-offset: 3px; }
 footer { padding-top: 2rem; padding-bottom: 2rem; display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; border-top: 1px solid var(--border); color: var(--gray); }
 .case-lightbox {
@@ -170,16 +182,20 @@ footer { padding-top: 2rem; padding-bottom: 2rem; display: flex; justify-content
   .gallery { grid-template-columns: 1fr 1fr; }
   .gallery li:first-child { grid-column: span 2; grid-row: auto; }
   .comparisons { grid-template-columns: 1fr; }
+  .related-cases-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 520px) {
   .gallery { grid-template-columns: 1fr; }
   .gallery li:first-child { grid-column: auto; }
   .gallery a { min-height: 220px; }
+  .related-cases-grid { grid-template-columns: 1fr; }
   .case-lightbox { padding-left: 1rem; padding-right: 1rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  .gallery img { transition: none; }
+  .gallery img,
+  .related-case,
+  .related-case-image img { transition: none; }
 }

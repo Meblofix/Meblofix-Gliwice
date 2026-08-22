@@ -429,6 +429,13 @@ def case_comparisons(item: dict) -> list[dict]:
     return comparisons
 
 
+def related_realizations(data: dict, item: dict, limit: int = 3) -> list[dict]:
+    others = [candidate for candidate in ordered_realizations(data) if candidate["id"] != item["id"]]
+    same_category = [candidate for candidate in others if candidate["kategoria"] == item["kategoria"]]
+    remaining = [candidate for candidate in others if candidate["kategoria"] != item["kategoria"]]
+    return (same_category + remaining)[:limit]
+
+
 def render_case_page(data: dict, item: dict) -> str:
     photos = item["zdjecia"]
     photo_by_base = {photo["plik"]: photo for photo in photos}
@@ -513,6 +520,27 @@ def render_case_page(data: dict, item: dict) -> str:
             unique_links.append(f'<a class="cta cta-secondary" href="{escape(href)}">{escape(label)}</a>')
             seen_hrefs.add(href)
 
+    related_cards = []
+    for related in related_realizations(data, item):
+        related_photos = {photo["plik"]: photo for photo in related["zdjecia"]}
+        related_cover = related_photos[related["okladka"]]
+        related_cards.append(
+            "<li>"
+            f'<a class="related-case" href="../{escape(related["id"])}/">'
+            f'<span class="related-case-image">{case_picture(related, related_cover)}</span>'
+            '<span class="related-case-copy">'
+            f'<strong>{escape(related["tytul"])}</strong>'
+            f'<span>{escape(related["miasto"])}</span>'
+            "</span></a></li>"
+        )
+    related_section = (
+        '<section class="section section-muted related-cases"><div class="wrap">'
+        '<h2>Podobne realizacje</h2>'
+        '<p class="section-intro">Zobacz także inne wykonane montaże i zabudowy.</p>'
+        f'<ul class="related-cases-grid">{"".join(related_cards)}</ul>'
+        "</div></section>"
+    )
+
     return f'''<!DOCTYPE html>
 <html lang="pl">
 <head>
@@ -554,6 +582,7 @@ def render_case_page(data: dict, item: dict) -> str:
     <section class="section"><div class="wrap"><h2>Zdjęcia realizacji</h2><p class="section-intro">Galeria zawiera {len(photos)} zdjęć z tego zlecenia.</p><ul class="gallery">{"".join(gallery)}</ul></div></section>
     {comparisons_html}
     <section class="section"><div class="wrap"><h2>Podobny montaż</h2><p class="section-intro">Podeślij zdjęcia, instrukcję lub linki do produktów, aby otrzymać orientacyjną wycenę.</p><div class="links"><a class="cta" href="../../#kalkulator">Wyceń podobny montaż</a>{"".join(unique_links)}</div></div></section>
+    {related_section}
   </article>
 </main>
 <dialog class="case-lightbox" id="caseLightbox" aria-label="Podgląd zdjęć realizacji">
