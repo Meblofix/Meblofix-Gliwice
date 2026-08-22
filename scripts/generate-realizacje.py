@@ -91,16 +91,13 @@ def case_page_title(item: dict) -> str:
         if not isinstance(title_seo, str) or not title_seo.strip():
             raise ValueError(f'Nieprawidłowe title_seo realizacji: {item["id"]}')
         return title_seo
-    suffix = f' — {item["miasto"]} | MebloFix'
-    available = MAX_CASE_TITLE_LENGTH - len(suffix)
-    if available < 12:
-        raise ValueError(f'Miasto jest za długie dla title realizacji: {item["miasto"]}')
-    service = case_service_title(item)
-    if len(service) > available:
-        service = service[:available].rsplit(" ", 1)[0].rstrip(".,;:—-")
-        while service and len(service.rsplit(" ", 1)[-1]) < 3:
-            service = service.rsplit(" ", 1)[0].rstrip(".,;:—-")
-    return service + suffix
+    title = f'{case_service_title(item)} — {item["miasto"]} | MebloFix'
+    if len(title) > MAX_CASE_TITLE_LENGTH:
+        raise ValueError(
+            f'Realizacja {item["id"]}: wygenerowany title ma {len(title)} znaków '
+            f'(maksimum {MAX_CASE_TITLE_LENGTH}); ustaw title_seo'
+        )
+    return title
 
 
 def image_id(item: dict, photo: dict) -> str:
