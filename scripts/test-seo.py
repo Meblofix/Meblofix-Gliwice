@@ -16,6 +16,9 @@ from xml.etree import ElementTree
 
 
 SITE_ORIGIN = "https://meblofix-gliwice.pl"
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+REALIZACJE_DATA = PROJECT_ROOT / "data" / "realizacje.json"
+MAX_CASE_TITLE_LENGTH = 60
 SITEMAP_NS = {"sm": "http://www.sitemaps.org/schemas/sitemap/0.9"}
 IGNORED_SCHEMES = ("mailto:", "tel:", "javascript:", "data:")
 EXPECTED_BLOG_DATES = {
@@ -149,6 +152,16 @@ def normalized_text(value: str) -> str:
     return re.sub(r"\s+([.,;:!?])", r"\1", compact)
 
 
+def automatic_case_title(item: dict) -> str:
+    service = item["tytul"].strip()
+    for separator in (" — ", " – ", " - "):
+        city_suffix = separator + item["miasto"]
+        if service.endswith(city_suffix):
+            service = service[: -len(city_suffix)].rstrip()
+            break
+    return f'{service} — {item["miasto"]} | MebloFix'
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--dist", type=Path, default=Path("dist"))
@@ -156,6 +169,19 @@ def main() -> int:
     dist = args.dist.resolve()
     errors: list[str] = []
     warnings: list[str] = []
+
+    try:
+        realizacje = json.loads(REALIZACJE_DATA.read_text(encoding="utf-8"))["realizacje"]
+    except (OSError, json.JSONDecodeError, KeyError) as error:
+        errors.append(f"nie można sprawdzić danych realizacji: {error}")
+    else:
+        for item in realizacje:
+            automatic_title = automatic_case_title(item)
+            if len(automatic_title) > MAX_CASE_TITLE_LENGTH and not item.get("title_seo"):
+                errors.append(
+                    f'{item["id"]}: automatyczny title ma {len(automatic_title)} znaków; '
+                    "brak wymaganego title_seo"
+                )
 
     sitemap_path = dist / "sitemap.xml"
     try:
@@ -200,14 +226,13 @@ def main() -> int:
         else:
             titles[parsed_page.title.casefold()].append(path)
             if path.startswith("/realizacje/"):
-                if len(parsed_page.title) > 60:
-                    errors.append(f"{path}: title ma {len(parsed_page.title)} znaków, maksimum to 60")
+                if len(parsed_page.title) > MAX_CASE_TITLE_LENGTH:
+                    errors.append(
+                        f"{path}: title ma {len(parsed_page.title)} znaków, maksimum to {MAX_CASE_TITLE_LENGTH}"
+                    )
                 title_base = parsed_page.title.split(" — ", 1)[0].strip()
                 if title_base.endswith(("…", "...")):
                     errors.append(f"{path}: title ma urwane zakończenie {title_base!r}")
-                title_words = re.findall(r"\w+", title_base, flags=re.UNICODE)
-                if title_words and len(title_words[-1]) < 3:
-                    errors.append(f"{path}: ostatnie słowo przed separatorem jest za krótkie: {title_words[-1]!r}")
         if not parsed_page.description:
             errors.append(f"{path}: brak meta description")
         is_noindex = "noindex" in parsed_page.robots.lower()

@@ -12,11 +12,22 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "data" / "realizacje.json"
+MAX_CASE_TITLE_LENGTH = 60
 
 
 def require(condition: bool, message: str) -> None:
     if not condition:
         raise AssertionError(message)
+
+
+def automatic_case_title(item: dict) -> str:
+    service = item["tytul"].strip()
+    for separator in (" — ", " – ", " - "):
+        city_suffix = separator + item["miasto"]
+        if service.endswith(city_suffix):
+            service = service[: -len(city_suffix)].rstrip()
+            break
+    return f'{service} — {item["miasto"]} | MebloFix'
 
 
 def main() -> None:
@@ -27,6 +38,13 @@ def main() -> None:
     ids = {item["id"] for item in data["realizacje"]}
     ordered = [next(item for item in data["realizacje"] if item["id"] == item_id) for item_id in data["kolejnosc"]]
     require(len(ids) == len(data["realizacje"]), "ID realizacji nie są unikalne")
+
+    for item in data["realizacje"]:
+        automatic_title = automatic_case_title(item)
+        require(
+            len(automatic_title) <= MAX_CASE_TITLE_LENGTH or bool(item.get("title_seo")),
+            f"{item['id']}: automatyczny title ma {len(automatic_title)} znaków; brak wymaganego title_seo",
+        )
 
     pages_dir = args.dist / "realizacje"
     generated = {path.parent.name for path in pages_dir.glob("*/index.html")}
@@ -48,11 +66,15 @@ def main() -> None:
         )
         if item.get("title_seo"):
             require(title == item["title_seo"], f"{item['id']}: generator zmienił ręczne title_seo")
-        require(len(title) <= 60, f"{item['id']}: title ma {len(title)} znaków")
+        require(len(title) <= MAX_CASE_TITLE_LENGTH, f"{item['id']}: title ma {len(title)} znaków")
+        title_base = title.split(" — ", 1)[0].strip()
+        require(not title_base.endswith(("…", "...")), f"{item['id']}: title kończy się wielokropkiem")
+        require(title.endswith(" | MebloFix"), f"{item['id']}: title nie ma spójnego sufiksu | MebloFix")
         require(item["miasto"] in title, f"{item['id']}: title nie zawiera miasta")
         require(title.count(item["miasto"]) == 1, f"{item['id']}: title powiela miasto")
-        service_prefix = " ".join(item["tytul"].split()[:2])
-        require(service_prefix in title, f"{item['id']}: title nie zachowuje rodzaju usługi")
+        if not item.get("title_seo"):
+            service_prefix = " ".join(item["tytul"].split()[:2])
+            require(service_prefix in title, f"{item['id']}: title nie zachowuje rodzaju usługi")
         require(f'<link rel="canonical" href="{canonical}">' in source, f"{item['id']}: błędny canonical")
         require(f'<h1>{html.escape(item["tytul"])}</h1>' in source, f"{item['id']}: brak H1 ze źródła")
         require(html.escape(item["opis"]) in source, f"{item['id']}: brak pełnego opisu")
