@@ -593,7 +593,6 @@ def render_case_page(data: dict, item: dict) -> str:
     related_section = (
         '<section class="section section-muted related-cases"><div class="wrap">'
         '<h2>Podobne realizacje</h2>'
-        '<p class="section-intro">Zobacz także inne wykonane montaże i zabudowy.</p>'
         f'<ul class="related-cases-grid">{"".join(related_cards)}</ul>'
         "</div></section>"
     )

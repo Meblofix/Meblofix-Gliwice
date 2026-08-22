@@ -96,6 +96,10 @@ def main() -> None:
         expected_ids = [candidate["id"] for candidate in expected_related[:3]]
         related_ids = re.findall(r'class="related-case" href="\.\./([^/]+)/"', source)
         require(related_ids == expected_ids, f"{item['id']}: błędna kolejność podobnych realizacji {related_ids}")
+        require(
+            "Zobacz także inne wykonane montaże i zabudowy." not in source,
+            f"{item['id']}: sekcja podobnych realizacji zawiera powtarzalny akapit",
+        )
         for related in expected_related[:3]:
             require(html.escape(related["tytul"]) in source, f"{item['id']}: brak tytułu podobnej realizacji")
             require(html.escape(related["miasto"]) in source, f"{item['id']}: brak miasta podobnej realizacji")
