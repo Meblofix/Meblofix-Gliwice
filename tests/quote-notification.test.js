@@ -8,6 +8,8 @@ const SECRET = 'testowy-sekret-powiadomien-ma-co-najmniej-32-znaki';
 const NOTIFICATION_ENDPOINT = 'https://formspree.io/f/testquoteendpoint';
 const ALLEGRO_URL = 'https://allegro.pl/produkt/lozko-pojedyncze-ikea-hemnes-drewniane-biale-80x200-z-pojemnikiem-34f7722e-546b-437d-a88d-2d618d6728d0?offerId=18281158355';
 const ALLEGRO_NAME = 'IKEA HEMNES łóżko składane, leżanka 3 szufladami biały 80x200';
+const PLANNER_MESSAGE = 'Projekt z planera IKEA wyceniamy indywidualnie. Prześlij dane kontaktowe, a przygotujemy ręczną wycenę na podstawie projektu.';
+const UNSUPPORTED_MESSAGE = 'Podaj link do strony produktu w obsługiwanym sklepie. Jeśli produktu nie ma na liście obsługiwanych sklepów, prześlij dane kontaktowe — przygotujemy wycenę indywidualną.';
 const ALLEGRO_VISIBLE_HTML = `<!doctype html><html><head><meta property="og:title" content="${ALLEGRO_NAME}"></head><body>
   <h1>${ALLEGRO_NAME}</h1>
   <section><h2>Warunki oferty</h2><p>dla biznesu</p><p>cena 1399,00&nbsp;zł</p></section>
@@ -266,23 +268,123 @@ test('próba SSRF nadal jest blokowana bez wykonania pobrania', async () => {
     assert.equal(result.response.status, 200);
     assert.equal(result.data.allConfirmed, false);
     assert.ok(result.data.notificationToken);
-    assert.match(result.data.products[0].error, /Nieprawidłowy lub zablokowany/);
+    assert.equal(result.data.products[0].kind, 'unsupported-url');
+    assert.equal(result.data.products[0].message, UNSUPPORTED_MESSAGE);
     assert.equal(requests.length, 0);
     assert.equal(deliveries.length, 0);
   } finally { restore(); }
 });
 
-test('projekt IKEA Planner pozostaje wyceną indywidualną i dostaje wyłącznie token nieudanej próby', async () => {
+test('link z planera kuchni IKEA uruchamia wycenę indywidualną i poprawnie oznaczone powiadomienie', async () => {
   const deliveries = [];
-  const url = 'https://kitchen.planner.ikea.com/pl/pl/planner/12345678-1234-1234-1234-123456789abc/';
-  const restore = installFetchMock({ products: { [url]: '<!doctype html><html></html>' }, deliveries });
+  const requests = [];
+  const url = 'https://kitchen.planner.ikea.com/pl/pl/planner/Projekt_Kuchni-123/?ref=share';
+  const bindings = env();
+  const restore = installFetchMock({ deliveries, requests });
   try {
-    const result = await calculate(body([{ url, quantity: 1 }]), env(), 'test-planner');
+    const result = await calculate(body([{ url, quantity: 1 }], {
+      city: 'Zabrze', distance: 11, details: 'Montaż całej kuchni.',
+      contact: { name: 'Anna', phone: '500 111 222', email: 'anna@example.com' }
+    }), bindings, 'test-planner');
+    assert.equal(result.response.status, 200);
     assert.equal(result.data.allConfirmed, false);
-    assert.equal(result.data.products[0].kind, 'ikea-project');
+    assert.equal(result.data.products[0].kind, 'ikea-planner');
+    assert.equal(result.data.products[0].plannerType, 'kitchen');
+    assert.equal(result.data.products[0].message, PLANNER_MESSAGE);
+    assert.deepEqual(result.data.individualQuote, { reason: 'ikea_planner', message: PLANNER_MESSAGE });
     assert.ok(result.data.notificationToken);
-    assert.equal((await tokenPayload(result.data.notificationToken, env())).eventType, 'price_not_confirmed');
-    assert.equal(deliveries.length, 0);
+    const signed = await tokenPayload(result.data.notificationToken, bindings);
+    assert.equal(signed.eventType, 'individual_quote');
+    assert.equal(signed.reason, 'ikea_planner');
+    assert.equal(requests.length, 0, 'aplikacja planera nie może być pobierana ani parsowana');
+    const notification = await notify(result.data.notificationToken, bindings);
+    assert.equal(notification.response.status, 200);
+    assert.equal(deliveries.length, 1);
+    assert.equal(deliveries[0]._subject, 'Nowe zapytanie o wycenę indywidualną');
+    assert.equal(deliveries[0].typ_zdarzenia, 'ZAPYTANIE_O_WYCENE_INDYWIDUALNA');
+    assert.equal(deliveries[0].przyczyna, 'ikea_planner');
+    assert.equal(deliveries[0].linki_do_planera_ikea, url);
+    assert.equal(deliveries[0].miejscowosc, 'Zabrze');
+    assert.equal(deliveries[0].odleglosc_od_gliwic_km, '11');
+    assert.equal(deliveries[0].dodatkowe_informacje, 'Montaż całej kuchni.');
+    assert.equal(deliveries[0].imie, 'Anna');
+    assert.equal(deliveries[0].telefon, '500 111 222');
+    assert.equal(deliveries[0].email_klienta, 'anna@example.com');
+    assert.doesNotMatch(deliveries[0].typ_zdarzenia, /NIEUDANA/);
+  } finally { restore(); }
+});
+
+test('oficjalny planer szaf IKEA PAX jest rozpoznawany bez pobierania aplikacji', async () => {
+  const deliveries = [];
+  const requests = [];
+  const url = 'https://www.ikea.com/addon-app/storageone/pax/web/latest/pl/pl/#/projekt-testowy';
+  const restore = installFetchMock({ deliveries, requests });
+  try {
+    const result = await calculate(body([{ url, quantity: 1 }]), env(), 'test-pax-planner');
+    assert.equal(result.response.status, 200);
+    assert.equal(result.data.products[0].kind, 'ikea-planner');
+    assert.equal(result.data.products[0].plannerType, 'pax');
+    assert.equal(result.data.products[0].url, url);
+    assert.equal(result.data.individualQuote.reason, 'ikea_planner');
+    assert.equal(requests.length, 0);
+  } finally { restore(); }
+});
+
+test('zwykły link do produktu IKEA zachowuje automatyczną wycenę', async () => {
+  const deliveries = [];
+  const requests = [];
+  const url = 'https://www.ikea.com/pl/pl/p/test-zwykly-produkt/';
+  const restore = installFetchMock({ products: { [url]: PRODUCT_HTML('Szafka IKEA', 500) }, deliveries, requests });
+  try {
+    const result = await calculate(body([{ url, quantity: 1 }]), env(), 'test-ikea-product-unchanged');
+    assert.equal(result.response.status, 200);
+    assert.equal(result.data.allConfirmed, true);
+    assert.equal(result.data.quote.furniture, 500);
+    assert.equal((await tokenPayload(result.data.notificationToken, env())).eventType, 'automatic_quote');
+    assert.deepEqual(requests.map(item => item.url), [url]);
+  } finally { restore(); }
+});
+
+test('adres spoza allowlisty oferuje wycenę indywidualną bez szczegółów technicznych', async () => {
+  const deliveries = [];
+  const requests = [];
+  const url = 'https://example.com/mebel/test';
+  const restore = installFetchMock({ deliveries, requests });
+  try {
+    const result = await calculate(body([{ url, quantity: 1 }]), env(), 'test-unsupported-url');
+    assert.equal(result.response.status, 200);
+    assert.equal(result.data.products[0].kind, 'unsupported-url');
+    assert.equal(result.data.products[0].message, UNSUPPORTED_MESSAGE);
+    assert.deepEqual(result.data.individualQuote, { reason: 'unsupported_url', message: UNSUPPORTED_MESSAGE });
+    assert.equal((await tokenPayload(result.data.notificationToken, env())).eventType, 'individual_quote');
+    assert.equal(requests.length, 0);
+    assert.doesNotMatch(JSON.stringify(result.data), /SSRF|allowlist|hostname|fetch|stack|exception/i);
+  } finally { restore(); }
+});
+
+test('mieszany zestaw produktu i planera przechodzi jedną ścieżką wyceny indywidualnej', async () => {
+  const deliveries = [];
+  const requests = [];
+  const productUrl = 'https://www.ikea.com/pl/pl/p/test-produkt-mieszany/';
+  const plannerUrl = 'https://kitchen.planner.ikea.com/pl/pl/planner/mixed-project/?ref=share';
+  const bindings = env();
+  const restore = installFetchMock({ products: { [productUrl]: PRODUCT_HTML('Szafka IKEA', 600) }, deliveries, requests });
+  try {
+    const result = await calculate(body([
+      { url: productUrl, quantity: 2 },
+      { url: plannerUrl, quantity: 1 }
+    ]), bindings, 'test-mixed-planner');
+    assert.equal(result.response.status, 200);
+    assert.equal(result.data.allConfirmed, false);
+    assert.equal(result.data.individualQuote.reason, 'ikea_planner');
+    assert.deepEqual(requests.map(item => item.url), [productUrl]);
+    const signed = await tokenPayload(result.data.notificationToken, bindings);
+    assert.equal(signed.eventType, 'individual_quote');
+    assert.deepEqual(signed.inquiry.products.map(product => product.status), ['price_confirmed', 'ikea_planner']);
+    await notify(result.data.notificationToken, bindings);
+    assert.match(deliveries[0].pozycje_zgloszenia, /test-produkt-mieszany/);
+    assert.match(deliveries[0].pozycje_zgloszenia, /mixed-project/);
+    assert.equal(deliveries[0].linki_do_planera_ikea, plannerUrl);
   } finally { restore(); }
 });
 

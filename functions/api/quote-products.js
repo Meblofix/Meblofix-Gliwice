@@ -29,17 +29,19 @@ const ALLOWED_FURNITURE_TYPES = new Set([
   'Kuchnia z gotowych elementów/paczek',
   'Zestaw mebli'
 ]);
-const ALLOWED_HOSTS = new Set([
+const ALLOWED_PRODUCT_HOSTS = new Set([
   'ikea.com', 'www.ikea.com', 'ikea.pl', 'www.ikea.pl',
   'agatameble.pl', 'www.agatameble.pl',
   'brw.pl', 'www.brw.pl',
   'jysk.pl', 'www.jysk.pl',
-  'allegro.pl', 'www.allegro.pl',
-  'kitchen.planner.ikea.com'
+  'allegro.pl', 'www.allegro.pl'
 ]);
 
-const IKEA_PLANNER_HOSTS = ['kitchen.planner.ikea.com'];
 const ALLEGRO_HOSTS = new Set(['allegro.pl', 'www.allegro.pl']);
+const INDIVIDUAL_QUOTE_MESSAGES = Object.freeze({
+  ikea_planner: 'Projekt z planera IKEA wyceniamy indywidualnie. Prześlij dane kontaktowe, a przygotujemy ręczną wycenę na podstawie projektu.',
+  unsupported_url: 'Podaj link do strony produktu w obsługiwanym sklepie. Jeśli produktu nie ma na liście obsługiwanych sklepów, prześlij dane kontaktowe — przygotujemy wycenę indywidualną.'
+});
 const FETCH_HEADERS = Object.freeze({
   Accept: 'text/html,application/xhtml+xml',
   'Accept-Language': 'pl-PL,pl;q=0.9,en;q=0.5',
@@ -104,10 +106,6 @@ function isGliwice(city) {
   return city.toLocaleLowerCase('pl-PL') === 'gliwice';
 }
 
-function isIkeaPlanner(url) {
-  return IKEA_PLANNER_HOSTS.includes(url.hostname.toLowerCase()) && /^\/pl\/pl\/planner\/[0-9a-f-]{20,}(?:\/|$)/i.test(url.pathname);
-}
-
 function isPrivateHost(hostname) {
   const host = hostname.toLowerCase().replace(/^\[|\]$/g, '');
   if (host === 'localhost' || host.endsWith('.localhost') || host === '::1' || host === '0.0.0.0') return true;
@@ -122,14 +120,32 @@ function isPrivateHost(hostname) {
   return false;
 }
 
-function validUrl(value) {
+function safeHttpsUrl(value) {
   try {
     const url = new URL(value);
     if (url.protocol !== 'https:' || url.username || url.password || isPrivateHost(url.hostname) || url.port && url.port !== '443') return null;
-    if (!ALLOWED_HOSTS.has(url.hostname.toLowerCase())) return null;
-    url.hash = '';
     return url;
   } catch { return null; }
+}
+
+function ikeaPlanner(value) {
+  const url = safeHttpsUrl(value);
+  if (!url) return null;
+  const hostname = url.hostname.toLowerCase();
+  if (hostname === 'kitchen.planner.ikea.com' && /^\/pl\/pl\/planner\/[a-z0-9_-]+(?:\/|$)/i.test(url.pathname)) {
+    return { url, plannerType: 'kitchen', store: 'IKEA Kitchen Planner', name: 'Projekt kuchni IKEA' };
+  }
+  if (hostname === 'www.ikea.com' && /^\/addon-app\/storageone\/pax\/web\/latest\/pl\/pl(?:\/|$)/i.test(url.pathname)) {
+    return { url, plannerType: 'pax', store: 'IKEA PAX Planner', name: 'Projekt szafy IKEA PAX' };
+  }
+  return null;
+}
+
+function validUrl(value) {
+  const url = safeHttpsUrl(value);
+  if (!url || !ALLOWED_PRODUCT_HOSTS.has(url.hostname.toLowerCase())) return null;
+  url.hash = '';
+  return url;
 }
 
 function allegroOfferId(url) {
@@ -319,21 +335,28 @@ async function fetchProductHtml(startUrl, signal) {
 }
 
 async function resolveProduct(rawUrl) {
+  const planner = ikeaPlanner(rawUrl);
+  if (planner) {
+    return {
+      url: planner.url.toString(),
+      kind: 'ikea-planner',
+      plannerType: planner.plannerType,
+      store: planner.store,
+      name: planner.name,
+      message: INDIVIDUAL_QUOTE_MESSAGES.ikea_planner
+    };
+  }
   const url = validUrl(rawUrl);
-  if (!url) return { url: cleanText(rawUrl, 2048), error: 'Nieprawidłowy lub zablokowany adres URL.' };
+  if (!url) {
+    return {
+      url: cleanText(rawUrl, 2048),
+      kind: 'unsupported-url',
+      message: INDIVIDUAL_QUOTE_MESSAGES.unsupported_url
+    };
+  }
   const isAllegro = ALLEGRO_HOSTS.has(url.hostname.toLowerCase());
   const offerId = isAllegro ? allegroOfferId(url) : null;
   if (isAllegro && !offerId) return { url: url.toString(), store: 'Allegro', error: 'Nieprawidłowy link do oferty Allegro.' };
-  if (isIkeaPlanner(url)) {
-    const projectId = url.pathname.split('/').filter(Boolean).at(-1) || null;
-    return {
-      url: url.toString(),
-      kind: 'ikea-project',
-      store: 'IKEA Kitchen Planner',
-      project: { name: 'Projekt IKEA Kitchen Planner', projectId, itemCount: null, products: [], total: null },
-      error: 'Projekt IKEA został rozpoznany, ale nie możemy automatycznie odczytać jego wartości. Ten projekt wymaga indywidualnej wyceny.'
-    };
-  }
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
@@ -438,9 +461,10 @@ export async function verifyQuoteToken(token, env) {
     payload?.v !== 1
     || typeof payload.quoteId !== 'string'
     || !/^[0-9a-f-]{36}$/i.test(payload.quoteId)
-    || !['automatic_quote', 'price_not_confirmed'].includes(payload.eventType || (payload.quote ? 'automatic_quote' : ''))
+    || !['automatic_quote', 'price_not_confirmed', 'individual_quote'].includes(payload.eventType || (payload.quote ? 'automatic_quote' : ''))
     || ((payload.eventType || 'automatic_quote') === 'automatic_quote' && !payload.quote)
     || (payload.eventType === 'price_not_confirmed' && (!payload.attempt || payload.reason !== 'price_not_confirmed'))
+    || (payload.eventType === 'individual_quote' && (!payload.inquiry || !['ikea_planner', 'unsupported_url'].includes(payload.reason)))
     || !payload.context
     || !Number.isFinite(payload.issuedAt)
     || !Number.isFinite(payload.expiresAt)
@@ -523,6 +547,42 @@ export async function onRequestPost({ request, env }) {
     const clientFingerprint = await sha256(`${request.headers.get('cf-connecting-ip') || 'unknown'}|${request.headers.get('user-agent') || 'unknown'}`);
     const quoteId = crypto.randomUUID();
     const dedupeKey = await notificationKey(clientFingerprint, { items, extraServices, context }, issuedAt);
+    const plannerProducts = products.filter(product => product.kind === 'ikea-planner');
+    const unsupportedProducts = products.filter(product => product.kind === 'unsupported-url');
+    if (plannerProducts.length || unsupportedProducts.length) {
+      const reason = plannerProducts.length ? 'ikea_planner' : 'unsupported_url';
+      let notificationToken = null;
+      if (notificationSecret(env)) {
+        const inquiry = {
+          products: products.map(product => ({
+            url: product.url,
+            quantity: product.quantity,
+            ...(product.name ? { name: product.name } : {}),
+            ...(product.plannerType ? { plannerType: product.plannerType } : {}),
+            status: product.kind === 'ikea-planner'
+              ? 'ikea_planner'
+              : product.kind === 'unsupported-url'
+                ? 'unsupported_url'
+                : product.error
+                  ? 'price_not_confirmed'
+                  : 'price_confirmed'
+          })),
+          extraServices
+        };
+        notificationToken = await signQuote({
+          v: 1, eventType: 'individual_quote', reason, quoteId,
+          notificationKey: dedupeKey, clientFingerprint, issuedAt, expiresAt: issuedAt + TOKEN_LIFETIME_MS,
+          inquiry, context
+        }, env);
+      }
+      return jsonResponse({
+        products,
+        allConfirmed: false,
+        individualQuote: { reason, message: INDIVIDUAL_QUOTE_MESSAGES[reason] },
+        notificationToken,
+        quoteId
+      });
+    }
     if (!allConfirmed) {
       let notificationToken = null;
       if (notificationSecret(env)) {

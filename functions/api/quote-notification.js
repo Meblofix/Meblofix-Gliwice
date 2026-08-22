@@ -149,6 +149,26 @@ function attemptProductLines(products) {
   ].join('\n')).join('\n\n');
 }
 
+function individualProductLines(products) {
+  const statuses = {
+    ikea_planner: 'projekt z planera IKEA — wycena indywidualna',
+    unsupported_url: 'link spoza obsługiwanych stron produktów — wycena indywidualna',
+    price_not_confirmed: 'cena niepotwierdzona',
+    price_confirmed: 'cena produktu potwierdzona'
+  };
+  return products.map((product, index) => [
+    `${index + 1}. ${product.name || 'Pozycja bez potwierdzonej nazwy'}`,
+    `Link: ${product.url}`,
+    `Ilość: ${product.quantity}`,
+    `Status: ${statuses[product.status] || 'wycena indywidualna'}`
+  ].join('\n')).join('\n\n');
+}
+
+function ikeaPlannerLinks(products) {
+  const links = products.filter(product => product.status === 'ikea_planner').map(product => product.url);
+  return links.length ? links.join('\n') : 'Nie dotyczy';
+}
+
 function attemptExtraServiceLines(services) {
   if (!Array.isArray(services) || services.length === 0) return 'Nie wybrano';
   return services.map((service, index) => [
@@ -205,10 +225,32 @@ export function failedAttemptNotificationFields(payload) {
   return fields;
 }
 
+export function individualQuoteNotificationFields(payload) {
+  const { inquiry, context } = payload;
+  const fields = new FormData();
+  setMailField(fields, '_subject', 'Nowe zapytanie o wycenę indywidualną');
+  setMailField(fields, 'typ_zdarzenia', 'ZAPYTANIE_O_WYCENE_INDYWIDUALNA');
+  setMailField(fields, 'data_i_godzina', polishDate(payload.issuedAt));
+  setMailField(fields, 'identyfikator_zapytania', payload.quoteId);
+  setMailField(fields, 'przyczyna', payload.reason);
+  setMailField(fields, 'pozycje_zgloszenia', individualProductLines(inquiry.products));
+  setMailField(fields, 'linki_do_planera_ikea', ikeaPlannerLinks(inquiry.products));
+  setMailField(fields, 'uslugi_dodatkowe', attemptExtraServiceLines(inquiry.extraServices));
+  setMailField(fields, 'miejscowosc', context.city, 80);
+  setMailField(fields, 'odleglosc_od_gliwic_km', String(context.distance), 32);
+  setMailField(fields, 'rodzaj_mebla', context.furnitureType, 80);
+  setMailField(fields, 'dodatkowe_informacje', context.details || 'Nie podano', 2_000);
+  setMailField(fields, 'imie', context.contact.name || 'Nie podano', 80);
+  setMailField(fields, 'telefon', context.contact.phone || 'Nie podano', 20);
+  setMailField(fields, 'email_klienta', context.contact.email || 'Nie podano', 254);
+  setMailField(fields, 'wynik', 'Zapytanie skierowano do ręcznej wyceny. Nie wygenerowano automatycznej kwoty.');
+  return fields;
+}
+
 function notificationFields(payload) {
-  return payload.eventType === 'price_not_confirmed'
-    ? failedAttemptNotificationFields(payload)
-    : automaticNotificationFields(payload);
+  if (payload.eventType === 'price_not_confirmed') return failedAttemptNotificationFields(payload);
+  if (payload.eventType === 'individual_quote') return individualQuoteNotificationFields(payload);
+  return automaticNotificationFields(payload);
 }
 
 function cleanupMemory(now) {
