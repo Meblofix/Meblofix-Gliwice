@@ -16,15 +16,16 @@ bash scripts/build-cloudflare.sh
 npx --no-install wrangler pages dev dist \
   --kv QUOTE_NOTIFICATION_KV \
   --binding QUOTE_NOTIFICATION_SECRET=lokalny-sekret-o-dlugosci-minimum-32-znakow \
-  --binding QUOTE_NOTIFICATION_FORMSPREE_ENDPOINT=https://formspree.io/f/lokalnytest \
-  --binding QUOTE_NOTIFICATION_MODE=test \
+  --binding NOTIFICATION_DRY_RUN=1 \
   --ip 127.0.0.1 \
   --port 8788
 ```
 
 Adres podglądu: http://127.0.0.1:8788
 
-`QUOTE_NOTIFICATION_MODE=test` zatrzymuje wysyłkę przed Formspree. Nie używaj
+`NOTIFICATION_DRY_RUN=1` zachowuje walidację podpisanego tokenu, kontrolę KV,
+limity, deduplikację i budowę pól powiadomienia, ale nie wykonuje żądania do
+Formspree. Odpowiedź zawiera wyłącznie nazwy pól, bez ich wartości. Nie używaj
 tej zmiennej w produkcji.
 
 Projekt przypina `wrangler` w wersji `4.120.0` w `devDependencies` i
@@ -153,6 +154,11 @@ Cloudflare Pages musi mieć skonfigurowane:
 - binding KV `QUOTE_NOTIFICATION_KV` do deduplikacji i limitowania wysyłki,
 - zaszyfrowaną zmienną `QUOTE_NOTIFICATION_FORMSPREE_ENDPOINT` z pełnym adresem
   osobnego formularza Formspree przeznaczonego tylko do automatycznych powiadomień.
+
+Opcjonalna zmienna `NOTIFICATION_DRY_RUN=1` jest przeznaczona wyłącznie dla
+preview. Pomija wymóg endpointu Formspree i samą wysyłkę, ale nadal wymaga
+`QUOTE_NOTIFICATION_SECRET` oraz `QUOTE_NOTIFICATION_KV`, aby sprawdzić tę samą
+ścieżkę podpisu, walidacji, limitowania i deduplikacji co normalne powiadomienie.
 
 Kalkulator obsługuje backendowy schemat `extraServices` (`serviceId` i
 `quantity`). Frontend nie zawiera ani nie przesyła cen jednostkowych: wszystkie

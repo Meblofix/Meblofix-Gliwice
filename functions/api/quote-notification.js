@@ -252,10 +252,12 @@ async function deliver(payload, env, endpoint) {
   if (await alreadySent(env, payload)) return jsonResponse({ sent: false, error: 'notification-already-sent' }, { status: 409 });
   if (!await checkRateLimit(env, payload.clientFingerprint, now)) return jsonResponse({ sent: false, error: 'rate-limit' }, { status: 429 });
 
-  if (env.QUOTE_NOTIFICATION_MODE !== 'test') {
+  const fields = notificationFields(payload);
+  const dryRun = env.NOTIFICATION_DRY_RUN === '1';
+  if (!dryRun && env.QUOTE_NOTIFICATION_MODE !== 'test') {
     const response = await fetch(endpoint, {
       method: 'POST',
-      body: notificationFields(payload),
+      body: fields,
       headers: { Accept: 'application/json' }
     });
     if (!response.ok) return jsonResponse({ sent: false, error: 'delivery-failed' }, { status: 502 });
@@ -267,6 +269,14 @@ async function deliver(payload, env, endpoint) {
   // natomiast inFlight chroni dodatkowo równoległe wywołania w tym samym isolate.
   await env.QUOTE_NOTIFICATION_KV.put(`notification:${payload.quoteId}`, '1', { expirationTtl: NOTIFICATION_RECORD_TTL_SECONDS });
   await env.QUOTE_NOTIFICATION_KV.put(`notification-dedupe:${key}`, '1', { expirationTtl: NOTIFICATION_RECORD_TTL_SECONDS });
+  if (dryRun) {
+    return jsonResponse({
+      sent: false,
+      dryRun: true,
+      mode: 'notification-dry-run',
+      fields: [...fields.keys()]
+    }, { status: 200 });
+  }
   return jsonResponse({ sent: true, testMode: env.QUOTE_NOTIFICATION_MODE === 'test' }, { status: 200 });
 }
 
@@ -280,8 +290,9 @@ export async function onRequestPost({ request, env }) {
     return jsonResponse({ sent: false, error: 'invalid-token' }, { status: 400 });
   }
   if (!env?.QUOTE_NOTIFICATION_KV) return jsonResponse({ sent: false, error: 'notification-not-configured' }, { status: 503 });
+  const dryRun = env.NOTIFICATION_DRY_RUN === '1';
   const endpoint = configuredFormspreeEndpoint(env);
-  if (!endpoint) return jsonResponse({ sent: false, error: 'notification-not-configured' }, { status: 503 });
+  if (!dryRun && !endpoint) return jsonResponse({ sent: false, error: 'notification-not-configured' }, { status: 503 });
 
   let allowed;
   try {
