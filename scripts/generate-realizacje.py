@@ -436,6 +436,50 @@ def related_realizations(data: dict, item: dict, limit: int = 3) -> list[dict]:
     return (same_category + remaining)[:limit]
 
 
+def render_case_image_objects(item: dict, page_url: str) -> str:
+    gallery_url = page_url + "#galeria"
+    graph: list[dict] = [
+        {
+            "@type": "ImageGallery",
+            "@id": gallery_url,
+            "url": gallery_url,
+            "name": gallery_name(item),
+            "description": item["opis"],
+            "inLanguage": "pl",
+            "isPartOf": page_url,
+            "hasPart": [
+                {"@id": page_url + "#zdjecie-" + photo["plik"]} for photo in item["zdjecia"]
+            ],
+        }
+    ]
+    for photo in item["zdjecia"]:
+        content_path = image_path(item, photo["plik"], 800, "jpg")
+        thumbnail_path = image_path(item, photo["plik"], 400, "jpg")
+        width, height = jpeg_size(ROOT / content_path)
+        graph.append(
+            {
+                "@type": "ImageObject",
+                "@id": page_url + "#zdjecie-" + photo["plik"],
+                "contentUrl": SITE_URL + content_path,
+                "thumbnailUrl": SITE_URL + thumbnail_path,
+                "width": width,
+                "height": height,
+                "caption": photo["alt"],
+                "name": photo["alt"],
+                "isPartOf": {"@id": gallery_url},
+                "contentLocation": {"@type": "Place", "name": item["miasto"]},
+                "datePublished": item["data"],
+                "creator": {"@type": "Organization", "name": "MebloFix Gliwice"},
+                "creditText": "MebloFix Gliwice",
+                "copyrightNotice": "MebloFix Gliwice",
+                "license": SITE_URL + "licencja-zdjec/",
+                "acquireLicensePage": SITE_URL + "licencja-zdjec/",
+            }
+        )
+    payload = json.dumps({"@context": "https://schema.org", "@graph": graph}, ensure_ascii=False, indent=2)
+    return f'<script type="application/ld+json">\n{payload}\n</script>'
+
+
 def render_case_page(data: dict, item: dict) -> str:
     photos = item["zdjecia"]
     photo_by_base = {photo["plik"]: photo for photo in photos}
@@ -460,6 +504,7 @@ def render_case_page(data: dict, item: dict) -> str:
         ensure_ascii=False,
         indent=2,
     )
+    image_objects = render_case_image_objects(item, page_url)
 
     facts = [item["miasto"], data["kategorie"][item["kategoria"]]]
     if item.get("marka"):
@@ -568,6 +613,7 @@ def render_case_page(data: dict, item: dict) -> str:
 <script type="application/ld+json">
 {breadcrumb}
 </script>
+{image_objects}
 </head>
 <body>
 <a class="skip-link" href="#main-content">Przejdź do treści</a>
@@ -579,7 +625,7 @@ def render_case_page(data: dict, item: dict) -> str:
 <main id="main-content" tabindex="-1">
   <article>
     <header class="hero"><div class="wrap"><div class="eyebrow">Realizacja · {escape(item["miasto"])}</div><h1>{escape(item["tytul"])}</h1><p class="lead">{escape(item["opis"])}</p><div class="facts">{facts_html}</div></div></header>
-    <section class="section"><div class="wrap"><h2>Zdjęcia realizacji</h2><p class="section-intro">Galeria zawiera {len(photos)} zdjęć z tego zlecenia.</p><ul class="gallery">{"".join(gallery)}</ul></div></section>
+    <section class="section" id="galeria"><div class="wrap"><h2>Zdjęcia realizacji</h2><p class="section-intro">Galeria zawiera {len(photos)} zdjęć z tego zlecenia.</p><ul class="gallery">{"".join(gallery)}</ul></div></section>
     {comparisons_html}
     <section class="section"><div class="wrap"><h2>Podobny montaż</h2><p class="section-intro">Podeślij zdjęcia, instrukcję lub linki do produktów, aby otrzymać orientacyjną wycenę.</p><div class="links"><a class="cta" href="../../#kalkulator">Wyceń podobny montaż</a>{"".join(unique_links)}</div></div></section>
     {related_section}

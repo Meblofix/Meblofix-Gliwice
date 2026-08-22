@@ -51,6 +51,20 @@ def main() -> None:
         require('"@type": "BreadcrumbList"' in source, f"{item['id']}: brak BreadcrumbList")
         require('<dialog class="case-lightbox"' in source, f"{item['id']}: brak dostępnego lightboxa")
         require('src="../../js/realizacje.js"' in source, f"{item['id']}: brak wspólnego skryptu galerii")
+        schemas = [json.loads(payload) for payload in re.findall(
+            r'<script type="application/ld\+json">\s*(.*?)\s*</script>', source, flags=re.DOTALL
+        )]
+        image_objects = [
+            node
+            for schema in schemas
+            for node in schema.get("@graph", [])
+            if node.get("@type") == "ImageObject"
+        ]
+        require(len(image_objects) == len(item["zdjecia"]), f"{item['id']}: błędna liczba ImageObject")
+        for image_object in image_objects:
+            require(image_object.get("contentUrl", "").startswith("https://meblofix-gliwice.pl/img/realizacje/"), f"{item['id']}: błędny contentUrl")
+            require(image_object.get("license") == "https://meblofix-gliwice.pl/licencja-zdjec/", f"{item['id']}: błędna licencja")
+            require(image_object.get("acquireLicensePage") == "https://meblofix-gliwice.pl/licencja-zdjec/", f"{item['id']}: błędna strona pozyskania licencji")
         for photo in item["zdjecia"]:
             require(html.escape(photo["alt"], quote=True) in source, f"{item['id']}: brak alt {photo['plik']}")
             require(f'{photo["plik"]}-1200.jpg' in source, f"{item['id']}: brak pełnego zdjęcia {photo['plik']}")
@@ -74,6 +88,7 @@ def main() -> None:
     redirects = (args.dist / "_redirects").read_text(encoding="utf-8")
     require("/realizacje/*" not in redirects, "Wildcard nadal przechwytuje strony realizacji")
     homepage = (args.dist / "index.html").read_text(encoding="utf-8")
+    require('"@type": "ImageObject"' not in homepage, "Homepage ponownie zawiera ImageObject")
     linked = set(re.findall(r'href="realizacje/([^/]+)/"', homepage))
     require(linked == ids, "Homepage nie linkuje do wszystkich trwałych stron realizacji")
     print(f"OK: {len(ids)} trwałych stron realizacji, galerie, porównania, CTA i breadcrumb")
