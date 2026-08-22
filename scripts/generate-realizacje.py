@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parent.parent
 DATA_PATH = ROOT / "data" / "realizacje.json"
 SITE_URL = "https://meblofix-gliwice.pl/"
 SIZES = (400, 800, 1200, 1600)
+MAX_CASE_TITLE_LENGTH = 60
 
 MARKERS = {
     "image_objects": ("<!-- REALIZACJE_IMAGEOBJECT:START -->", "<!-- REALIZACJE_IMAGEOBJECT:END -->"),
@@ -72,6 +73,22 @@ def gallery_id(item: dict) -> str:
 def gallery_name(item: dict) -> str:
     title = item["tytul"].rstrip()
     return title if title.endswith(item["miasto"]) else f'{title} — {item["miasto"]}'
+
+
+def case_page_title(item: dict) -> str:
+    suffix = f' — {item["miasto"]} | MebloFix'
+    available = MAX_CASE_TITLE_LENGTH - len(suffix)
+    if available < 12:
+        raise ValueError(f'Miasto jest za długie dla title realizacji: {item["miasto"]}')
+    service = item["tytul"].strip()
+    for separator in (" — ", " – ", " - "):
+        city_suffix = separator + item["miasto"]
+        if service.endswith(city_suffix):
+            service = service[: -len(city_suffix)].rstrip()
+            break
+    if len(service) > available:
+        service = service[: available - 1].rsplit(" ", 1)[0].rstrip(".,;:—-") + "…"
+    return service + suffix
 
 
 def image_id(item: dict, photo: dict) -> str:
@@ -418,7 +435,7 @@ def render_case_page(data: dict, item: dict) -> str:
     cover = photo_by_base[item["okladka"]]
     slug = item["id"]
     page_url = f"{SITE_URL}realizacje/{slug}/"
-    title = f'{item["tytul"]} — {item["miasto"]} | MebloFix'
+    title = case_page_title(item)
     description = f'{item["tytul"]} w {item["miasto"]}. {item["opis"]}'
     if len(description) > 158:
         description = description[:155].rsplit(" ", 1)[0] + "…"

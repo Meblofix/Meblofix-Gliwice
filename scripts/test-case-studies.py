@@ -35,6 +35,14 @@ def main() -> None:
         page = pages_dir / item["id"] / "index.html"
         source = page.read_text(encoding="utf-8")
         canonical = f'https://meblofix-gliwice.pl/realizacje/{item["id"]}/'
+        title_match = re.search(r"<title>(.*?)</title>", source)
+        require(title_match is not None, f"{item['id']}: brak title")
+        title = html.unescape(title_match.group(1))
+        require(len(title) <= 60, f"{item['id']}: title ma {len(title)} znaków")
+        require(item["miasto"] in title, f"{item['id']}: title nie zawiera miasta")
+        require(title.count(item["miasto"]) == 1, f"{item['id']}: title powiela miasto")
+        service_prefix = " ".join(item["tytul"].split()[:2])
+        require(service_prefix in title, f"{item['id']}: title nie zachowuje rodzaju usługi")
         require(f'<link rel="canonical" href="{canonical}">' in source, f"{item['id']}: błędny canonical")
         require(f'<h1>{html.escape(item["tytul"])}</h1>' in source, f"{item['id']}: brak H1 ze źródła")
         require(html.escape(item["opis"]) in source, f"{item['id']}: brak pełnego opisu")
