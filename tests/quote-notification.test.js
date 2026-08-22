@@ -462,6 +462,24 @@ test('podrobiony token i brak magazynu antyspamowego są odrzucane', async () =>
   assert.equal(missingKv.response.status, 503);
 });
 
+test('brak wymaganego tokenu zwraca 400 z czytelnym błędem', async () => {
+  const response = await notifyQuote({
+    request: request('/api/quote-notification', {}),
+    env: env()
+  });
+  assert.equal(response.status, 400);
+  assert.deepEqual(await response.json(), { sent: false, error: 'invalid-token' });
+});
+
+test('brak konfiguracji powiadomień zwraca 503 z czytelnym błędem', async () => {
+  const response = await notifyQuote({
+    request: request('/api/quote-notification', { token: 'dowolny' }),
+    env: {}
+  });
+  assert.equal(response.status, 503);
+  assert.deepEqual(await response.json(), { sent: false, error: 'notification-not-configured' });
+});
+
 test('brak osobnego endpointu Formspree daje kontrolowany błąd bez wysyłki', async () => {
   const deliveries = [];
   const url = 'https://www.ikea.com/pl/pl/p/test-missing-endpoint/';
@@ -474,6 +492,47 @@ test('brak osobnego endpointu Formspree daje kontrolowany błąd bez wysyłki', 
     assert.equal(notification.response.status, 503);
     assert.equal(notification.data.error, 'notification-not-configured');
     assert.equal(deliveries.length, 0);
+  } finally { restore(); }
+});
+
+test('NOTIFICATION_DRY_RUN przechodzi pełną logikę bez próby wysyłki', async () => {
+  const deliveries = [];
+  const url = 'https://www.ikea.com/pl/pl/p/test-dry-run/';
+  const restore = installFetchMock({ products: { [url]: PRODUCT_HTML('Szafa dry-run', 1000) }, deliveries });
+  try {
+    const bindings = env({
+      NOTIFICATION_DRY_RUN: '1',
+      QUOTE_NOTIFICATION_FORMSPREE_ENDPOINT: ''
+    });
+    const result = await calculate(body([{ url, quantity: 1 }]), bindings, 'test-dry-run');
+    const notification = await notify(result.data.notificationToken, bindings);
+    assert.equal(notification.response.status, 200);
+    assert.equal(notification.data.sent, false);
+    assert.equal(notification.data.dryRun, true);
+    assert.equal(notification.data.mode, 'notification-dry-run');
+    assert.deepEqual(notification.data.fields, [
+      '_subject',
+      'typ_zdarzenia',
+      'data_i_godzina',
+      'identyfikator_wyceny',
+      'produkty',
+      'laczna_wartosc_produktow',
+      'koszt_montazu',
+      'uslugi_dodatkowe',
+      'laczny_koszt_uslug_dodatkowych',
+      'koszt_dojazdu',
+      'laczna_orientacyjna_wycena',
+      'miejscowosc',
+      'odleglosc_od_gliwic_km',
+      'rodzaj_mebla',
+      'dodatkowe_informacje',
+      'imie',
+      'telefon',
+      'email_klienta',
+      'dane_techniczne'
+    ]);
+    assert.equal(deliveries.length, 0);
+    assert.equal(await bindings.QUOTE_NOTIFICATION_KV.get(`notification:${result.data.quoteId}`), '1');
   } finally { restore(); }
 });
 
@@ -762,6 +821,35 @@ test('frontend nie zawiera reguły procentowej ani technicznego minimum', async 
   assert.doesNotMatch(serviceUi, /\b(?:60|80|100)\s*zł|unitPrice|price|value/);
   assert.match(serviceUi, /sink_cutout/);
   assert.match(serviceUi, /hood_install/);
+});
+
+test('frontend i quote-products zachowują zgodny kontrakt payloadu kalkulatora', async () => {
+  const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
+  const backend = await readFile(new URL('../functions/api/quote-products.js', import.meta.url), 'utf8');
+  const start = html.indexOf('const requestData = {');
+  const end = html.indexOf('\n    };', start);
+  assert.ok(start >= 0 && end > start, 'brak payloadu requestData kalkulatora');
+  const frontendPayload = html.slice(start, end);
+  for (const pattern of [
+    /\bitems\b/,
+    /extraServices:\s*selectedExtraServices\(\)/,
+    /city:\s*quoteCityField\.value\.trim\(\)/,
+    /distance:\s*Number\(quoteDistanceField\.value\)/,
+    /furnitureType:\s*quoteServiceField\.value/,
+    /details:\s*quoteDetailsField\.value\.trim\(\)/,
+    /contact:\s*\{\s*name:/
+  ]) assert.match(frontendPayload, pattern);
+  for (const pattern of [
+    /body\?\.items/,
+    /body\?\.extraServices/,
+    /body\?\.city/,
+    /body\?\.distance/,
+    /body\?\.furnitureType/,
+    /body\?\.details/,
+    /body\?\.contact\?\.name/,
+    /body\?\.contact\?\.phone/,
+    /body\?\.contact\?\.email/
+  ]) assert.match(backend, pattern);
 });
 
 test('CTA jest w polach kalkulatora przed kontaktem i awaria powiadomienia nie czyści wyniku', async () => {
