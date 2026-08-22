@@ -92,7 +92,9 @@ def case_page_title(item: dict) -> str:
             service = service[: -len(city_suffix)].rstrip()
             break
     if len(service) > available:
-        service = service[: available - 1].rsplit(" ", 1)[0].rstrip(".,;:—-") + "…"
+        service = service[:available].rsplit(" ", 1)[0].rstrip(".,;:—-")
+        while service and len(service.rsplit(" ", 1)[-1]) < 3:
+            service = service.rsplit(" ", 1)[0].rstrip(".,;:—-")
     return service + suffix
 
 

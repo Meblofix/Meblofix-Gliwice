@@ -199,6 +199,15 @@ def main() -> int:
             errors.append(f"{path}: brak title")
         else:
             titles[parsed_page.title.casefold()].append(path)
+            if path.startswith("/realizacje/"):
+                if len(parsed_page.title) > 60:
+                    errors.append(f"{path}: title ma {len(parsed_page.title)} znaków, maksimum to 60")
+                title_base = parsed_page.title.split(" — ", 1)[0].strip()
+                if title_base.endswith(("…", "...")):
+                    errors.append(f"{path}: title ma urwane zakończenie {title_base!r}")
+                title_words = re.findall(r"\w+", title_base, flags=re.UNICODE)
+                if title_words and len(title_words[-1]) < 3:
+                    errors.append(f"{path}: ostatnie słowo przed separatorem jest za krótkie: {title_words[-1]!r}")
         if not parsed_page.description:
             errors.append(f"{path}: brak meta description")
         is_noindex = "noindex" in parsed_page.robots.lower()
