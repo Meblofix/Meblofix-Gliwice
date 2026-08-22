@@ -18,6 +18,11 @@ from xml.etree import ElementTree
 SITE_ORIGIN = "https://meblofix-gliwice.pl"
 SITEMAP_NS = {"sm": "http://www.sitemaps.org/schemas/sitemap/0.9"}
 IGNORED_SCHEMES = ("mailto:", "tel:", "javascript:", "data:")
+EXPECTED_BLOG_DATES = {
+    "/blog/bledy-przy-montazu-ikea/": "2024-12-01",
+    "/blog/jak-dbac-o-meble/": "2025-01-01",
+    "/blog/jak-usunac-rysy-z-mebli/": "2025-02-01",
+}
 
 
 class PageParser(HTMLParser):
@@ -247,6 +252,12 @@ def main() -> int:
                             errors.append(f"{path}: BreadcrumbList ma mniej niż 2 elementy")
                         if positions != list(range(1, len(items) + 1)):
                             errors.append(f"{path}: nieciągłe pozycje BreadcrumbList: {positions}")
+                    elif schema_type == "BlogPosting":
+                        expected_date = EXPECTED_BLOG_DATES.get(path)
+                        if expected_date and node.get("datePublished") != expected_date:
+                            errors.append(
+                                f"{path}: datePublished {node.get('datePublished')!r}, oczekiwano {expected_date}"
+                            )
                     if schema_type == "LocalBusiness":
                         local_business_nodes.append((path, node))
                         for forbidden in ("aggregateRating", "review", "serviceArea", "geo"):
