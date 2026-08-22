@@ -279,12 +279,7 @@ def main() -> int:
             if parsed.netloc and parsed.netloc != "meblofix-gliwice.pl":
                 continue
             target_path = parsed.path or "/"
-            if (
-                target_path == "/realizacje"
-                or target_path == "/realizacje/"
-                or target_path.startswith("/realizacje/")
-                or (not target_path.endswith("/") and target_path + "/" in pages)
-            ):
+            if not target_path.endswith("/") and target_path + "/" in pages:
                 redirected_links.add((source_path, href))
             file = target_file(target_path, dist)
             if not file.is_file():

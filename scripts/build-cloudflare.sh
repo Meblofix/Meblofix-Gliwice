@@ -38,7 +38,8 @@ done
 
 python3 "$PROJECT_DIR/scripts/generate-realizacje.py" \
   --template "$PROJECT_DIR/index.html" \
-  --output "$DIST_DIR/index.html"
+  --output "$DIST_DIR/index.html" \
+  --pages-dir "$DIST_DIR/realizacje"
 
 shopt -s nullglob
 
@@ -75,6 +76,7 @@ while IFS= read -r -d '' image_file; do
 done < <(find "$PROJECT_DIR/img" -type f ! -path "$PROJECT_DIR/img/realizacje/_surowe/*" -print0)
 
 python3 "$PROJECT_DIR/scripts/test-realizacje.py" --html "$DIST_DIR/index.html"
+python3 "$PROJECT_DIR/scripts/test-case-studies.py" --dist "$DIST_DIR"
 python3 "$PROJECT_DIR/scripts/test-cennik.py"
 python3 "$PROJECT_DIR/scripts/test-seo.py" --dist "$DIST_DIR"
 
@@ -83,7 +85,7 @@ trap 'rm -rf -- "$FUNCTIONS_TEMP_DIR"' EXIT
 
 (
   cd "$PROJECT_DIR"
-  npx --no-install wrangler pages functions build "$PROJECT_DIR/functions" \
+  WRANGLER_LOG_PATH="$FUNCTIONS_TEMP_DIR/wrangler.log" npx --no-install wrangler pages functions build "$PROJECT_DIR/functions" \
     --project-directory "$PROJECT_DIR" \
     --outdir "$FUNCTIONS_TEMP_DIR/_worker.js" \
     --output-routes-path "$FUNCTIONS_TEMP_DIR/_routes.json"

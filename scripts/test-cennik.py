@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parent.parent
 DIST = ROOT / "dist"
 CONFIG_PATH = ROOT / "data" / "cennik.json"
 RENDER_PATH = ROOT / "scripts" / "render-public-config.py"
+sys.dont_write_bytecode = True
 
 
 def require(condition: bool, message: str) -> None:

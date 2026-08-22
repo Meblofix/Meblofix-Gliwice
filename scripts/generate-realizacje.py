@@ -201,8 +201,9 @@ def render_cards(data: dict) -> str:
                 f'          <span class="work-count">{count_label}</span>',
                 "        </span>",
                 "      </a>",
+                f'      <p class="work-page-link"><a class="work-case-link" href="realizacje/{escape(item["id"])}/">Opis i wszystkie zdjęcia ({len(photos)})</a></p>',
                 '      <details class="work-details">',
-                f'        <summary>Opis i wszystkie zdjęcia ({len(photos)})</summary>',
+                '        <summary>Skrócony opis i podgląd galerii</summary>',
                 f'        <p class="work-description">{escape(item["opis"])}</p>',
             ]
         )
@@ -337,6 +338,170 @@ def render_image_objects(data: dict) -> str:
     return f'<script type="application/ld+json">\n{payload}\n</script>'
 
 
+def case_picture(item: dict, photo: dict, *, eager: bool = False) -> str:
+    jpg = image_variants(item, photo, "jpg")
+    webp = image_variants(item, photo, "webp")
+    largest = jpg[-1]
+    prefix = "../../"
+    loading = ' loading="eager" fetchpriority="high"' if eager else ' loading="lazy"'
+    sizes = "(max-width: 520px) calc(100vw - 2.5rem), (max-width: 800px) calc((100vw - 3.5rem) / 2), 360px"
+    return (
+        "<picture>"
+        f'<source type="image/webp" srcset="{escape(srcset([(prefix + path, width, height) for path, width, height in webp]))}" sizes="{escape(sizes)}">'
+        f'<img src="{escape(prefix + image_path(item, photo["plik"], 800, "jpg"))}" '
+        f'srcset="{escape(srcset([(prefix + path, width, height) for path, width, height in jpg]))}" '
+        f'sizes="{escape(sizes)}" alt="{escape(photo["alt"])}" width="{largest[1]}" height="{largest[2]}"'
+        f'{loading} decoding="async">'
+        "</picture>"
+    )
+
+
+def case_comparisons(item: dict) -> list[dict]:
+    comparisons = list(item.get("porownania", []))
+    if item.get("przed_po"):
+        comparisons.append({"nazwa": "Porównanie realizacji", **item["przed_po"]})
+    return comparisons
+
+
+def render_case_page(data: dict, item: dict) -> str:
+    photos = item["zdjecia"]
+    photo_by_base = {photo["plik"]: photo for photo in photos}
+    cover = photo_by_base[item["okladka"]]
+    slug = item["id"]
+    page_url = f"{SITE_URL}realizacje/{slug}/"
+    title = f'{item["tytul"]} — {item["miasto"]} | MebloFix'
+    description = f'{item["tytul"]} w {item["miasto"]}. {item["opis"]}'
+    if len(description) > 158:
+        description = description[:155].rsplit(" ", 1)[0] + "…"
+    cover_url = SITE_URL + image_path(item, cover["plik"], 1200, "jpg")
+    breadcrumb = json.dumps(
+        {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+                {"@type": "ListItem", "position": 1, "name": "Strona główna", "item": SITE_URL},
+                {"@type": "ListItem", "position": 2, "name": "Realizacje", "item": SITE_URL + "#realizacje"},
+                {"@type": "ListItem", "position": 3, "name": item["tytul"], "item": page_url},
+            ],
+        },
+        ensure_ascii=False,
+        indent=2,
+    )
+
+    facts = [item["miasto"], data["kategorie"][item["kategoria"]]]
+    if item.get("marka"):
+        facts.append(item["marka"])
+    if item.get("czas"):
+        facts.append(item["czas"])
+    facts_html = "".join(f'<span class="fact">{escape(fact)}</span>' for fact in facts)
+
+    gallery = []
+    for index, photo in enumerate(photos):
+        gallery.append(
+            "<li>"
+            f'<a href="../../{escape(image_path(item, photo["plik"], 1200, "jpg"))}" '
+            f'aria-label="Otwórz zdjęcie {index + 1} z {len(photos)}: {escape(photo["alt"])}">'
+            f'{case_picture(item, photo, eager=index == 0)}'
+            "</a></li>"
+        )
+
+    comparisons_html = ""
+    comparisons = case_comparisons(item)
+    if comparisons:
+        comparison_items = []
+        for comparison in comparisons:
+            before = photo_by_base[comparison["przed"]]
+            after = photo_by_base[comparison["po"]]
+            comparison_items.append(
+                '<li><figure class="comparison">'
+                f'<figcaption>{escape(comparison["nazwa"])}</figcaption>'
+                '<div class="comparison-grid">'
+                f'<figure>{case_picture(item, before)}<span>Przed</span></figure>'
+                f'<figure>{case_picture(item, after)}<span>Po</span></figure>'
+                "</div></figure></li>"
+            )
+        comparisons_html = (
+            '<section class="section section-muted"><div class="wrap">'
+            '<h2>Przed i po</h2><p class="section-intro">Porównanie zdjęć należących do tej realizacji.</p>'
+            f'<ul class="comparisons">{"".join(comparison_items)}</ul>'
+            "</div></section>"
+        )
+
+    related_links: list[tuple[str, str]] = []
+    city_pages = {
+        "Gliwice": ("../../montaz-mebli-gliwice/", "Montaż mebli w Gliwicach"),
+        "Zabrze": ("../../montaz-mebli-zabrze/", "Montaż mebli w Zabrzu"),
+    }
+    related_links.append(city_pages.get(item["miasto"], ("../../#obszar", "Obszar działania MebloFix")))
+    related_page = item.get("powiazanaStrona")
+    if related_page:
+        related_links.append(("../../" + related_page["url"], related_page["etykieta"]))
+    if item.get("marka") == "IKEA":
+        related_links.append(("../../montaz-mebli-ikea-gliwice/", "Montaż mebli IKEA"))
+    unique_links = []
+    seen_hrefs = set()
+    for href, label in related_links:
+        if href not in seen_hrefs:
+            unique_links.append(f'<a class="cta cta-secondary" href="{escape(href)}">{escape(label)}</a>')
+            seen_hrefs.add(href)
+
+    return f'''<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" sizes="96x96" href="../../favicon-96.png">
+<link rel="apple-touch-icon" sizes="180x180" href="../../apple-touch-icon.png">
+<title>{escape(title)}</title>
+<meta name="description" content="{escape(description)}">
+<meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large">
+<link rel="canonical" href="{escape(page_url)}">
+<meta property="og:type" content="article">
+<meta property="og:title" content="{escape(title)}">
+<meta property="og:description" content="{escape(description)}">
+<meta property="og:url" content="{escape(page_url)}">
+<meta property="og:locale" content="pl_PL">
+<meta property="og:site_name" content="MebloFix Gliwice">
+<meta property="og:image" content="{escape(cover_url)}">
+<meta property="og:image:alt" content="{escape(cover["alt"])}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="{escape(cover_url)}">
+<link rel="preload" href="../../fonts/JTUSjIg69CK48gW7PXoo9Wdhyzbi.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../fonts/fonts.css">
+<link rel="stylesheet" href="../../css/realizacje.css">
+<script type="application/ld+json">
+{breadcrumb}
+</script>
+</head>
+<body>
+<a class="skip-link" href="#main-content">Przejdź do treści</a>
+<header class="top">
+  <a class="logo" href="../../">Meblo<span>Fix</span><sub>Gliwice</sub></a>
+  <nav class="nav" aria-label="Główna nawigacja"><a href="../../#uslugi">Usługi</a><a href="../../#realizacje">Realizacje</a><a href="../../#cennik">Cennik</a><a href="../../#kontakt">Kontakt</a></nav>
+</header>
+<nav class="breadcrumbs" aria-label="Okruszki"><ol class="wrap"><li><a href="../../">Strona główna</a></li><li><a href="../../#realizacje">Realizacje</a></li><li aria-current="page">{escape(item["tytul"])}</li></ol></nav>
+<main id="main-content" tabindex="-1">
+  <article>
+    <header class="hero"><div class="wrap"><div class="eyebrow">Realizacja · {escape(item["miasto"])}</div><h1>{escape(item["tytul"])}</h1><p class="lead">{escape(item["opis"])}</p><div class="facts">{facts_html}</div></div></header>
+    <section class="section"><div class="wrap"><h2>Zdjęcia realizacji</h2><p class="section-intro">Galeria zawiera {len(photos)} zdjęć z tego zlecenia.</p><ul class="gallery">{"".join(gallery)}</ul></div></section>
+    {comparisons_html}
+    <section class="section"><div class="wrap"><h2>Podobny montaż</h2><p class="section-intro">Podeślij zdjęcia, instrukcję lub linki do produktów, aby otrzymać orientacyjną wycenę.</p><div class="links"><a class="cta" href="../../#kalkulator">Wyceń podobny montaż</a>{"".join(unique_links)}</div></div></section>
+  </article>
+</main>
+<footer><span>© 2026 MebloFix Gliwice</span><a href="../../#realizacje">Wszystkie realizacje</a></footer>
+<script src="../../analytics.js"></script>
+</body>
+</html>
+'''
+
+
+def write_case_pages(data: dict, pages_dir: Path) -> None:
+    for item in ordered_realizations(data):
+        target = pages_dir / item["id"] / "index.html"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(render_case_page(data, item), encoding="utf-8")
+
+
 def replace_generated(document: str, key: str, generated: str) -> str:
     start, end = MARKERS[key]
     if document.count(start) != 1 or document.count(end) != 1:
@@ -350,6 +515,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--template", type=Path, default=ROOT / "index.html")
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--pages-dir", type=Path)
     args = parser.parse_args()
 
     data = json.loads(DATA_PATH.read_text(encoding="utf-8"))
@@ -359,6 +525,8 @@ def main() -> None:
     document = replace_generated(document, "runtime_data", render_runtime_data(data))
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(document, encoding="utf-8")
+    if args.pages_dir:
+        write_case_pages(data, args.pages_dir)
     print(
         f"Wygenerowano realizacje: {len(data['realizacje'])} realizacji, "
         f"{sum(len(item['zdjecia']) for item in data['realizacje'])} zdjęcia -> {args.output}"
