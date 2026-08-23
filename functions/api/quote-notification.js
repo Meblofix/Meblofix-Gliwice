@@ -5,6 +5,7 @@ const MAX_REQUEST_BYTES = 32_000;
 const MAX_TOKEN_LENGTH = 24_000;
 const MAX_REQUESTS_PER_MINUTE = 20;
 const NOTIFICATION_RECORD_TTL_SECONDS = 30 * 60;
+const REJECTED_NOTIFICATION_MESSAGE = 'Nie udało się przyjąć zgłoszenia. Zadzwoń pod numer +48 784 878 197, aby przekazać szczegóły wyceny.';
 const memorySent = new Map();
 const memoryRate = new Map();
 const inFlight = new Map();
@@ -334,6 +335,17 @@ function logTelegram(level, event, notificationId, details = {}) {
   });
 }
 
+function rejectedResponse(notificationId, reason, status, { headers, details = {} } = {}) {
+  logTelegram('warn', 'notification-rejected', notificationId, { reason, ...details });
+  return jsonResponse({
+    sent: false,
+    accepted: false,
+    outcome: 'rejected',
+    error: reason,
+    message: REJECTED_NOTIFICATION_MESSAGE
+  }, { status, headers });
+}
+
 async function sendFormspree(endpoint, fields) {
   try {
     const response = await fetch(endpoint, {
@@ -395,13 +407,12 @@ function deliveryKey(payload) {
     : payload.quoteId;
 }
 
-async function alreadySent(env, payload) {
+async function duplicateReason(env, payload) {
   const key = deliveryKey(payload);
-  if (memorySent.has(key)) return true;
-  return Boolean(
-    await env.QUOTE_NOTIFICATION_KV.get(`notification:${payload.quoteId}`)
-    || await env.QUOTE_NOTIFICATION_KV.get(`notification-dedupe:${key}`)
-  );
+  if (memorySent.has(key)) return 'duplicate-memory';
+  if (await env.QUOTE_NOTIFICATION_KV.get(`notification:${payload.quoteId}`)) return 'duplicate-quote-id';
+  if (await env.QUOTE_NOTIFICATION_KV.get(`notification-dedupe:${key}`)) return 'duplicate-notification-key';
+  return null;
 }
 
 async function checkRateLimit(env, clientFingerprint, now) {
@@ -422,10 +433,36 @@ async function checkRateLimit(env, clientFingerprint, now) {
 async function deliver(payload, env, endpoint, telegram) {
   const now = Date.now();
   cleanupMemory(now);
-  if (await alreadySent(env, payload)) return jsonResponse({ sent: false, error: 'notification-already-sent' }, { status: 409 });
-  if (!await checkRateLimit(env, payload.clientFingerprint, now)) return jsonResponse({ sent: false, error: 'rate-limit' }, { status: 429 });
+  let duplicate;
+  try {
+    duplicate = await duplicateReason(env, payload);
+  } catch {
+    return rejectedResponse(payload.quoteId, 'kv-deduplication-error', 503);
+  }
+  if (duplicate) {
+    return rejectedResponse(payload.quoteId, 'notification-already-sent', 409, {
+      details: { duplicateReason: duplicate }
+    });
+  }
 
-  const fields = notificationFields(payload);
+  let rateLimitAllowed;
+  try {
+    rateLimitAllowed = await checkRateLimit(env, payload.clientFingerprint, now);
+  } catch {
+    return rejectedResponse(payload.quoteId, 'kv-rate-limit-error', 503);
+  }
+  if (!rateLimitAllowed) {
+    return rejectedResponse(payload.quoteId, 'rate-limit', 429, {
+      details: { rateLimit: 'client-hourly', limit: RATE_LIMIT_PER_HOUR }
+    });
+  }
+
+  let fields;
+  try {
+    fields = notificationFields(payload);
+  } catch {
+    return rejectedResponse(payload.quoteId, 'notification-payload-error', 500);
+  }
   const dryRun = env.NOTIFICATION_DRY_RUN === '1';
   const testMode = env.QUOTE_NOTIFICATION_MODE === 'test';
   let formspreeSent = false;
@@ -436,7 +473,7 @@ async function deliver(payload, env, endpoint, telegram) {
       telegram.configured ? sendTelegram(telegram.config, fields, payload.quoteId) : Promise.resolve(false)
     ]);
     if (!formspreeSent && !telegramSent) {
-      return jsonResponse({ sent: false, error: 'delivery-failed' }, { status: 502 });
+      return rejectedResponse(payload.quoteId, 'delivery-failed', 502);
     }
   }
 
@@ -444,50 +481,75 @@ async function deliver(payload, env, endpoint, telegram) {
   memorySent.set(key, payload.expiresAt);
   // Rekord replay żyje dłużej niż 20-minutowy token. KV pozostaje best-effort,
   // natomiast inFlight chroni dodatkowo równoległe wywołania w tym samym isolate.
-  await env.QUOTE_NOTIFICATION_KV.put(`notification:${payload.quoteId}`, '1', { expirationTtl: NOTIFICATION_RECORD_TTL_SECONDS });
-  await env.QUOTE_NOTIFICATION_KV.put(`notification-dedupe:${key}`, '1', { expirationTtl: NOTIFICATION_RECORD_TTL_SECONDS });
+  let deliveryRecorded = true;
+  try {
+    await env.QUOTE_NOTIFICATION_KV.put(`notification:${payload.quoteId}`, '1', { expirationTtl: NOTIFICATION_RECORD_TTL_SECONDS });
+    await env.QUOTE_NOTIFICATION_KV.put(`notification-dedupe:${key}`, '1', { expirationTtl: NOTIFICATION_RECORD_TTL_SECONDS });
+  } catch {
+    deliveryRecorded = false;
+    logTelegram('error', 'notification-storage-failed', payload.quoteId, {
+      reason: 'kv-delivery-record-error'
+    });
+  }
   if (dryRun) {
     return jsonResponse({
       sent: false,
+      accepted: true,
+      outcome: 'dry-run',
       dryRun: true,
       mode: 'notification-dry-run',
       fields: [...fields.keys()],
-      channels: { formspree: 'dry-run', telegram: telegram.configured ? 'dry-run' : 'inactive' }
+      channels: { formspree: 'dry-run', telegram: telegram.configured ? 'dry-run' : 'inactive' },
+      deliveryRecorded
     }, { status: 200 });
   }
   return jsonResponse({
     sent: true,
+    accepted: true,
+    outcome: testMode ? 'test' : 'sent',
     testMode,
     channels: {
       formspree: testMode ? 'test' : formspreeSent ? 'sent' : 'failed',
       telegram: !telegram.configured ? 'inactive' : testMode ? 'test' : telegramSent ? 'sent' : 'failed'
-    }
+    },
+    deliveryRecorded
   }, { status: 200 });
 }
 
 export async function onRequestPost({ request, env }) {
-  if (!acceptsJson(request)) return jsonResponse({ sent: false, error: 'unsupported-media-type' }, { status: 415 });
+  if (!acceptsJson(request)) return rejectedResponse(null, 'unsupported-media-type', 415);
   let rawBody;
   try {
     rawBody = await readLimitedRequest(request);
   } catch (error) {
-    if (error?.message === 'request-too-large') return jsonResponse({ sent: false, error: 'request-too-large' }, { status: 413 });
-    return jsonResponse({ sent: false, error: 'invalid-token' }, { status: 400 });
+    if (error?.message === 'request-too-large') return rejectedResponse(null, 'request-too-large', 413);
+    return rejectedResponse(null, 'invalid-token', 400, { details: { tokenReason: 'request-read-error' } });
   }
-  if (!env?.QUOTE_NOTIFICATION_KV) return jsonResponse({ sent: false, error: 'notification-not-configured' }, { status: 503 });
+  if (!env?.QUOTE_NOTIFICATION_KV) {
+    return rejectedResponse(null, 'notification-not-configured', 503, {
+      details: { configurationReason: 'missing-kv-binding' }
+    });
+  }
   const dryRun = env.NOTIFICATION_DRY_RUN === '1';
   const endpoint = configuredFormspreeEndpoint(env);
   const telegram = telegramConfiguration(env);
-  if (!dryRun && !endpoint) return jsonResponse({ sent: false, error: 'notification-not-configured' }, { status: 503 });
+  if (!dryRun && !endpoint) {
+    return rejectedResponse(null, 'notification-not-configured', 503, {
+      details: { configurationReason: 'missing-formspree-endpoint' }
+    });
+  }
 
   let allowed;
   try {
     allowed = await withinIngressRateLimit(env, request);
   } catch {
-    return jsonResponse({ sent: false, error: 'notification-temporarily-unavailable' }, { status: 503 });
+    return rejectedResponse(null, 'kv-ingress-rate-limit-error', 503);
   }
   if (!allowed) {
-    return jsonResponse({ sent: false, error: 'rate-limit' }, { status: 429, headers: { 'Retry-After': '60' } });
+    return rejectedResponse(null, 'rate-limit', 429, {
+      headers: { 'Retry-After': '60' },
+      details: { rateLimit: 'ingress-minute', limit: MAX_REQUESTS_PER_MINUTE }
+    });
   }
 
   let payload;
@@ -496,7 +558,7 @@ export async function onRequestPost({ request, env }) {
     if (typeof body?.token !== 'string' || body.token.length > MAX_TOKEN_LENGTH) throw new Error('invalid-token');
     payload = await verifyQuoteToken(body?.token, env);
   } catch {
-    return jsonResponse({ sent: false, error: 'invalid-token' }, { status: 400 });
+    return rejectedResponse(null, 'invalid-token', 400);
   }
 
   logTelegram('info', 'telegram-configuration', payload.quoteId, {
@@ -508,11 +570,18 @@ export async function onRequestPost({ request, env }) {
 
   try {
     const key = deliveryKey(payload);
-    if (inFlight.has(key)) return (await inFlight.get(key)).clone();
+    if (inFlight.has(key)) {
+      logTelegram('info', 'notification-coalesced', payload.quoteId, {
+        reason: 'duplicate-in-flight'
+      });
+      return (await inFlight.get(key)).clone();
+    }
     const delivery = deliver(payload, env, endpoint, telegram).finally(() => inFlight.delete(key));
     inFlight.set(key, delivery);
     return await delivery;
   } catch {
-    return jsonResponse({ sent: false, error: 'notification-temporarily-unavailable' }, { status: 503 });
+    return rejectedResponse(payload.quoteId, 'notification-temporarily-unavailable', 503, {
+      details: { failureReason: 'unexpected-delivery-error' }
+    });
   }
 }

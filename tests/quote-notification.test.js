@@ -8,6 +8,7 @@ const SECRET = 'testowy-sekret-powiadomien-ma-co-najmniej-32-znaki';
 const NOTIFICATION_ENDPOINT = 'https://formspree.io/f/testquoteendpoint';
 const TELEGRAM_TOKEN = '123456789:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
 const TELEGRAM_CHAT_ID = '-1001234567890';
+const REJECTED_NOTIFICATION_MESSAGE = 'Nie udało się przyjąć zgłoszenia. Zadzwoń pod numer +48 784 878 197, aby przekazać szczegóły wyceny.';
 const ALLEGRO_URL = 'https://allegro.pl/produkt/lozko-pojedyncze-ikea-hemnes-drewniane-biale-80x200-z-pojemnikiem-34f7722e-546b-437d-a88d-2d618d6728d0?offerId=18281158355';
 const ALLEGRO_NAME = 'IKEA HEMNES łóżko składane, leżanka 3 szufladami biały 80x200';
 const PLANNER_MESSAGE = 'Projekt z planera IKEA wyceniamy indywidualnie. Prześlij dane kontaktowe, a przygotujemy ręczną wycenę na podstawie projektu.';
@@ -140,6 +141,8 @@ test('poprawna wycena jednego produktu wysyła dokładnie jedno powiadomienie', 
     const notification = await notify(result.data.notificationToken, bindings);
     assert.equal(notification.response.status, 200);
     assert.equal(notification.data.sent, true);
+    assert.equal(notification.data.accepted, true);
+    assert.equal(notification.data.outcome, 'sent');
     assert.equal(deliveries.length, 1);
     assert.equal(deliveries[0]._subject, 'Nowa wycena z kalkulatora Meblofix');
     assert.ok(deliveries[0].data_i_godzina);
@@ -439,16 +442,50 @@ test('mieszany zestaw produktu i planera przechodzi jedną ścieżką wyceny ind
 
 test('równoległe powtórzenie tego samego powiadomienia nie wysyła dwóch e-maili', async () => {
   const deliveries = [];
+  const infoLogs = [];
   const url = 'https://www.ikea.com/pl/pl/p/test-double/';
-  const restore = installFetchMock({ products: { [url]: PRODUCT_HTML('Komoda', 800) }, deliveries });
+  let releaseFormspree;
+  let markFormspreeStarted;
+  let markSecondConfigured;
+  let configurationLogs = 0;
+  const formspreeGate = new Promise(resolve => { releaseFormspree = resolve; });
+  const formspreeStarted = new Promise(resolve => { markFormspreeStarted = resolve; });
+  const secondConfigured = new Promise(resolve => { markSecondConfigured = resolve; });
+  const restore = installFetchMock({
+    products: { [url]: PRODUCT_HTML('Komoda', 800) },
+    deliveries,
+    async onFormspreeRequest() {
+      markFormspreeStarted();
+      await formspreeGate;
+      return Response.json({ ok: true });
+    }
+  });
+  const originalInfo = console.info;
+  console.info = (...args) => {
+    infoLogs.push(args);
+    if (String(args[0]).includes('telegram-configuration') && ++configurationLogs === 2) markSecondConfigured();
+  };
   try {
     const bindings = env();
     const result = await calculate(body([{ url, quantity: 1 }]), bindings, 'test-double');
-    const responses = await Promise.all([notify(result.data.notificationToken, bindings), notify(result.data.notificationToken, bindings)]);
+    const firstResponse = notify(result.data.notificationToken, bindings);
+    await formspreeStarted;
+    const secondResponse = notify(result.data.notificationToken, bindings);
+    await secondConfigured;
+    releaseFormspree();
+    const responses = await Promise.all([firstResponse, secondResponse]);
     assert.equal(responses.some(item => item.response.status === 200), true);
     assert.equal(responses.every(item => [200, 409].includes(item.response.status)), true);
     assert.equal(deliveries.length, 1);
-  } finally { restore(); }
+    const logs = JSON.stringify(infoLogs);
+    assert.match(logs, /notification-coalesced/);
+    assert.match(logs, /duplicate-in-flight/);
+    assert.match(logs, new RegExp(result.data.quoteId));
+  } finally {
+    releaseFormspree();
+    console.info = originalInfo;
+    restore();
+  }
 });
 
 test('dwie identyczne wyceny otrzymują dwa różne losowe quoteId', async () => {
@@ -470,8 +507,11 @@ test('dwie identyczne wyceny otrzymują dwa różne losowe quoteId', async () =>
 
 test('ponowne użycie quoteId po udanej wysyłce jest odrzucane', async () => {
   const deliveries = [];
+  const warningLogs = [];
   const url = 'https://www.ikea.com/pl/pl/p/test-replay/';
   const restore = installFetchMock({ products: { [url]: PRODUCT_HTML('Komoda', 800) }, deliveries });
+  const originalWarn = console.warn;
+  console.warn = (...args) => { warningLogs.push(args); };
   try {
     const bindings = env();
     const result = await calculate(body([{ url, quantity: 1 }]), bindings, 'test-replay');
@@ -479,9 +519,20 @@ test('ponowne użycie quoteId po udanej wysyłce jest odrzucane', async () => {
     const replay = await notify(result.data.notificationToken, bindings);
     assert.equal(replay.response.status, 409);
     assert.equal(replay.data.error, 'notification-already-sent');
+    assert.equal(replay.data.accepted, false);
+    assert.equal(replay.data.outcome, 'rejected');
+    assert.equal(replay.data.message, REJECTED_NOTIFICATION_MESSAGE);
     assert.equal(deliveries.length, 1);
     assert.equal(await bindings.QUOTE_NOTIFICATION_KV.get(`notification:${result.data.quoteId}`), '1');
-  } finally { restore(); }
+    const logs = JSON.stringify(warningLogs);
+    assert.match(logs, /notification-rejected/);
+    assert.match(logs, /notification-already-sent/);
+    assert.match(logs, /duplicate-memory/);
+    assert.match(logs, new RegExp(result.data.quoteId));
+  } finally {
+    console.warn = originalWarn;
+    restore();
+  }
 });
 
 test('nieudana wycena wysyła jedno powiadomienie price_not_confirmed bez fałszywej kwoty', async () => {
@@ -615,12 +666,29 @@ test('podrobiony token i brak magazynu antyspamowego są odrzucane', async () =>
 });
 
 test('brak wymaganego tokenu zwraca 400 z czytelnym błędem', async () => {
-  const response = await notifyQuote({
-    request: request('/api/quote-notification', {}),
-    env: env()
-  });
-  assert.equal(response.status, 400);
-  assert.deepEqual(await response.json(), { sent: false, error: 'invalid-token' });
+  const warningLogs = [];
+  const originalWarn = console.warn;
+  console.warn = (...args) => { warningLogs.push(args); };
+  try {
+    const response = await notifyQuote({
+      request: request('/api/quote-notification', {}),
+      env: env()
+    });
+    assert.equal(response.status, 400);
+    assert.deepEqual(await response.json(), {
+      sent: false,
+      accepted: false,
+      outcome: 'rejected',
+      error: 'invalid-token',
+      message: REJECTED_NOTIFICATION_MESSAGE
+    });
+    const logs = JSON.stringify(warningLogs);
+    assert.match(logs, /notification-rejected/);
+    assert.match(logs, /"notificationId":null/);
+    assert.match(logs, /invalid-token/);
+  } finally {
+    console.warn = originalWarn;
+  }
 });
 
 test('brak konfiguracji powiadomień zwraca 503 z czytelnym błędem', async () => {
@@ -629,7 +697,13 @@ test('brak konfiguracji powiadomień zwraca 503 z czytelnym błędem', async () 
     env: {}
   });
   assert.equal(response.status, 503);
-  assert.deepEqual(await response.json(), { sent: false, error: 'notification-not-configured' });
+  assert.deepEqual(await response.json(), {
+    sent: false,
+    accepted: false,
+    outcome: 'rejected',
+    error: 'notification-not-configured',
+    message: REJECTED_NOTIFICATION_MESSAGE
+  });
 });
 
 test('brak osobnego endpointu Formspree daje kontrolowany błąd bez wysyłki', async () => {
@@ -690,23 +764,113 @@ test('NOTIFICATION_DRY_RUN przechodzi pełną logikę bez próby wysyłki', asyn
 
 test('chwilowa awaria KV daje kontrolowany błąd bez próby wysyłki', async () => {
   const deliveries = [];
+  const warningLogs = [];
   const url = 'https://www.ikea.com/pl/pl/p/test-kv-failure/';
   const restore = installFetchMock({ products: { [url]: PRODUCT_HTML('Witryna', 1100) }, deliveries });
+  const originalWarn = console.warn;
+  console.warn = (...args) => { warningLogs.push(args); };
   try {
     const signingBindings = env();
     const result = await calculate(body([{ url, quantity: 1 }]), signingBindings, 'test-kv-failure');
     const failingKv = {
-      async get() { throw new Error('symulowana awaria KV'); },
-      async put() { throw new Error('symulowana awaria KV'); }
+      async get(key) {
+        if (key.startsWith('quote-notification-rate:')) return null;
+        throw new Error('symulowana awaria KV deduplikacji');
+      },
+      async put(key) {
+        if (key.startsWith('quote-notification-rate:')) return;
+        throw new Error('symulowana awaria KV deduplikacji');
+      }
     };
     const notification = await notify(result.data.notificationToken, {
       ...signingBindings,
       QUOTE_NOTIFICATION_KV: failingKv
     });
     assert.equal(notification.response.status, 503);
-    assert.equal(notification.data.error, 'notification-temporarily-unavailable');
+    assert.equal(notification.data.error, 'kv-deduplication-error');
+    assert.equal(notification.data.outcome, 'rejected');
     assert.equal(deliveries.length, 0);
-  } finally { restore(); }
+    const logs = JSON.stringify(warningLogs);
+    assert.match(logs, /notification-rejected/);
+    assert.match(logs, /kv-deduplication-error/);
+    assert.match(logs, new RegExp(result.data.quoteId));
+    assert.doesNotMatch(logs, /symulowana awaria/);
+  } finally {
+    console.warn = originalWarn;
+    restore();
+  }
+});
+
+test('błąd zapisu rekordu KV po wysyłce jest logowany bez fałszywego odrzucenia', async () => {
+  const deliveries = [];
+  const errorLogs = [];
+  const url = 'https://www.ikea.com/pl/pl/p/test-kv-record-failure/';
+  const restore = installFetchMock({ products: { [url]: PRODUCT_HTML('Szafka', 900) }, deliveries });
+  const originalError = console.error;
+  console.error = (...args) => { errorLogs.push(args); };
+  try {
+    const signingBindings = env();
+    const result = await calculate(body([{ url, quantity: 1 }]), signingBindings, 'test-kv-record-failure');
+    const failingRecordKv = {
+      async get() { return null; },
+      async put(key) {
+        if (key.startsWith('notification:')) throw new Error('symulowana awaria zapisu KV');
+      }
+    };
+    const notification = await notify(result.data.notificationToken, {
+      ...signingBindings,
+      QUOTE_NOTIFICATION_KV: failingRecordKv
+    });
+    assert.equal(notification.response.status, 200);
+    assert.equal(notification.data.sent, true);
+    assert.equal(notification.data.outcome, 'sent');
+    assert.equal(notification.data.deliveryRecorded, false);
+    assert.equal(deliveries.length, 1);
+    const logs = JSON.stringify(errorLogs);
+    assert.match(logs, /notification-storage-failed/);
+    assert.match(logs, /kv-delivery-record-error/);
+    assert.match(logs, new RegExp(result.data.quoteId));
+    assert.doesNotMatch(logs, /symulowana awaria/);
+  } finally {
+    console.error = originalError;
+    restore();
+  }
+});
+
+test('awaria KV podczas godzinowego limitu jest odrzucona z notificationId i powodem', async () => {
+  const deliveries = [];
+  const warningLogs = [];
+  const url = 'https://www.ikea.com/pl/pl/p/test-kv-rate-failure/';
+  const restore = installFetchMock({ products: { [url]: PRODUCT_HTML('Komoda', 850) }, deliveries });
+  const originalWarn = console.warn;
+  console.warn = (...args) => { warningLogs.push(args); };
+  try {
+    const signingBindings = env();
+    const result = await calculate(body([{ url, quantity: 1 }]), signingBindings, 'test-kv-rate-failure');
+    const failingRateKv = {
+      async get(key) {
+        if (key.startsWith('rate:')) throw new Error('symulowana awaria KV limitu');
+        return null;
+      },
+      async put() {}
+    };
+    const notification = await notify(result.data.notificationToken, {
+      ...signingBindings,
+      QUOTE_NOTIFICATION_KV: failingRateKv
+    });
+    assert.equal(notification.response.status, 503);
+    assert.equal(notification.data.error, 'kv-rate-limit-error');
+    assert.equal(notification.data.outcome, 'rejected');
+    assert.equal(deliveries.length, 0);
+    const logs = JSON.stringify(warningLogs);
+    assert.match(logs, /notification-rejected/);
+    assert.match(logs, /kv-rate-limit-error/);
+    assert.match(logs, new RegExp(result.data.quoteId));
+    assert.doesNotMatch(logs, /symulowana awaria/);
+  } finally {
+    console.warn = originalWarn;
+    restore();
+  }
 });
 
 test('frontend nie może wskazać endpointu ani zmienić podpisanych kwot', async () => {
@@ -1181,18 +1345,38 @@ test('Telegram podtrzymuje powiadomienie przy odrzuceniu przez Formspree', async
 
 test('limit godzinowy zatrzymuje szóstą wiadomość z tego samego klienta', async () => {
   const deliveries = [];
+  const warningLogs = [];
   const url = 'https://www.ikea.com/pl/pl/p/test-rate/';
   const restore = installFetchMock({ products: { [url]: PRODUCT_HTML('Krzesło', 200) }, deliveries });
+  const originalWarn = console.warn;
+  console.warn = (...args) => { warningLogs.push(args); };
   try {
     const bindings = env();
     const statuses = [];
+    const outcomes = [];
+    const quoteIds = [];
     for (let index = 1; index <= 6; index += 1) {
       const result = await calculate(body([{ url, quantity: 1 }], { details: `Wariant ${index}` }), bindings, 'test-rate');
-      statuses.push((await notify(result.data.notificationToken, bindings)).response.status);
+      quoteIds.push(result.data.quoteId);
+      const notification = await notify(result.data.notificationToken, bindings);
+      statuses.push(notification.response.status);
+      outcomes.push(notification.data);
     }
     assert.deepEqual(statuses, [200, 200, 200, 200, 200, 429]);
+    assert.equal(outcomes[5].outcome, 'rejected');
+    assert.equal(outcomes[5].accepted, false);
+    assert.equal(outcomes[5].message, REJECTED_NOTIFICATION_MESSAGE);
     assert.equal(deliveries.length, 5);
-  } finally { restore(); }
+    const logs = JSON.stringify(warningLogs);
+    assert.match(logs, /notification-rejected/);
+    assert.match(logs, /"reason":"rate-limit"/);
+    assert.match(logs, /client-hourly/);
+    assert.match(logs, /"limit":5/);
+    assert.match(logs, new RegExp(quoteIds[5]));
+  } finally {
+    console.warn = originalWarn;
+    restore();
+  }
 });
 
 test('brak sekretu nie usuwa poprawnej wyceny, ale nie tworzy tokenu', async () => {
@@ -1265,6 +1449,10 @@ test('CTA jest w polach kalkulatora przed kontaktem i awaria powiadomienia nie c
   const notificationFailure = html.slice(html.indexOf('async function sendCalculationNotice'), html.indexOf('function validateContact'));
   assert.doesNotMatch(notificationFailure, /setResult\(null\)|lastCalculation\s*=\s*null/);
   assert.match(notificationFailure, /console\.warn/);
+  assert.match(notificationFailure, /responseData\?\.sent !== true/);
+  assert.match(notificationFailure, /responseData\?\.outcome !== 'sent'/);
+  assert.match(notificationFailure, /setFormStatus\(\s*quoteProductsStatus/);
+  assert.match(notificationFailure, /\+48 784 878 197/);
   assert.match(html, /individualQuoteReady = true/);
   assert.match(html, /if \(!lastCalculation && !individualQuoteReady\)/);
   assert.match(html, /link\.href = '#quoteContact'/);
@@ -1413,9 +1601,21 @@ test('limity wejściowe zatrzymują burst przed kosztownym przetwarzaniem', asyn
 
   const notificationBindings = env();
   const notificationStatuses = [];
-  for (let index = 0; index < 21; index += 1) {
-    notificationStatuses.push((await notify(`invalid-${index}`, notificationBindings)).response.status);
+  const warningLogs = [];
+  const originalWarn = console.warn;
+  console.warn = (...args) => { warningLogs.push(args); };
+  try {
+    for (let index = 0; index < 21; index += 1) {
+      notificationStatuses.push((await notify(`invalid-${index}`, notificationBindings)).response.status);
+    }
+  } finally {
+    console.warn = originalWarn;
   }
   assert.deepEqual(notificationStatuses.slice(0, 20), Array(20).fill(400));
   assert.equal(notificationStatuses[20], 429);
+  const logs = JSON.stringify(warningLogs);
+  assert.match(logs, /notification-rejected/);
+  assert.match(logs, /"notificationId":null/);
+  assert.match(logs, /ingress-minute/);
+  assert.match(logs, /"limit":20/);
 });

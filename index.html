@@ -5040,14 +5040,23 @@
     finally { quoteCalculate.disabled = false; quoteCalculate.textContent = 'PRZELICZ WYCENĘ'; }
   }
   async function sendCalculationNotice(token, key) {
-    if (calculationNoticeKey === key) return;
+    if (calculationNoticeKey === key) return true;
     calculationNoticeKey = key;
+    let responseData = null;
     try {
       const response = await fetch('/api/quote-notification', { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({ token }) });
-      if (!response.ok) throw new Error('notification failed');
+      responseData = await response.json().catch(() => null);
+      if (!response.ok || responseData?.sent !== true || responseData?.outcome !== 'sent') throw new Error('notification rejected');
+      return true;
     } catch (error) {
       calculationNoticeKey = '';
+      setFormStatus(
+        quoteProductsStatus,
+        responseData?.message || 'Nie udało się przyjąć zgłoszenia. Zadzwoń pod numer +48 784 878 197, aby przekazać szczegóły wyceny.',
+        'error'
+      );
       console.warn('Nie udało się wysłać technicznego powiadomienia o wycenie.', error);
+      return false;
     }
   }
   function validateContact() {
