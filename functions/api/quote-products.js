@@ -1,13 +1,12 @@
 import pricingConfig from '../../data/cennik.json' with { type: 'json' };
+import { QUOTE_SECURITY_LIMITS } from './quote-security-config.js';
 
 const MAX_ITEMS = 10;
 const MAX_BYTES = 1_500_000;
 const MAX_REQUEST_BYTES = 32_000;
-const MAX_REQUESTS_PER_MINUTE = 15;
 const TIMEOUT_MS = 8_000;
 const MAX_REDIRECTS = 3;
-export const TOKEN_LIFETIME_MS = 20 * 60 * 1_000;
-const NOTIFICATION_DEDUPE_WINDOW_MS = 5 * 60 * 1_000;
+export const TOKEN_LIFETIME_MS = QUOTE_SECURITY_LIMITS.quoteTokenLifetimeMs;
 const QUOTE_RULES = Object.freeze({
   minimumJob: pricingConfig.publicRates.minimumJob,
   installationRate: pricingConfig.calculator.installationRate,
@@ -402,12 +401,14 @@ async function sha256(value) {
 async function withinRequestRateLimit(env, request) {
   if (!env?.QUOTE_NOTIFICATION_KV) return true;
   try {
-    const minute = Math.floor(Date.now() / 60_000);
+    const minute = Math.floor(Date.now() / QUOTE_SECURITY_LIMITS.minuteWindowMs);
     const client = await sha256(request.headers.get('cf-connecting-ip') || 'unknown');
     const key = `quote-products-rate:${client}:${minute}`;
     const count = Number(await env.QUOTE_NOTIFICATION_KV.get(key) || 0);
-    if (!Number.isFinite(count) || count >= MAX_REQUESTS_PER_MINUTE) return false;
-    await env.QUOTE_NOTIFICATION_KV.put(key, String(count + 1), { expirationTtl: 120 });
+    if (!Number.isFinite(count) || count >= QUOTE_SECURITY_LIMITS.productsPerMinute) return false;
+    await env.QUOTE_NOTIFICATION_KV.put(key, String(count + 1), {
+      expirationTtl: QUOTE_SECURITY_LIMITS.minuteRateRecordTtlSeconds
+    });
     return true;
   } catch {
     // Limiter KV jest ochroną best-effort i nie może wyłączyć kalkulatora przy awarii magazynu.
@@ -415,9 +416,8 @@ async function withinRequestRateLimit(env, request) {
   }
 }
 
-async function notificationKey(clientFingerprint, normalizedRequest, issuedAt) {
-  const window = Math.floor(issuedAt / NOTIFICATION_DEDUPE_WINDOW_MS);
-  return sha256(`${clientFingerprint}|${window}|${JSON.stringify(normalizedRequest)}`);
+async function notificationKey(clientFingerprint, normalizedRequest) {
+  return sha256(`${clientFingerprint}|${JSON.stringify(normalizedRequest)}`);
 }
 
 async function signQuote(payload, env) {
@@ -544,9 +544,11 @@ export async function onRequestPost({ request, env }) {
     }));
     const allConfirmed = products.every(product => !product.error && Number.isFinite(product.price));
     const issuedAt = Date.now();
-    const clientFingerprint = await sha256(`${request.headers.get('cf-connecting-ip') || 'unknown'}|${request.headers.get('user-agent') || 'unknown'}`);
+    const clientIp = request.headers.get('cf-connecting-ip') || 'unknown';
+    const clientIpHash = await sha256(clientIp);
+    const clientFingerprint = await sha256(`${clientIp}|${request.headers.get('user-agent') || 'unknown'}`);
     const quoteId = crypto.randomUUID();
-    const dedupeKey = await notificationKey(clientFingerprint, { items, extraServices, context }, issuedAt);
+    const dedupeKey = await notificationKey(clientFingerprint, { items, extraServices, context });
     const plannerProducts = products.filter(product => product.kind === 'ikea-planner');
     const unsupportedProducts = products.filter(product => product.kind === 'unsupported-url');
     if (plannerProducts.length || unsupportedProducts.length) {
@@ -571,7 +573,7 @@ export async function onRequestPost({ request, env }) {
         };
         notificationToken = await signQuote({
           v: 1, eventType: 'individual_quote', reason, quoteId,
-          notificationKey: dedupeKey, clientFingerprint, issuedAt, expiresAt: issuedAt + TOKEN_LIFETIME_MS,
+          notificationKey: dedupeKey, clientFingerprint, clientIpHash, issuedAt, expiresAt: issuedAt + TOKEN_LIFETIME_MS,
           inquiry, context
         }, env);
       }
@@ -597,7 +599,7 @@ export async function onRequestPost({ request, env }) {
         };
         notificationToken = await signQuote({
           v: 1, eventType: 'price_not_confirmed', reason: 'price_not_confirmed', quoteId,
-          notificationKey: dedupeKey, clientFingerprint, issuedAt, expiresAt: issuedAt + TOKEN_LIFETIME_MS,
+          notificationKey: dedupeKey, clientFingerprint, clientIpHash, issuedAt, expiresAt: issuedAt + TOKEN_LIFETIME_MS,
           attempt, context
         }, env);
       }
@@ -627,7 +629,7 @@ export async function onRequestPost({ request, env }) {
     let notificationToken = null;
     if (notificationSecret(env)) {
       notificationToken = await signQuote({
-        v: 1, eventType: 'automatic_quote', quoteId, notificationKey: dedupeKey, clientFingerprint,
+        v: 1, eventType: 'automatic_quote', quoteId, notificationKey: dedupeKey, clientFingerprint, clientIpHash,
         issuedAt, expiresAt: issuedAt + TOKEN_LIFETIME_MS, quote, context
       }, env);
     }

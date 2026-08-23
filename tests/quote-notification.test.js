@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { onRequestPost as calculateQuote, TOKEN_LIFETIME_MS, verifyQuoteToken } from '../functions/api/quote-products.js';
 import { onRequestPost as notifyQuote } from '../functions/api/quote-notification.js';
+import { QUOTE_SECURITY_LIMITS } from '../functions/api/quote-security-config.js';
 
 const SECRET = 'testowy-sekret-powiadomien-ma-co-najmniej-32-znaki';
 const NOTIFICATION_ENDPOINT = 'https://formspree.io/f/testquoteendpoint';
@@ -25,8 +26,21 @@ const PRODUCT_HTML = (name, price) => `<!doctype html><html><head><script type="
 
 class FakeKv {
   constructor() { this.values = new Map(); }
-  async get(key) { return this.values.get(key) ?? null; }
-  async put(key, value) { this.values.set(key, String(value)); }
+  async get(key) {
+    const record = this.values.get(key);
+    if (!record) return null;
+    if (record.expiresAt <= Date.now()) {
+      this.values.delete(key);
+      return null;
+    }
+    return record.value;
+  }
+  async put(key, value, options = {}) {
+    const expiresAt = Number.isFinite(options.expirationTtl)
+      ? Date.now() + options.expirationTtl * 1_000
+      : Number.POSITIVE_INFINITY;
+    this.values.set(key, { value: String(value), expiresAt });
+  }
 }
 
 function env(overrides = {}) {
@@ -527,7 +541,7 @@ test('ponowne użycie quoteId po udanej wysyłce jest odrzucane', async () => {
     const logs = JSON.stringify(warningLogs);
     assert.match(logs, /notification-rejected/);
     assert.match(logs, /notification-already-sent/);
-    assert.match(logs, /duplicate-memory/);
+    assert.match(logs, /duplicate-quote-id-memory/);
     assert.match(logs, new RegExp(result.data.quoteId));
   } finally {
     console.warn = originalWarn;
@@ -596,6 +610,51 @@ test('dwa szybkie identyczne kliknięcia nie tworzą dwóch powiadomień', async
     Date.now = realNow;
     restore();
   }
+});
+
+test('deduplikacja treści wygasa po 300 s, a replay quoteId pozostaje aktywny przez 1800 s', async () => {
+  const deliveries = [];
+  const url = 'https://www.jysk.pl/test-dedupe-ttl/';
+  const restore = installFetchMock({ products: { [url]: PRODUCT_HTML('Regał', 700) }, deliveries });
+  const realNow = Date.now;
+  let now = 1_800_000_100_000;
+  try {
+    Date.now = () => now;
+    const bindings = env();
+    const input = body([{ url, quantity: 1 }], { details: 'Test kroczącego TTL' });
+    const first = await calculate(input, bindings, 'test-dedupe-ttl');
+    const firstPayload = await tokenPayload(first.data.notificationToken, bindings);
+    assert.equal((await notify(first.data.notificationToken, bindings)).response.status, 200);
+
+    now += (QUOTE_SECURITY_LIMITS.notificationDedupeTtlSeconds + 1) * 1_000;
+    const replay = await notify(first.data.notificationToken, bindings);
+    assert.equal(replay.response.status, 409);
+    assert.equal(replay.data.error, 'notification-already-sent');
+
+    const second = await calculate(input, bindings, 'test-dedupe-ttl');
+    const secondPayload = await tokenPayload(second.data.notificationToken, bindings);
+    assert.equal(secondPayload.notificationKey, firstPayload.notificationKey);
+    assert.equal((await notify(second.data.notificationToken, bindings)).response.status, 200);
+    assert.equal(deliveries.length, 2);
+  } finally {
+    Date.now = realNow;
+    restore();
+  }
+});
+
+test('konfiguracja bezpieczeństwa zachowuje zatwierdzone progi i niezależne TTL', () => {
+  assert.deepEqual(QUOTE_SECURITY_LIMITS, {
+    productsPerMinute: 15,
+    notificationsPerMinute: 20,
+    notificationsPerHour: 40,
+    minuteWindowMs: 60_000,
+    hourWindowMs: 3_600_000,
+    minuteRateRecordTtlSeconds: 120,
+    hourlyRateRecordTtlSeconds: 3_700,
+    notificationDedupeTtlSeconds: 300,
+    quoteReplayTtlSeconds: 1_800,
+    quoteTokenLifetimeMs: 20 * 60_000
+  });
 });
 
 test('zmodyfikowany i wygasły token są odrzucane', async () => {
@@ -1343,37 +1402,49 @@ test('Telegram podtrzymuje powiadomienie przy odrzuceniu przez Formspree', async
   } finally { restore(); }
 });
 
-test('limit godzinowy zatrzymuje szóstą wiadomość z tego samego klienta', async () => {
+test('limit godzinowy przepuszcza 40 zgłoszeń z jednego IP i odrzuca 41. z czytelnym logiem', async () => {
   const deliveries = [];
   const warningLogs = [];
   const url = 'https://www.ikea.com/pl/pl/p/test-rate/';
   const restore = installFetchMock({ products: { [url]: PRODUCT_HTML('Krzesło', 200) }, deliveries });
   const originalWarn = console.warn;
+  const realNow = Date.now;
+  const hourStart = Math.floor(1_900_000_000_000 / QUOTE_SECURITY_LIMITS.hourWindowMs)
+    * QUOTE_SECURITY_LIMITS.hourWindowMs;
+  let now = hourStart;
   console.warn = (...args) => { warningLogs.push(args); };
   try {
+    Date.now = () => now;
     const bindings = env();
     const statuses = [];
     const outcomes = [];
     const quoteIds = [];
-    for (let index = 1; index <= 6; index += 1) {
-      const result = await calculate(body([{ url, quantity: 1 }], { details: `Wariant ${index}` }), bindings, 'test-rate');
+    for (let index = 1; index <= 41; index += 1) {
+      now = hourStart + (index - 1) * QUOTE_SECURITY_LIMITS.minuteWindowMs;
+      const result = await calculate(
+        body([{ url, quantity: 1 }], { details: `Wariant ${index}` }),
+        env(),
+        `test-rate-user-agent-${index}`
+      );
       quoteIds.push(result.data.quoteId);
       const notification = await notify(result.data.notificationToken, bindings);
       statuses.push(notification.response.status);
       outcomes.push(notification.data);
     }
-    assert.deepEqual(statuses, [200, 200, 200, 200, 200, 429]);
-    assert.equal(outcomes[5].outcome, 'rejected');
-    assert.equal(outcomes[5].accepted, false);
-    assert.equal(outcomes[5].message, REJECTED_NOTIFICATION_MESSAGE);
-    assert.equal(deliveries.length, 5);
+    assert.deepEqual(statuses.slice(0, 40), Array(40).fill(200));
+    assert.equal(statuses[40], 429);
+    assert.equal(outcomes[40].outcome, 'rejected');
+    assert.equal(outcomes[40].accepted, false);
+    assert.equal(outcomes[40].message, REJECTED_NOTIFICATION_MESSAGE);
+    assert.equal(deliveries.length, 40);
     const logs = JSON.stringify(warningLogs);
     assert.match(logs, /notification-rejected/);
     assert.match(logs, /"reason":"rate-limit"/);
     assert.match(logs, /client-hourly/);
-    assert.match(logs, /"limit":5/);
-    assert.match(logs, new RegExp(quoteIds[5]));
+    assert.match(logs, /"limit":40/);
+    assert.match(logs, new RegExp(quoteIds[40]));
   } finally {
+    Date.now = realNow;
     console.warn = originalWarn;
     restore();
   }

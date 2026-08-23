@@ -1,12 +1,10 @@
 import { verifyQuoteToken } from './quote-products.js';
+import { QUOTE_SECURITY_LIMITS } from './quote-security-config.js';
 
-const RATE_LIMIT_PER_HOUR = 5;
 const MAX_REQUEST_BYTES = 32_000;
 const MAX_TOKEN_LENGTH = 24_000;
-const MAX_REQUESTS_PER_MINUTE = 20;
-const NOTIFICATION_RECORD_TTL_SECONDS = 30 * 60;
 const REJECTED_NOTIFICATION_MESSAGE = 'Nie udało się przyjąć zgłoszenia. Zadzwoń pod numer +48 784 878 197, aby przekazać szczegóły wyceny.';
-const memorySent = new Map();
+const memoryDeliveryRecords = new Map();
 const memoryRate = new Map();
 const inFlight = new Map();
 const decoder = new TextDecoder();
@@ -65,11 +63,13 @@ async function ingressFingerprint(request) {
 }
 
 async function withinIngressRateLimit(env, request) {
-  const minute = Math.floor(Date.now() / 60_000);
+  const minute = Math.floor(Date.now() / QUOTE_SECURITY_LIMITS.minuteWindowMs);
   const key = `quote-notification-rate:${await ingressFingerprint(request)}:${minute}`;
   const count = Number(await env.QUOTE_NOTIFICATION_KV.get(key) || 0);
-  if (!Number.isFinite(count) || count >= MAX_REQUESTS_PER_MINUTE) return false;
-  await env.QUOTE_NOTIFICATION_KV.put(key, String(count + 1), { expirationTtl: 120 });
+  if (!Number.isFinite(count) || count >= QUOTE_SECURITY_LIMITS.notificationsPerMinute) return false;
+  await env.QUOTE_NOTIFICATION_KV.put(key, String(count + 1), {
+    expirationTtl: QUOTE_SECURITY_LIMITS.minuteRateRecordTtlSeconds
+  });
   return true;
 }
 
@@ -397,7 +397,9 @@ async function sendTelegram(config, fields, notificationId) {
 }
 
 function cleanupMemory(now) {
-  for (const [key, expiresAt] of memorySent) if (expiresAt <= now) memorySent.delete(key);
+  for (const [key, expiresAt] of memoryDeliveryRecords) {
+    if (expiresAt <= now) memoryDeliveryRecords.delete(key);
+  }
   for (const [key, state] of memoryRate) if (state.expiresAt <= now) memoryRate.delete(key);
 }
 
@@ -409,24 +411,30 @@ function deliveryKey(payload) {
 
 async function duplicateReason(env, payload) {
   const key = deliveryKey(payload);
-  if (memorySent.has(key)) return 'duplicate-memory';
+  if (memoryDeliveryRecords.has(`notification:${payload.quoteId}`)) return 'duplicate-quote-id-memory';
+  if (memoryDeliveryRecords.has(`notification-dedupe:${key}`)) return 'duplicate-notification-key-memory';
   if (await env.QUOTE_NOTIFICATION_KV.get(`notification:${payload.quoteId}`)) return 'duplicate-quote-id';
   if (await env.QUOTE_NOTIFICATION_KV.get(`notification-dedupe:${key}`)) return 'duplicate-notification-key';
   return null;
 }
 
-async function checkRateLimit(env, clientFingerprint, now) {
-  const hour = Math.floor(now / 3_600_000);
-  const key = `${clientFingerprint}:${hour}`;
-  const memory = memoryRate.get(key) || { count: 0, expiresAt: (hour + 1) * 3_600_000 };
+async function checkRateLimit(env, clientIpHash, now) {
+  const hour = Math.floor(now / QUOTE_SECURITY_LIMITS.hourWindowMs);
+  const key = `${clientIpHash}:${hour}`;
+  const memory = memoryRate.get(key) || {
+    count: 0,
+    expiresAt: (hour + 1) * QUOTE_SECURITY_LIMITS.hourWindowMs
+  };
   // KV ma spójność eventual i operacje get/put nie są globalnie atomowe. Jest to
   // ochrona best-effort; mapy poniżej wzmacniają ją tylko w obrębie jednego isolate.
   const stored = Number(await env.QUOTE_NOTIFICATION_KV.get(`rate:${key}`) || 0);
   const count = Math.max(memory.count, stored);
-  if (count >= RATE_LIMIT_PER_HOUR) return false;
+  if (count >= QUOTE_SECURITY_LIMITS.notificationsPerHour) return false;
   const next = count + 1;
   memoryRate.set(key, { count: next, expiresAt: memory.expiresAt });
-  await env.QUOTE_NOTIFICATION_KV.put(`rate:${key}`, String(next), { expirationTtl: 3_700 });
+  await env.QUOTE_NOTIFICATION_KV.put(`rate:${key}`, String(next), {
+    expirationTtl: QUOTE_SECURITY_LIMITS.hourlyRateRecordTtlSeconds
+  });
   return true;
 }
 
@@ -447,13 +455,15 @@ async function deliver(payload, env, endpoint, telegram) {
 
   let rateLimitAllowed;
   try {
-    rateLimitAllowed = await checkRateLimit(env, payload.clientFingerprint, now);
+    // clientFingerprint pozostaje fallbackiem tylko dla tokenów wystawionych przez
+    // poprzednią wersję; nowe tokeny limitujemy wyłącznie po hashu publicznego IP.
+    rateLimitAllowed = await checkRateLimit(env, payload.clientIpHash || payload.clientFingerprint, now);
   } catch {
     return rejectedResponse(payload.quoteId, 'kv-rate-limit-error', 503);
   }
   if (!rateLimitAllowed) {
     return rejectedResponse(payload.quoteId, 'rate-limit', 429, {
-      details: { rateLimit: 'client-hourly', limit: RATE_LIMIT_PER_HOUR }
+      details: { rateLimit: 'client-hourly', limit: QUOTE_SECURITY_LIMITS.notificationsPerHour }
     });
   }
 
@@ -478,13 +488,24 @@ async function deliver(payload, env, endpoint, telegram) {
   }
 
   const key = deliveryKey(payload);
-  memorySent.set(key, payload.expiresAt);
-  // Rekord replay żyje dłużej niż 20-minutowy token. KV pozostaje best-effort,
-  // natomiast inFlight chroni dodatkowo równoległe wywołania w tym samym isolate.
+  memoryDeliveryRecords.set(
+    `notification:${payload.quoteId}`,
+    now + QUOTE_SECURITY_LIMITS.quoteReplayTtlSeconds * 1_000
+  );
+  memoryDeliveryRecords.set(
+    `notification-dedupe:${key}`,
+    now + QUOTE_SECURITY_LIMITS.notificationDedupeTtlSeconds * 1_000
+  );
+  // Replay quoteId i deduplikacja treści mają niezależne czasy życia. KV pozostaje
+  // best-effort, a inFlight chroni równoległe wywołania w tym samym isolate.
   let deliveryRecorded = true;
   try {
-    await env.QUOTE_NOTIFICATION_KV.put(`notification:${payload.quoteId}`, '1', { expirationTtl: NOTIFICATION_RECORD_TTL_SECONDS });
-    await env.QUOTE_NOTIFICATION_KV.put(`notification-dedupe:${key}`, '1', { expirationTtl: NOTIFICATION_RECORD_TTL_SECONDS });
+    await env.QUOTE_NOTIFICATION_KV.put(`notification:${payload.quoteId}`, '1', {
+      expirationTtl: QUOTE_SECURITY_LIMITS.quoteReplayTtlSeconds
+    });
+    await env.QUOTE_NOTIFICATION_KV.put(`notification-dedupe:${key}`, '1', {
+      expirationTtl: QUOTE_SECURITY_LIMITS.notificationDedupeTtlSeconds
+    });
   } catch {
     deliveryRecorded = false;
     logTelegram('error', 'notification-storage-failed', payload.quoteId, {
@@ -548,7 +569,7 @@ export async function onRequestPost({ request, env }) {
   if (!allowed) {
     return rejectedResponse(null, 'rate-limit', 429, {
       headers: { 'Retry-After': '60' },
-      details: { rateLimit: 'ingress-minute', limit: MAX_REQUESTS_PER_MINUTE }
+      details: { rateLimit: 'ingress-minute', limit: QUOTE_SECURITY_LIMITS.notificationsPerMinute }
     });
   }
 
