@@ -161,9 +161,10 @@ Opcjonalny, równoległy kanał Telegram wymaga dwóch zaszyfrowanych zmiennych:
 - `QUOTE_NOTIFICATION_TELEGRAM_CHAT_ID` — identyfikator prywatnego czatu,
   grupy albo nazwa kanału w formacie `@nazwa`.
 
-Kanał włącza się tylko wtedy, gdy obie wartości są obecne i mają poprawny
-format. Brak jednej z nich pozostawia Telegram nieaktywny i nie zmienia
-działania Formspree. Wiadomości są wysyłane jako zwykły tekst metodą
+Kanał włącza się tylko wtedy, gdy obie wartości są obecne i niepuste. Ich
+poprawność weryfikuje Telegram API; kod nie odrzuca lokalnie wartości działającej
+z API. Brak jednej z nich pozostawia Telegram nieaktywny i nie zmienia działania
+Formspree. Wiadomości są wysyłane jako zwykły tekst metodą
 `sendMessage`, bez formatowania i bez podglądu linków. Nie zapisuj tokenu ani
 identyfikatora czatu w repozytorium.
 
