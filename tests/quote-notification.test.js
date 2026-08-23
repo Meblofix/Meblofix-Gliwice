@@ -95,7 +95,7 @@ function installFetchMock({
     if (url.startsWith('https://api.telegram.org/bot') && url.endsWith('/sendMessage')) {
       const payload = JSON.parse(init.body);
       telegramDeliveries.push(payload);
-      if (onTelegramRequest) return onTelegramRequest(payload);
+      if (onTelegramRequest) return onTelegramRequest(payload, url);
       return Response.json(
         telegramResponseBody ?? { ok: telegramStatus < 400 },
         { status: telegramStatus }
@@ -956,6 +956,48 @@ test('skonfigurowany Telegram działa równolegle z Formspree', async () => {
     assert.doesNotMatch(telegramDeliveries[0].text, /https?:\/\//i);
     assert.deepEqual(telegramDeliveries[0].link_preview_options, { is_disabled: true });
   } finally { restore(); }
+});
+
+test('końcowe białe znaki sekretów Telegrama są usuwane i raportowane bez ujawniania wartości', async () => {
+  const deliveries = [];
+  const telegramDeliveries = [];
+  const infoLogs = [];
+  const tokenWithWhitespace = `${TELEGRAM_TOKEN} \n`;
+  const chatIdWithWhitespace = `${TELEGRAM_CHAT_ID} \n`;
+  const url = 'https://www.ikea.com/pl/pl/p/test-telegram-trim/';
+  let telegramRequestUrl;
+  const restore = installFetchMock({
+    products: { [url]: PRODUCT_HTML('Szafka testowa', 450) },
+    deliveries,
+    telegramDeliveries,
+    onTelegramRequest(payload, requestUrl) {
+      telegramRequestUrl = requestUrl;
+      return Response.json({ ok: true });
+    }
+  });
+  const originalInfo = console.info;
+  console.info = (...args) => { infoLogs.push(args); };
+  try {
+    const bindings = env({
+      QUOTE_NOTIFICATION_TELEGRAM_BOT_TOKEN: tokenWithWhitespace,
+      QUOTE_NOTIFICATION_TELEGRAM_CHAT_ID: chatIdWithWhitespace
+    });
+    const result = await calculate(body([{ url, quantity: 1 }]), bindings, 'test-telegram-trim');
+    const notification = await notify(result.data.notificationToken, bindings);
+    assert.equal(notification.response.status, 200);
+    assert.deepEqual(notification.data.channels, { formspree: 'sent', telegram: 'sent' });
+    assert.equal(telegramRequestUrl, `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`);
+    assert.equal(telegramDeliveries[0].chat_id, TELEGRAM_CHAT_ID);
+    const logs = JSON.stringify(infoLogs);
+    assert.match(logs, /telegram-configuration/);
+    assert.match(logs, /"tokenTrimLengthDifference":2/);
+    assert.match(logs, /"chatIdTrimLengthDifference":2/);
+    assert.doesNotMatch(logs, new RegExp(TELEGRAM_TOKEN));
+    assert.doesNotMatch(logs, new RegExp(TELEGRAM_CHAT_ID));
+  } finally {
+    console.info = originalInfo;
+    restore();
+  }
 });
 
 test('obie niepuste zmienne uruchamiają Telegram przed odpowiedzią udanego Formspree', async () => {

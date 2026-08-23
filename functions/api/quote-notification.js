@@ -93,18 +93,26 @@ function configuredFormspreeEndpoint(env) {
 }
 
 function telegramConfiguration(env) {
-  const token = String(env?.QUOTE_NOTIFICATION_TELEGRAM_BOT_TOKEN || '').trim();
-  const chatId = String(env?.QUOTE_NOTIFICATION_TELEGRAM_CHAT_ID || '').trim();
+  const rawToken = String(env?.QUOTE_NOTIFICATION_TELEGRAM_BOT_TOKEN || '');
+  const rawChatId = String(env?.QUOTE_NOTIFICATION_TELEGRAM_CHAT_ID || '');
+  const token = rawToken.trim();
+  const chatId = rawChatId.trim();
+  const trimLengthDifference = {
+    token: rawToken.length - token.length,
+    chatId: rawChatId.length - chatId.length
+  };
   if (!token || !chatId) {
     return {
       configured: false,
       reason: !token && !chatId ? 'missing-both-secrets' : !token ? 'missing-bot-token' : 'missing-chat-id',
-      config: null
+      config: null,
+      trimLengthDifference
     };
   }
   return {
     configured: true,
     reason: null,
+    trimLengthDifference,
     config: {
       endpoint: `https://api.telegram.org/bot${token}/sendMessage`,
       chatId,
@@ -493,7 +501,9 @@ export async function onRequestPost({ request, env }) {
 
   logTelegram('info', 'telegram-configuration', payload.quoteId, {
     configured: telegram.configured,
-    reason: telegram.reason
+    reason: telegram.reason,
+    tokenTrimLengthDifference: telegram.trimLengthDifference.token,
+    chatIdTrimLengthDifference: telegram.trimLengthDifference.chatId
   });
 
   try {
