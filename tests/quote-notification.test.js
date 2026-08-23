@@ -8,7 +8,6 @@ const SECRET = 'testowy-sekret-powiadomien-ma-co-najmniej-32-znaki';
 const NOTIFICATION_ENDPOINT = 'https://formspree.io/f/testquoteendpoint';
 const TELEGRAM_TOKEN = '123456789:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
 const TELEGRAM_CHAT_ID = '-1001234567890';
-const TELEGRAM_ENDPOINT = `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`;
 const ALLEGRO_URL = 'https://allegro.pl/produkt/lozko-pojedyncze-ikea-hemnes-drewniane-biale-80x200-z-pojemnikiem-34f7722e-546b-437d-a88d-2d618d6728d0?offerId=18281158355';
 const ALLEGRO_NAME = 'IKEA HEMNES łóżko składane, leżanka 3 szufladami biały 80x200';
 const PLANNER_MESSAGE = 'Projekt z planera IKEA wyceniamy indywidualnie. Prześlij dane kontaktowe, a przygotujemy ręczną wycenę na podstawie projektu.';
@@ -79,18 +78,28 @@ function installFetchMock({
   deliveryStatus = 200,
   requests = [],
   telegramDeliveries = [],
-  telegramStatus = 200
+  telegramStatus = 200,
+  telegramResponseBody,
+  onFormspreeRequest,
+  onTelegramRequest
 }) {
   const original = globalThis.fetch;
   globalThis.fetch = async (input, init = {}) => {
     const url = String(input);
     if (url === NOTIFICATION_ENDPOINT) {
-      deliveries.push(Object.fromEntries(init.body.entries()));
+      const fields = Object.fromEntries(init.body.entries());
+      deliveries.push(fields);
+      if (onFormspreeRequest) return onFormspreeRequest(fields);
       return Response.json({ ok: deliveryStatus < 400 }, { status: deliveryStatus });
     }
-    if (url === TELEGRAM_ENDPOINT) {
-      telegramDeliveries.push(JSON.parse(init.body));
-      return Response.json({ ok: telegramStatus < 400 }, { status: telegramStatus });
+    if (url.startsWith('https://api.telegram.org/bot') && url.endsWith('/sendMessage')) {
+      const payload = JSON.parse(init.body);
+      telegramDeliveries.push(payload);
+      if (onTelegramRequest) return onTelegramRequest(payload);
+      return Response.json(
+        telegramResponseBody ?? { ok: telegramStatus < 400 },
+        { status: telegramStatus }
+      );
     }
     if (url in products) {
       requests.push({ url, init });
@@ -947,6 +956,141 @@ test('skonfigurowany Telegram działa równolegle z Formspree', async () => {
     assert.doesNotMatch(telegramDeliveries[0].text, /https?:\/\//i);
     assert.deepEqual(telegramDeliveries[0].link_preview_options, { is_disabled: true });
   } finally { restore(); }
+});
+
+test('obie niepuste zmienne uruchamiają Telegram przed odpowiedzią udanego Formspree', async () => {
+  const deliveries = [];
+  const telegramDeliveries = [];
+  const infoLogs = [];
+  const opaqueToken = 'wartosc-sekretu-przekazywana-do-telegram-api';
+  const numericChatId = '123456789';
+  const url = 'https://www.ikea.com/pl/pl/p/test-telegram-concurrent-success/';
+  let releaseFormspree;
+  let markFormspreeStarted;
+  let markTelegramStarted;
+  const formspreeGate = new Promise(resolve => { releaseFormspree = resolve; });
+  const formspreeStarted = new Promise(resolve => { markFormspreeStarted = resolve; });
+  const telegramStarted = new Promise(resolve => { markTelegramStarted = resolve; });
+  const restore = installFetchMock({
+    products: { [url]: PRODUCT_HTML('Szafka testowa', 600) },
+    deliveries,
+    telegramDeliveries,
+    async onFormspreeRequest() {
+      markFormspreeStarted();
+      await formspreeGate;
+      return Response.json({ ok: true });
+    },
+    onTelegramRequest() {
+      markTelegramStarted();
+      return Response.json({ ok: true });
+    }
+  });
+  const originalInfo = console.info;
+  console.info = (...args) => { infoLogs.push(args); };
+  try {
+    const bindings = env({
+      QUOTE_NOTIFICATION_TELEGRAM_BOT_TOKEN: opaqueToken,
+      QUOTE_NOTIFICATION_TELEGRAM_CHAT_ID: numericChatId
+    });
+    const result = await calculate(body([{ url, quantity: 1 }]), bindings, 'test-telegram-concurrent-success');
+    const notificationPromise = notify(result.data.notificationToken, bindings);
+    await Promise.all([formspreeStarted, telegramStarted]);
+    assert.equal(deliveries.length, 1);
+    assert.equal(telegramDeliveries.length, 1, 'Telegram musi wystartować przed odpowiedzią Formspree');
+    assert.equal(telegramDeliveries[0].chat_id, numericChatId, 'liczbowy chat_id zapisany jako tekst nie może być odrzucony');
+    releaseFormspree();
+    const notification = await notificationPromise;
+    assert.equal(notification.response.status, 200);
+    assert.deepEqual(notification.data.channels, { formspree: 'sent', telegram: 'sent' });
+    const logs = JSON.stringify(infoLogs);
+    assert.match(logs, /telegram-configuration/);
+    assert.match(logs, /"configured":true/);
+    assert.match(logs, /telegram-request-started/);
+    assert.match(logs, /telegram-request-succeeded/);
+    assert.doesNotMatch(logs, new RegExp(opaqueToken));
+    assert.doesNotMatch(logs, new RegExp(numericChatId));
+    assert.doesNotMatch(logs, /Szafka testowa/);
+  } finally {
+    releaseFormspree();
+    console.info = originalInfo;
+    restore();
+  }
+});
+
+test('błąd Telegram API jest logowany bez sekretów i danych klienta', async () => {
+  const deliveries = [];
+  const telegramDeliveries = [];
+  const errorLogs = [];
+  const url = 'https://www.ikea.com/pl/pl/p/test-telegram-error-log/';
+  const restore = installFetchMock({
+    products: { [url]: PRODUCT_HTML('Komoda klienta', 700) },
+    deliveries,
+    telegramDeliveries,
+    telegramStatus: 400,
+    telegramResponseBody: { ok: false, error_code: 400, description: 'Bad Request: chat not found' }
+  });
+  const originalError = console.error;
+  console.error = (...args) => { errorLogs.push(args); };
+  try {
+    const bindings = env({
+      QUOTE_NOTIFICATION_TELEGRAM_BOT_TOKEN: TELEGRAM_TOKEN,
+      QUOTE_NOTIFICATION_TELEGRAM_CHAT_ID: TELEGRAM_CHAT_ID
+    });
+    const result = await calculate(body([{ url, quantity: 1 }], {
+      contact: { name: 'Anna Testowa', phone: '500 111 222', email: 'anna-test@example.com' }
+    }), bindings, 'test-telegram-error-log');
+    const notification = await notify(result.data.notificationToken, bindings);
+    assert.equal(notification.response.status, 200, 'działający Formspree zachowuje sukces całego zgłoszenia');
+    assert.deepEqual(notification.data.channels, { formspree: 'sent', telegram: 'failed' });
+    const logs = JSON.stringify(errorLogs);
+    assert.match(logs, /telegram-request-failed/);
+    assert.match(logs, /"status":400/);
+    assert.match(logs, /"errorCode":400/);
+    assert.match(logs, /Bad Request: chat not found/);
+    assert.doesNotMatch(logs, new RegExp(TELEGRAM_TOKEN));
+    assert.doesNotMatch(logs, new RegExp(TELEGRAM_CHAT_ID));
+    assert.doesNotMatch(logs, /Anna Testowa|500 111 222|anna-test@example\.com|Komoda klienta/);
+  } finally {
+    console.error = originalError;
+    restore();
+  }
+});
+
+test('wyjątek połączenia z Telegramem jest logowany z redakcją sekretów', async () => {
+  const deliveries = [];
+  const telegramDeliveries = [];
+  const errorLogs = [];
+  const opaqueToken = 'sekret-o-formacie-niekontrolowanym-lokalnie';
+  const numericChatId = '-1009876543210';
+  const url = 'https://www.ikea.com/pl/pl/p/test-telegram-exception-log/';
+  const restore = installFetchMock({
+    products: { [url]: PRODUCT_HTML('Regał', 500) },
+    deliveries,
+    telegramDeliveries,
+    onTelegramRequest() {
+      throw new Error(`fetch failed for ${opaqueToken} and ${numericChatId}`);
+    }
+  });
+  const originalError = console.error;
+  console.error = (...args) => { errorLogs.push(args); };
+  try {
+    const bindings = env({
+      QUOTE_NOTIFICATION_TELEGRAM_BOT_TOKEN: opaqueToken,
+      QUOTE_NOTIFICATION_TELEGRAM_CHAT_ID: numericChatId
+    });
+    const result = await calculate(body([{ url, quantity: 1 }]), bindings, 'test-telegram-exception-log');
+    const notification = await notify(result.data.notificationToken, bindings);
+    assert.equal(notification.response.status, 200);
+    assert.deepEqual(notification.data.channels, { formspree: 'sent', telegram: 'failed' });
+    const logs = JSON.stringify(errorLogs);
+    assert.match(logs, /telegram-request-exception/);
+    assert.match(logs, /fetch failed for \[redacted\] and \[redacted\]/);
+    assert.doesNotMatch(logs, new RegExp(opaqueToken));
+    assert.doesNotMatch(logs, new RegExp(numericChatId));
+  } finally {
+    console.error = originalError;
+    restore();
+  }
 });
 
 test('brak jednej zmiennej Telegram pozostawia kanał nieaktywny', async () => {

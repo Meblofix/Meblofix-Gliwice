@@ -92,15 +92,24 @@ function configuredFormspreeEndpoint(env) {
   }
 }
 
-function configuredTelegram(env) {
+function telegramConfiguration(env) {
   const token = String(env?.QUOTE_NOTIFICATION_TELEGRAM_BOT_TOKEN || '').trim();
   const chatId = String(env?.QUOTE_NOTIFICATION_TELEGRAM_CHAT_ID || '').trim();
-  if (!token || !chatId) return null;
-  if (!/^\d{5,20}:[A-Za-z0-9_-]{20,}$/.test(token)) return null;
-  if (!/^-?\d{1,20}$/.test(chatId) && !/^@[A-Za-z][A-Za-z0-9_]{4,31}$/.test(chatId)) return null;
+  if (!token || !chatId) {
+    return {
+      configured: false,
+      reason: !token && !chatId ? 'missing-both-secrets' : !token ? 'missing-bot-token' : 'missing-chat-id',
+      config: null
+    };
+  }
   return {
-    endpoint: `https://api.telegram.org/bot${token}/sendMessage`,
-    chatId
+    configured: true,
+    reason: null,
+    config: {
+      endpoint: `https://api.telegram.org/bot${token}/sendMessage`,
+      chatId,
+      token
+    }
   };
 }
 
@@ -299,6 +308,24 @@ function telegramMessage(fields) {
   return text.length <= 4096 ? text : `${text.slice(0, 4093)}…`;
 }
 
+function telegramDiagnostic(value, config) {
+  let diagnostic = String(value || 'Brak opisu błędu')
+    .replace(/https:\/\/api\.telegram\.org\/bot[^/\s]+/gi, 'https://api.telegram.org/bot[redacted]')
+    .replace(/\b\d{5,20}:[A-Za-z0-9_-]{20,}\b/g, '[redacted]')
+    .replace(/[\r\n]+/g, ' ');
+  for (const secret of [config?.token, config?.chatId]) {
+    if (secret) diagnostic = diagnostic.replaceAll(secret, '[redacted]');
+  }
+  return diagnostic.slice(0, 500);
+}
+
+function logTelegram(level, event, notificationId, details = {}) {
+  console[level](`[quote-notification] ${event}`, {
+    notificationId,
+    ...details
+  });
+}
+
 async function sendFormspree(endpoint, fields) {
   try {
     const response = await fetch(endpoint, {
@@ -312,7 +339,8 @@ async function sendFormspree(endpoint, fields) {
   }
 }
 
-async function sendTelegram(config, fields) {
+async function sendTelegram(config, fields, notificationId) {
+  logTelegram('info', 'telegram-request-started', notificationId);
   try {
     const response = await fetch(config.endpoint, {
       method: 'POST',
@@ -323,9 +351,27 @@ async function sendTelegram(config, fields) {
         link_preview_options: { is_disabled: true }
       })
     });
-    const result = await response.json().catch(() => null);
-    return response.ok && result?.ok === true;
-  } catch {
+    const responseText = await response.text();
+    let result = null;
+    try {
+      result = JSON.parse(responseText);
+    } catch {}
+    const sent = response.ok && result?.ok === true;
+    if (sent) {
+      logTelegram('info', 'telegram-request-succeeded', notificationId, { status: response.status });
+    } else {
+      logTelegram('error', 'telegram-request-failed', notificationId, {
+        status: response.status,
+        errorCode: Number.isInteger(result?.error_code) ? result.error_code : null,
+        error: telegramDiagnostic(result?.description || responseText, config)
+      });
+    }
+    return sent;
+  } catch (error) {
+    logTelegram('error', 'telegram-request-exception', notificationId, {
+      status: null,
+      error: telegramDiagnostic(error?.message, config)
+    });
     return false;
   }
 }
@@ -379,7 +425,7 @@ async function deliver(payload, env, endpoint, telegram) {
   if (!dryRun && !testMode) {
     [formspreeSent, telegramSent] = await Promise.all([
       sendFormspree(endpoint, fields),
-      telegram ? sendTelegram(telegram, fields) : Promise.resolve(false)
+      telegram.configured ? sendTelegram(telegram.config, fields, payload.quoteId) : Promise.resolve(false)
     ]);
     if (!formspreeSent && !telegramSent) {
       return jsonResponse({ sent: false, error: 'delivery-failed' }, { status: 502 });
@@ -398,7 +444,7 @@ async function deliver(payload, env, endpoint, telegram) {
       dryRun: true,
       mode: 'notification-dry-run',
       fields: [...fields.keys()],
-      channels: { formspree: 'dry-run', telegram: telegram ? 'dry-run' : 'inactive' }
+      channels: { formspree: 'dry-run', telegram: telegram.configured ? 'dry-run' : 'inactive' }
     }, { status: 200 });
   }
   return jsonResponse({
@@ -406,7 +452,7 @@ async function deliver(payload, env, endpoint, telegram) {
     testMode,
     channels: {
       formspree: testMode ? 'test' : formspreeSent ? 'sent' : 'failed',
-      telegram: !telegram ? 'inactive' : testMode ? 'test' : telegramSent ? 'sent' : 'failed'
+      telegram: !telegram.configured ? 'inactive' : testMode ? 'test' : telegramSent ? 'sent' : 'failed'
     }
   }, { status: 200 });
 }
@@ -423,7 +469,7 @@ export async function onRequestPost({ request, env }) {
   if (!env?.QUOTE_NOTIFICATION_KV) return jsonResponse({ sent: false, error: 'notification-not-configured' }, { status: 503 });
   const dryRun = env.NOTIFICATION_DRY_RUN === '1';
   const endpoint = configuredFormspreeEndpoint(env);
-  const telegram = configuredTelegram(env);
+  const telegram = telegramConfiguration(env);
   if (!dryRun && !endpoint) return jsonResponse({ sent: false, error: 'notification-not-configured' }, { status: 503 });
 
   let allowed;
@@ -444,6 +490,11 @@ export async function onRequestPost({ request, env }) {
   } catch {
     return jsonResponse({ sent: false, error: 'invalid-token' }, { status: 400 });
   }
+
+  logTelegram('info', 'telegram-configuration', payload.quoteId, {
+    configured: telegram.configured,
+    reason: telegram.reason
+  });
 
   try {
     const key = deliveryKey(payload);
