@@ -6,6 +6,7 @@ const MAX_BYTES = 1_500_000;
 const MAX_REQUEST_BYTES = 32_000;
 const TIMEOUT_MS = 8_000;
 const MAX_REDIRECTS = 3;
+const MAX_DISTANCE_KM = pricingConfig.serviceArea.maximumDistanceOneWayKilometers;
 export const TOKEN_LIFETIME_MS = QUOTE_SECURITY_LIMITS.quoteTokenLifetimeMs;
 const QUOTE_RULES = Object.freeze({
   minimumJob: pricingConfig.publicRates.minimumJob,
@@ -487,9 +488,10 @@ function normalizeRequest(body) {
   });
   const city = cleanText(body?.city, 80);
   const furnitureType = cleanText(body?.furnitureType, 80);
-  const distanceInput = Number(body?.distance);
-  if (!city || !ALLOWED_FURNITURE_TYPES.has(furnitureType) || !Number.isFinite(distanceInput) || distanceInput < 0 || distanceInput > 500) throw new Error('context');
-  const distance = isGliwice(city) ? 0 : distanceInput;
+  const local = isGliwice(city);
+  const distanceInput = local ? 0 : Number(body?.distance);
+  if (!city || !ALLOWED_FURNITURE_TYPES.has(furnitureType) || !Number.isInteger(distanceInput) || distanceInput < 0 || distanceInput > MAX_DISTANCE_KM) throw new Error('context');
+  const distance = local ? 0 : distanceInput;
   if (!isGliwice(city) && distance <= 0) throw new Error('distance');
   const rawExtraServices = body?.extraServices == null ? [] : body.extraServices;
   if (!Array.isArray(rawExtraServices) || rawExtraServices.length > 10) throw new Error('extra-services');

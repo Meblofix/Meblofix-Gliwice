@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "build:cloudflare": "bash scripts/build-cloudflare.sh",
-    "test:quote": "node tests/quote-notification.test.js && node --test tests/analytics.test.js"
+    "test:quote": "node tests/quote-notification.test.js && node --test tests/quote-distance.test.js tests/analytics.test.js"
   },
   "devDependencies": {
     "wrangler": "4.120.0"

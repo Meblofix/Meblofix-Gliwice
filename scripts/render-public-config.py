@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+from html import escape
 import json
 from pathlib import Path
 
@@ -20,6 +21,7 @@ def money(value: float, *, hourly: bool = False) -> str:
 def replacements(config: dict) -> dict[str, str]:
     rates = config["publicRates"]
     travel = rates["travel"]
+    service_area = config["serviceArea"]
     rate = money(travel["outsideGliwicePerKilometer"])
     one_installer_two_hours = max(rates["minimumJob"], rates["hourlyOneInstaller"] * 2)
     two_installers_two_hours = max(rates["minimumJob"], rates["hourlyTwoInstallers"] * 2)
@@ -28,6 +30,13 @@ def replacements(config: dict) -> dict[str, str]:
         * travel["roundTripMultiplier"]
         * 10
     )
+    city_options = []
+    for city in service_area["cities"]:
+        distance = city["distanceOneWayKilometers"]
+        distance_attribute = "" if distance is None else f' data-distance="{int(distance)}"'
+        city_options.append(
+            f'<option value="{escape(city["name"], quote=True)}"{distance_attribute}></option>'
+        )
     return {
         "[[MINIMUM_JOB]]": money(rates["minimumJob"]),
         "[[HOURLY_ONE]]": money(rates["hourlyOneInstaller"], hourly=True),
@@ -37,6 +46,9 @@ def replacements(config: dict) -> dict[str, str]:
         "[[HOURLY_ONE_NUMBER]]": str(rates["hourlyOneInstaller"]),
         "[[HOURLY_TWO_NUMBER]]": str(rates["hourlyTwoInstallers"]),
         "[[TRAVEL_RATE]]": f"{rate}/km",
+        "[[SERVICE_AREA_ORIGIN_CITY]]": escape(service_area["originCity"], quote=True),
+        "[[SERVICE_AREA_MAX_DISTANCE]]": str(service_area["maximumDistanceOneWayKilometers"]),
+        "[[SERVICE_AREA_CITY_OPTIONS]]": "".join(city_options),
         "[[EXAMPLE_ONE_TWO_HOURS]]": money(one_installer_two_hours),
         "[[EXAMPLE_TWO_TWO_HOURS]]": money(two_installers_two_hours),
         "[[EXAMPLE_TRAVEL_TEN_KM]]": money(travel_ten_kilometers),

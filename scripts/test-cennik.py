@@ -37,6 +37,8 @@ altered["publicRates"].update({
     "estimate": 3,
 })
 altered["publicRates"]["travel"]["outsideGliwicePerKilometer"] = 2.75
+altered["serviceArea"]["maximumDistanceOneWayKilometers"] = 27
+next(city for city in altered["serviceArea"]["cities"] if city["name"] == "Zabrze")["distanceOneWayKilometers"] = 13
 
 price_pages = [
     "index.html",
@@ -63,9 +65,23 @@ for source_path in travel_sources:
     rendered = render_public_config.render_document(source_path.read_text(encoding="utf-8"), altered)
     require("2,75 zł" in rendered, f"{source_path.relative_to(ROOT)}: reguła dojazdu nie pochodzi z configu")
 
+calculator_rendered = render_public_config.render_document(
+    (ROOT / "index.html").read_text(encoding="utf-8"), altered
+)
+require('max="27"' in calculator_rendered, "Maksymalna odległość kalkulatora nie pochodzi z configu")
+require(
+    '<option value="Zabrze" data-distance="13"></option>' in calculator_rendered,
+    "Podpowiedź odległości miasta nie pochodzi z configu",
+)
+require(
+    "Dojazd poza Gliwicami kosztuje 2,75 zł za kilometr liczony w obie strony." in calculator_rendered,
+    "Pomoc pola odległości nie pokazuje reguły ze wspólnego configu",
+)
+
 backend = (ROOT / "functions" / "api" / "quote-products.js").read_text(encoding="utf-8")
 require("../../data/cennik.json" in backend, "Kalkulator nie importuje wspólnego configu")
 require("minimumJob: 150" not in backend and "travelPerKm: 1.5" not in backend, "Kalkulator nadal hardcoduje reguły")
+require("maximumDistanceOneWayKilometers" in backend and "distanceInput > 500" not in backend, "Limit odległości backendu nie pochodzi z configu")
 
 for html_path in DIST.rglob("*.html"):
     require("[[" not in html_path.read_text(encoding="utf-8"), f"Niewypełniony marker w {html_path.relative_to(DIST)}")

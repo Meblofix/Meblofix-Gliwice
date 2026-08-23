@@ -1331,6 +1331,7 @@
   }
 
   .quote-field-wide { grid-column: 1 / -1; }
+  .quote-field[hidden] { display: none; }
 
   .quote-label {
     color: var(--mid);
@@ -1391,6 +1392,19 @@
     color: var(--gray);
     font-size: 0.74rem;
     line-height: 1.45;
+  }
+
+  .quote-distance-map {
+    align-self: flex-start;
+    color: var(--orange-light);
+    font-size: 0.76rem;
+    font-weight: 600;
+    text-underline-offset: 0.2em;
+  }
+
+  .quote-distance-map:focus-visible {
+    outline: 3px solid var(--orange-light);
+    outline-offset: 3px;
   }
 
   .quote-error {
@@ -4171,14 +4185,17 @@
 
         <div class="quote-field">
           <label class="quote-label" for="quoteCity">Miejscowość <span class="quote-required" aria-hidden="true">*</span></label>
-          <input type="text" id="quoteCity" name="miejscowosc" value="Gliwice" maxlength="80" autocomplete="address-level2" required>
+          <input type="text" id="quoteCity" name="miejscowosc" value="Gliwice" maxlength="80" autocomplete="address-level2" list="quoteCitySuggestions" required>
+          <datalist id="quoteCitySuggestions">[[SERVICE_AREA_CITY_OPTIONS]]</datalist>
           <span class="quote-error" id="quoteCity-error"></span>
         </div>
 
-        <div class="quote-field">
-          <label class="quote-label" for="quoteDistance">Odległość od Gliwic w km <span class="quote-required" aria-hidden="true">*</span></label>
-          <input type="number" id="quoteDistance" name="odleglosc_km" min="0" max="500" step="1" value="0" inputmode="decimal" readonly required>
-          <span class="quote-hint" id="quoteDistanceHint">W Gliwicach dojazd jest bez dodatkowej opłaty.</span>
+        <div class="quote-field" id="quoteDistanceFieldWrap" hidden>
+          <label class="quote-label" for="quoteDistance">Odległość w jedną stronę od Gliwic w km <span class="quote-required" aria-hidden="true">*</span></label>
+          <input type="number" id="quoteDistance" name="odleglosc_km" min="0" max="[[SERVICE_AREA_MAX_DISTANCE]]" step="1" value="0" inputmode="numeric" required aria-describedby="quoteDistanceHint quoteTravelRule quoteDistance-error">
+          <span class="quote-hint" id="quoteDistanceHint">Podaj orientacyjną odległość w jedną stronę od Gliwic.</span>
+          <a class="quote-distance-map" id="quoteDistanceMapLink" href="https://www.google.com/maps/dir/Gliwice" target="_blank" rel="noopener noreferrer">Sprawdź trasę w Google Maps</a>
+          <span class="quote-hint" id="quoteTravelRule">[[TRAVEL_RULE]]</span>
           <span class="quote-error" id="quoteDistance-error"></span>
         </div>
 
@@ -4789,6 +4806,7 @@
 </footer>
 
 <script src="analytics.js"></script>
+<script src="js/quote-distance.js"></script>
 <script>
   // ─── MOBILNE MENU ───
   const navToggle = document.querySelector('.nav-toggle');
@@ -4907,8 +4925,10 @@
   const QUOTE_MAX_LINKS = 10;
   const quoteForm = document.getElementById('quoteForm');
   const quoteCityField = document.getElementById('quoteCity');
+  const quoteCitySuggestions = document.getElementById('quoteCitySuggestions');
+  const quoteDistanceFieldWrap = document.getElementById('quoteDistanceFieldWrap');
   const quoteDistanceField = document.getElementById('quoteDistance');
-  const quoteDistanceHint = document.getElementById('quoteDistanceHint');
+  const quoteDistanceMapLink = document.getElementById('quoteDistanceMapLink');
   const quoteWorkCost = document.getElementById('quoteWorkCost');
   const quoteExtraServicesCost = document.getElementById('quoteExtraServicesCost');
   const quoteTravelCost = document.getElementById('quoteTravelCost');
@@ -4932,14 +4952,30 @@
   let calculationNoticeKey = '';
   let quoteAnalyticsAttempt = 0;
   let lastQuoteStartedAt = 0;
+  let distanceCityKey = '';
 
-  function isGliwice(city) { return String(city || '').trim().toLocaleLowerCase('pl-PL') === 'gliwice'; }
   function money(value) { const hasFraction = Math.round(Number(value) * 100) % 100 !== 0; return `${new Intl.NumberFormat('pl-PL', { minimumFractionDigits: hasFraction ? 2 : 0, maximumFractionDigits: 2 }).format(value)} zł`; }
+  function configuredCitySuggestions() {
+    return [...quoteCitySuggestions.options].map(option => ({
+      name: option.value,
+      distanceOneWayKilometers: option.dataset.distance === undefined ? null : Number(option.dataset.distance)
+    }));
+  }
   function syncDistance() {
-    const local = isGliwice(quoteCityField.value);
-    quoteDistanceField.readOnly = local;
-    if (local) { quoteDistanceField.value = '0'; quoteDistanceHint.textContent = 'W Gliwicach dojazd jest bez dodatkowej opłaty.'; }
-    else { if (quoteDistanceField.value === '0') quoteDistanceField.value = ''; quoteDistanceHint.textContent = 'Poza Gliwicami podaj odległość w jedną stronę. [[TRAVEL_RULE]]'; }
+    const state = window.MeblofixQuoteDistance.deriveDistanceState({
+      city: quoteCityField.value,
+      originCity: '[[SERVICE_AREA_ORIGIN_CITY]]',
+      previousCityKey: distanceCityKey,
+      currentValue: quoteDistanceField.value,
+      suggestions: configuredCitySuggestions()
+    });
+    quoteDistanceFieldWrap.hidden = state.hidden;
+    quoteDistanceField.required = state.required;
+    quoteDistanceField.min = String(state.minimum);
+    if (state.cityChanged || state.hidden) quoteDistanceField.value = state.value;
+    quoteDistanceMapLink.href = state.mapsUrl;
+    distanceCityKey = state.cityKey;
+    if (state.hidden) clearFieldError(quoteDistanceField);
   }
   function addProductRow() {
     if (quoteProducts.children.length >= QUOTE_MAX_LINKS) return;
@@ -4993,11 +5029,23 @@
     };
     window.MeblofixAnalytics?.track('quote_started', analyticsProperties, `quote:${analyticsAttempt}:started`);
     if (!items.length || items.some(item => !Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 100)) { setFormStatus(quoteProductsStatus, 'Podaj poprawny link i ilość każdego produktu.', 'error'); return; }
+    clearFieldError(quoteCityField); clearFieldError(quoteDistanceField);
+    const locationValidation = window.MeblofixQuoteDistance.validateDistance({
+      city: quoteCityField.value,
+      value: quoteDistanceField.value,
+      originCity: '[[SERVICE_AREA_ORIGIN_CITY]]',
+      maximumDistance: Number('[[SERVICE_AREA_MAX_DISTANCE]]')
+    });
+    if (!locationValidation.valid) {
+      const invalidField = locationValidation.field === 'city' ? quoteCityField : quoteDistanceField;
+      setFieldError(invalidField, locationValidation.message); invalidField.focus();
+      setFormStatus(quoteProductsStatus, 'Sprawdź miejscowość i odległość.', 'error'); return;
+    }
     const requestData = {
       items,
       extraServices: selectedExtraServices(),
       city: quoteCityField.value.trim(),
-      distance: Number(quoteDistanceField.value),
+      distance: locationValidation.distance,
       furnitureType: quoteServiceField.value,
       details: quoteDetailsField.value.trim(),
       contact: { name: quoteNameField.value.trim(), phone: quotePhoneField.value.trim(), email: quoteEmailField.value.trim() }

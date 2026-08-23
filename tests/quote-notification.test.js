@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { onRequestPost as calculateQuote, TOKEN_LIFETIME_MS, verifyQuoteToken } from '../functions/api/quote-products.js';
 import { onRequestPost as notifyQuote } from '../functions/api/quote-notification.js';
 import { QUOTE_SECURITY_LIMITS } from '../functions/api/quote-security-config.js';
+import pricingConfig from '../data/cennik.json' with { type: 'json' };
 
 const SECRET = 'testowy-sekret-powiadomien-ma-co-najmniej-32-znaki';
 const NOTIFICATION_ENDPOINT = 'https://formspree.io/f/testquoteendpoint';
@@ -167,6 +168,35 @@ test('poprawna wycena jednego produktu wysyła dokładnie jedno powiadomienie', 
     assert.equal(deliveries[0].koszt_dojazdu, '0 zł');
     assert.equal(deliveries[0].laczna_orientacyjna_wycena, '200 zł');
     assert.equal(deliveries[0].rodzaj_mebla, 'Meble z paczek');
+  } finally { restore(); }
+});
+
+test('Gliwice nie wymagają pola odległości i zawsze mają koszt dojazdu 0', async () => {
+  const deliveries = [];
+  const url = 'https://www.ikea.com/pl/pl/p/test-gliwice-no-distance/';
+  const restore = installFetchMock({ products: { [url]: PRODUCT_HTML('Szafka', 500) }, deliveries });
+  try {
+    const input = body([{ url, quantity: 1 }]);
+    delete input.distance;
+    const result = await calculate(input, env(), 'test-gliwice-no-distance');
+    assert.equal(result.response.status, 200);
+    assert.equal(result.data.quote.distance, 0);
+    assert.equal(result.data.quote.travel, 0);
+  } finally { restore(); }
+});
+
+test('backend wymaga całkowitej odległości spoza Gliwic i respektuje zasięg z configu', async () => {
+  const deliveries = [];
+  const requests = [];
+  const url = 'https://www.ikea.com/pl/pl/p/test-distance-validation/';
+  const restore = installFetchMock({ products: { [url]: PRODUCT_HTML('Szafka', 500) }, deliveries, requests });
+  try {
+    for (const invalidDistance of [undefined, 0, 10.5, pricingConfig.serviceArea.maximumDistanceOneWayKilometers + 1]) {
+      const input = body([{ url, quantity: 1 }], { city: 'Zabrze', distance: invalidDistance });
+      const result = await calculate(input, env(), `test-distance-${String(invalidDistance)}`);
+      assert.equal(result.response.status, 400);
+    }
+    assert.equal(requests.length, 0, 'błędna odległość ma być odrzucona przed pobraniem produktu');
   } finally { restore(); }
 });
 
@@ -1133,7 +1163,10 @@ test('e-mail właściciela zawiera wszystkie usługi, ilości i wewnętrzne ceny
     assert.match(deliveries[0].uslugi_dodatkowe, /Cena jednostkowa: 80 zł/);
     assert.equal(deliveries[0].laczny_koszt_uslug_dodatkowych, '280 zł');
     assert.equal(deliveries[0].koszt_montazu, '300 zł');
-    assert.equal(deliveries[0].koszt_dojazdu, '30 zł');
+    const expectedTravel = 10
+      * pricingConfig.publicRates.travel.roundTripMultiplier
+      * pricingConfig.publicRates.travel.outsideGliwicePerKilometer;
+    assert.equal(deliveries[0].koszt_dojazdu, `${expectedTravel} zł`);
     assert.equal(deliveries[0].laczna_orientacyjna_wycena, '610 zł');
     assert.equal(deliveries[0].identyfikator_wyceny, result.data.quoteId);
   } finally { restore(); }
@@ -1490,7 +1523,7 @@ test('frontend i quote-products zachowują zgodny kontrakt payloadu kalkulatora'
     /\bitems\b/,
     /extraServices:\s*selectedExtraServices\(\)/,
     /city:\s*quoteCityField\.value\.trim\(\)/,
-    /distance:\s*Number\(quoteDistanceField\.value\)/,
+    /distance:\s*locationValidation\.distance/,
     /furnitureType:\s*quoteServiceField\.value/,
     /details:\s*quoteDetailsField\.value\.trim\(\)/,
     /contact:\s*\{\s*name:/

@@ -12,6 +12,27 @@
       "roundTripMultiplier": 2
     }
   },
+  "serviceArea": {
+    "originCity": "Gliwice",
+    "maximumDistanceOneWayKilometers": 40,
+    "cities": [
+      { "name": "Gliwice", "distanceOneWayKilometers": 0 },
+      { "name": "Zabrze", "distanceOneWayKilometers": null },
+      { "name": "Bytom", "distanceOneWayKilometers": null },
+      { "name": "Katowice", "distanceOneWayKilometers": null },
+      { "name": "Rybnik", "distanceOneWayKilometers": null },
+      { "name": "Tychy", "distanceOneWayKilometers": null },
+      { "name": "Chorzów", "distanceOneWayKilometers": null },
+      { "name": "Mikołów", "distanceOneWayKilometers": null },
+      { "name": "Knurów", "distanceOneWayKilometers": null },
+      { "name": "Pyskowice", "distanceOneWayKilometers": null },
+      { "name": "Gierałtowice", "distanceOneWayKilometers": null },
+      { "name": "Rudziniec", "distanceOneWayKilometers": null },
+      { "name": "Pogrzebień", "distanceOneWayKilometers": null },
+      { "name": "Kędzierzyn-Koźle", "distanceOneWayKilometers": null },
+      { "name": "Jastrzębie-Zdrój", "distanceOneWayKilometers": null }
+    ]
+  },
   "calculator": {
     "installationRate": 0.2
   }

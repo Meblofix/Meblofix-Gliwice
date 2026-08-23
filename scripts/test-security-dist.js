@@ -21,6 +21,7 @@ assert.deepEqual(routes.include.sort(), ['/api/quote-notification', '/api/quote-
 assert.deepEqual(routes.exclude, []);
 
 assert.equal(existsSync(join(dist, 'analytics.js')), true, 'Brak first-party modułu zdarzeń analytics.js');
+assert.equal(existsSync(join(dist, 'js', 'quote-distance.js')), true, 'Brak modułu obsługi odległości kalkulatora');
 const htmlFiles = [];
 function collectHtml(directory) {
   for (const entry of readdirSync(directory, { withFileTypes: true })) {
