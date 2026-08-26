@@ -107,7 +107,8 @@
       {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Składanie mebli Zabrze"}},
       {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Montaż mebli Katowice"}},
       {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Montaż mebli Agata Meble Gliwice"}},
-      {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Montaż mebli Black Red White Gliwice"}}
+      {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Montaż mebli Black Red White Gliwice"}},
+      {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Podwykonawstwo montażu mebli B2B na Śląsku", "url": "https://meblofix-gliwice.pl/wspolpraca-b2b-montaz-mebli-slask/", "description": "Montaż mebli u klienta końcowego oraz obsługa uzgodnionych zleceń dla producentów, sklepów i studiów meblowych"}}
     ]
   }
 }
@@ -1885,6 +1886,52 @@
   }
   .seo-copy-link:focus-visible { outline: 3px solid var(--orange); outline-offset: 3px; }
 
+  /* ─── WSPÓŁPRACA B2B ─── */
+  .b2b-home-section {
+    padding: 5rem;
+    background: radial-gradient(ellipse at 85% 15%, rgba(232,68,10,.16), transparent 50%), #0d0d0d;
+    border-top: 1px solid var(--border);
+  }
+
+  .b2b-home-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1.15fr .85fr;
+    gap: 3rem;
+    align-items: center;
+  }
+
+  .b2b-home-copy {
+    max-width: 720px;
+    color: var(--mid);
+    line-height: 1.8;
+  }
+
+  .b2b-home-list {
+    display: grid;
+    gap: .7rem;
+    padding: 1.4rem;
+    list-style: none;
+    border: 1px solid var(--border-orange);
+    background: rgba(232,68,10,.055);
+  }
+
+  .b2b-home-list li {
+    display: flex;
+    gap: .65rem;
+    color: var(--mid);
+  }
+
+  .b2b-home-list li::before {
+    content: '✓';
+    color: var(--orange-light);
+    font-weight: 700;
+  }
+
+  .b2b-home-actions { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: 1.5rem; }
+  .b2b-home-actions .btn-primary, .b2b-home-actions .btn-secondary { min-height: 46px; }
+
   /* ─── KONTAKT ─── */
   .contact-section {
     padding: 7rem 5rem;
@@ -3531,6 +3578,7 @@
     .about-section,
     .brands-section,
     .area-section,
+    .b2b-home-section,
     .seo-links-section,
     .phone-strip,
     .trust-bar { padding-left: 1.5rem; padding-right: 1.5rem; }
@@ -3578,6 +3626,7 @@
     .footer-right { flex-wrap: wrap; justify-content: center; }
     .brand-item { padding: 0.8rem 1.5rem; font-size: 1.1rem; }
     .area-section { flex-direction: column; gap: 2rem; align-items: flex-start; }
+    .b2b-home-inner { grid-template-columns: 1fr; gap: 2rem; }
     .seo-links-grid { grid-template-columns: 1fr; }
     .phone-strip { flex-direction: column; gap: 1rem; }
     .trust-bar { gap: 2rem; }
@@ -3799,6 +3848,7 @@
     <ul class="nav-links">
       <li><a href="#uslugi">Usługi</a></li>
       <li><a href="#cennik">Cennik</a></li>
+      <li><a href="/wspolpraca-b2b-montaz-mebli-slask/">Dla firm B2B</a></li>
       <li><a href="/#realizacje">Realizacje</a></li>
       <li><a href="#opinie">Opinie</a></li>
       <li><a href="#faq">FAQ</a></li>
@@ -4535,6 +4585,27 @@
   </div>
 </div>
 
+<!-- WSPÓŁPRACA B2B -->
+<section class="b2b-home-section" id="dla-firm" aria-labelledby="b2b-home-title">
+  <div class="b2b-home-inner">
+    <div>
+      <div class="section-label">Dla producentów, sklepów i wykonawców</div>
+      <h2 class="section-title" id="b2b-home-title">Podwykonawca montażu mebli B2B na Śląsku</h2>
+      <p class="b2b-home-copy">MebloFix przyjmuje zapytania o stałą współpracę i pojedyncze realizacje. Mogę montować meble u klienta końcowego po sprzedaży przez partnera, obsługiwać lokalne zlecenia oraz wspierać firmy przy większej liczbie montaży.</p>
+      <div class="b2b-home-actions">
+        <a class="btn-primary" href="wspolpraca-b2b-montaz-mebli-slask/">Sprawdź współpracę B2B</a>
+        <a class="btn-secondary" href="https://wa.me/48784878197?text=Dzie%C5%84%20dobry%2C%20chc%C4%99%20porozmawia%C4%87%20o%20wsp%C3%B3%C5%82pracy%20B2B%20przy%20monta%C5%BCu%20mebli.">Zapytaj na WhatsApp</a>
+      </div>
+    </div>
+    <ul class="b2b-home-list">
+      <li>montaż mebli po sprzedaży przez producenta lub sklep,</li>
+      <li>pojedyncze i cykliczne zlecenia na Śląsku,</li>
+      <li>zakres ustalany z projektu, instrukcji lub listy elementów,</li>
+      <li>możliwość rozpoczęcia od montażu próbnego.</li>
+    </ul>
+  </div>
+</section>
+
 <!-- PODSTRONY SEO -->
 <section class="seo-links-section" aria-labelledby="seo-links-title">
   <div class="seo-links-inner">
@@ -4545,6 +4616,7 @@
       <a class="seo-link-card" href="montaz-mebli-zabrze/">Montaż mebli Zabrze <span>→</span></a>
       <a class="seo-link-card" href="obszar-dzialania/">Obszar działania: Bytom, Katowice i Rybnik <span>→</span></a>
       <a class="seo-link-card" href="cennik-montazu-mebli/">Cennik montażu mebli <span>→</span></a>
+      <a class="seo-link-card" href="wspolpraca-b2b-montaz-mebli-slask/">Współpraca B2B i podwykonawstwo <span>→</span></a>
       <a class="seo-link-card" href="blog/">Blog meblowy <span>→</span></a>
       <a class="seo-link-card" href="#realizacje">Realizacje i przykłady zleceń <span>→</span></a>
     </div>
@@ -4800,6 +4872,7 @@
     <a href="/#realizacje">Realizacje</a>
     <a href="licencja-zdjec/">Licencja zdjęć</a>
     <a href="montaz-mebli-gliwice/">Gliwice</a>
+    <a href="wspolpraca-b2b-montaz-mebli-slask/">Dla firm B2B</a>
     <a href="cennik-montazu-mebli/">Cennik</a>
     <a href="#kontakt">Kontakt</a>
   </div>

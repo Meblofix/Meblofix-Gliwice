@@ -32,7 +32,7 @@ copy_directory() {
 rm -rf -- "$DIST_DIR"
 mkdir -p -- "$DIST_DIR"
 
-for required_file in index.html 404.html analytics.js _headers _redirects robots.txt sitemap.xml favicon.ico favicon-48.png favicon-96.png apple-touch-icon.png; do
+for required_file in index.html 404.html analytics.js _headers _redirects robots.txt sitemap.xml llms.txt favicon.ico favicon-48.png favicon-96.png apple-touch-icon.png; do
   copy_file "$required_file"
 done
 
@@ -52,7 +52,7 @@ for icon_file in "${icon_files[@]}"; do
   cp -p -- "$icon_file" "$DIST_DIR/"
 done
 
-for required_directory in blog licencja-zdjec cennik-montazu-mebli obszar-dzialania fonts css js; do
+for required_directory in blog licencja-zdjec cennik-montazu-mebli obszar-dzialania wspolpraca-b2b-montaz-mebli-slask fonts css js; do
   copy_directory "$required_directory"
 done
 
@@ -81,6 +81,7 @@ python3 "$PROJECT_DIR/scripts/test-case-studies.py" --dist "$DIST_DIR"
 python3 "$PROJECT_DIR/scripts/test-homepage-content.py" --html "$DIST_DIR/index.html"
 python3 "$PROJECT_DIR/scripts/test-city-pages.py" --dist "$DIST_DIR"
 python3 "$PROJECT_DIR/scripts/test-social-meta.py" --dist "$DIST_DIR"
+python3 "$PROJECT_DIR/scripts/test-b2b-page.py" --dist "$DIST_DIR"
 python3 "$PROJECT_DIR/scripts/test-cennik.py"
 python3 "$PROJECT_DIR/scripts/test-seo.py" --dist "$DIST_DIR"
 
