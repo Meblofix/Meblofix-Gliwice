@@ -63,15 +63,15 @@
       "marka": "Castorama",
       "data": null,
       "czas": null,
-      "opis_krotki": "Montaż małej kuchni Castorama w Knurowie – szafki dolne i wiszące, szafka z szufladami, dopasowanie blatu oraz wykonanie otworu pod zlew.",
-      "opis": "Realizacja w Knurowie obejmowała montaż niewielkiej zabudowy kuchennej z Castoramy. Złożono i ustawiono szafki dolne, szafki wiszące oraz dodatkową szafkę z szufladami. Blat został dopasowany do istniejącego układu pomieszczenia, a następnie wykonano w nim precyzyjne wycięcie pod zlew. Zakres realizacji nie obejmował prac hydraulicznych, podłączenia odpływu ani podłączenia zlewu do instalacji wodnej.",
+      "opis_krotki": "Montaż małej kuchni Castorama w Knurowie – szafki dolne i wiszące, mała szafka z szufladami przy lodówce, dopasowanie blatu oraz wykonanie otworu pod zlew.",
+      "opis": "Realizacja w Knurowie obejmowała montaż niewielkiej zabudowy kuchennej z Castoramy. Złożono i ustawiono szafki dolne, szafki wiszące oraz małą szafkę z szufladami przy lodówce. Blat został dopasowany do istniejącego układu pomieszczenia, a następnie wykonano w nim precyzyjne wycięcie pod zlew. Zakres realizacji nie obejmował prac hydraulicznych, podłączenia odpływu ani podłączenia zlewu do instalacji wodnej.",
       "zakresPrac": [
-        "montaż dolnych szafek",
+        "montaż dolnych szafek kuchennych",
         "montaż szafek wiszących",
-        "montaż szafki z szufladami",
+        "montaż małej szafki z szufladami przy lodówce",
         "ustawienie i wypoziomowanie zabudowy",
-        "montaż i dopasowanie blatu",
-        "wykonanie wycięcia w blacie pod zlew"
+        "dopasowanie blatu",
+        "wykonanie otworu w blacie pod zlew"
       ],
       "pozaZakresem": [
         "podłączenie hydrauliki i instalacji wodnej",
@@ -80,6 +80,7 @@
         "podłączenie zlewu do instalacji"
       ],
       "okladka": "montaz-kuchni-castorama-knurow-01",
+      "przed_po": { "przed": "montaz-kuchni-castorama-knurow-przed-01", "po": "montaz-kuchni-castorama-knurow-01" },
       "powiazaneStrony": [
         {
           "url": "#uslugi",
@@ -94,7 +95,7 @@
         { "plik": "montaz-kuchni-castorama-knurow-przed-01", "alt": "Kuchnia przed montażem mebli Castorama w Knurowie" },
         { "plik": "montaz-kuchni-castorama-knurow-blat-01", "alt": "Dopasowanie blatu i wycięcie otworu pod zlew – kuchnia Castorama Knurów" },
         { "plik": "montaz-kuchni-castorama-knurow-dolne-01", "alt": "Gotowa dolna zabudowa kuchenna Castorama w Knurowie" },
-        { "plik": "montaz-kuchni-castorama-knurow-szuflady-01", "alt": "Szafka z szufladami i szafka wisząca po montażu – Knurów" },
+        { "plik": "montaz-kuchni-castorama-knurow-szuflady-01", "alt": "Mała szafka z szufladami przy lodówce – montaż kuchni Castorama w Knurowie" },
         { "plik": "montaz-kuchni-castorama-knurow-01", "alt": "Gotowa mała kuchnia Castorama po montażu w Knurowie" }
       ]
     },
