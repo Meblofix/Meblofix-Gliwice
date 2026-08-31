@@ -4,6 +4,8 @@
     "na-wymiar": "Meble na wymiar"
   },
   "kolejnosc": [
+    "montaz-lozka-ikea-knurow",
+    "montaz-kuchni-castorama-knurow",
     "kuchnia-ikea-pogrzebien",
     "kuchnia-kedzierzyn",
     "zabudowa-wneki-jastrzebie",
@@ -12,6 +14,90 @@
     "kuchnia-obi-gliwice"
   ],
   "realizacje": [
+    {
+      "id": "montaz-lozka-ikea-knurow",
+      "tytul": "Montaż łóżka IKEA z szufladami – Knurów",
+      "title_seo": "Montaż łóżka IKEA z szufladami Knurów | MebloFix",
+      "meta_description": "Montaż łóżka IKEA z wysuwanym stelażem i trzema szufladami w Knurowie. Zobacz realizację MebloFix.",
+      "kategoria": "sieciowe",
+      "miasto": "Knurów",
+      "pomieszczenie": "sypialnia",
+      "marka": "IKEA",
+      "data": null,
+      "czas": null,
+      "opis_krotki": "Montaż łóżka IKEA z wysuwanym stelażem i trzema pojemnymi szufladami w Knurowie. Złożenie konstrukcji, stelaża oraz elementów wysuwanych i regulacja całości.",
+      "opis": "Realizacja obejmowała kompleksowe złożenie łóżka IKEA w Knurowie. Zamontowano konstrukcję łóżka, boczne i tylne elementy, stelaż oraz wysuwaną część zwiększającą powierzchnię spania. W dolnej części wykonano montaż trzech szuflad. Po zakończeniu wszystkie elementy zostały sprawdzone pod kątem poprawnego działania i spasowania.",
+      "zakresPrac": [
+        "montaż konstrukcji łóżka",
+        "montaż boków i oparcia",
+        "montaż stelaża",
+        "montaż wysuwanej części łóżka",
+        "montaż 3 szuflad",
+        "regulacja i sprawdzenie poprawnego działania elementów"
+      ],
+      "okladka": "montaz-lozka-ikea-knurow-01",
+      "powiazaneStrony": [
+        {
+          "url": "montaz-mebli-ikea-gliwice/",
+          "etykieta": "Montaż mebli IKEA"
+        },
+        {
+          "url": "montaz-mebli-gliwice/",
+          "etykieta": "Montaż mebli"
+        }
+      ],
+      "zdjecia": [
+        { "plik": "montaz-lozka-ikea-knurow-01", "alt": "Montaż łóżka IKEA z szufladami w Knurowie – gotowa realizacja" },
+        { "plik": "montaz-lozka-ikea-knurow-02", "alt": "Łóżko IKEA z trzema szufladami po montażu w Knurowie" },
+        { "plik": "montaz-lozka-ikea-knurow-03", "alt": "Montaż wysuwanego stelaża łóżka IKEA w Knurowie" }
+      ]
+    },
+    {
+      "id": "montaz-kuchni-castorama-knurow",
+      "tytul": "Montaż małej kuchni Castorama – Knurów",
+      "title_seo": "Montaż kuchni Castorama Knurów | MebloFix",
+      "meta_description": "Montaż małej kuchni Castorama w Knurowie: szafki dolne i wiszące, blat oraz wykonanie otworu pod zlew. Zobacz realizację MebloFix.",
+      "kategoria": "sieciowe",
+      "miasto": "Knurów",
+      "pomieszczenie": "kuchnia",
+      "marka": "Castorama",
+      "data": null,
+      "czas": null,
+      "opis_krotki": "Montaż małej kuchni Castorama w Knurowie – szafki dolne i wiszące, szafka z szufladami, dopasowanie blatu oraz wykonanie otworu pod zlew.",
+      "opis": "Realizacja w Knurowie obejmowała montaż niewielkiej zabudowy kuchennej z Castoramy. Złożono i ustawiono szafki dolne, szafki wiszące oraz dodatkową szafkę z szufladami. Blat został dopasowany do istniejącego układu pomieszczenia, a następnie wykonano w nim precyzyjne wycięcie pod zlew. Zakres realizacji nie obejmował prac hydraulicznych, podłączenia odpływu ani podłączenia zlewu do instalacji wodnej.",
+      "zakresPrac": [
+        "montaż dolnych szafek",
+        "montaż szafek wiszących",
+        "montaż szafki z szufladami",
+        "ustawienie i wypoziomowanie zabudowy",
+        "montaż i dopasowanie blatu",
+        "wykonanie wycięcia w blacie pod zlew"
+      ],
+      "pozaZakresem": [
+        "podłączenie hydrauliki i instalacji wodnej",
+        "podłączenie odpływu",
+        "montaż hydrauliczny zlewu",
+        "podłączenie zlewu do instalacji"
+      ],
+      "okladka": "montaz-kuchni-castorama-knurow-01",
+      "powiazaneStrony": [
+        {
+          "url": "#uslugi",
+          "etykieta": "Montaż mebli kuchennych"
+        },
+        {
+          "url": "montaz-mebli-gliwice/",
+          "etykieta": "Montaż mebli"
+        }
+      ],
+      "zdjecia": [
+        { "plik": "montaz-kuchni-castorama-knurow-przed-01", "alt": "Kuchnia przed montażem mebli Castorama w Knurowie" },
+        { "plik": "montaz-kuchni-castorama-knurow-blat-01", "alt": "Dopasowanie blatu i wycięcie otworu pod zlew – kuchnia Castorama Knurów" },
+        { "plik": "montaz-kuchni-castorama-knurow-dolne-01", "alt": "Gotowa dolna zabudowa kuchenna Castorama w Knurowie" },
+        { "plik": "montaz-kuchni-castorama-knurow-szuflady-01", "alt": "Szafka z szufladami i szafka wisząca po montażu – Knurów" },
+        { "plik": "montaz-kuchni-castorama-knurow-01", "alt": "Gotowa mała kuchnia Castorama po montażu w Knurowie" }
+      ]
+    },
     {
       "id": "zabudowa-wneki-jastrzebie",
       "tytul": "Zabudowa wnęki na wymiar",

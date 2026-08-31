@@ -75,6 +75,18 @@ def gallery_name(item: dict) -> str:
     return title if title.endswith(item["miasto"]) else f'{title} — {item["miasto"]}'
 
 
+def short_description(item: dict) -> str:
+    return item.get("opis_krotki", item["opis"])
+
+
+def photo_count_label(count: int) -> str:
+    if count == 1:
+        return "1 zdjęcie"
+    if count % 10 in {2, 3, 4} and count % 100 not in {12, 13, 14}:
+        return f"{count} zdjęcia"
+    return f"{count} zdjęć"
+
+
 def case_service_title(item: dict) -> str:
     service = item["tytul"].strip()
     for separator in (" — ", " – ", " - "):
@@ -212,11 +224,11 @@ def render_cards(data: dict) -> str:
             raise ValueError(f"Okładka {item['okladka']} nie należy do realizacji {item['id']}")
         cover_index = photos.index(cover)
         featured = " is-featured" if position == 0 else ""
-        count_label = f"{len(photos)} zdjęć" if len(photos) != 1 else "1 zdjęcie"
+        count_label = photo_count_label(len(photos))
         lines.extend(
             [
                 f'    <li class="work-card{featured}" id="realizacja-{escape(item["id"])}" data-kat="{escape(item["kategoria"])}" data-pomieszczenie="{escape(item["pomieszczenie"])}" data-realizacja="{escape(item["id"])}">',
-                f'      <a class="work-card-btn" href="{escape(image_path(item, cover["plik"], 1200, "jpg"))}" data-id="{escape(item["id"])}" data-idx="{cover_index}" aria-label="{escape(item["tytul"])} — {escape(item["miasto"])} — otwórz zdjęcie okładkowe; {count_label} w galerii">',
+                f'      <a class="work-card-btn" href="{escape(image_path(item, cover["plik"], 1200, "jpg"))}" data-id="{escape(item["id"])}" data-idx="{cover_index}" aria-label="{escape(gallery_name(item))} — otwórz zdjęcie okładkowe; {count_label} w galerii">',
                 '        <span class="work-thumb">',
                 f'          {picture(item, cover, cover=True, featured=position == 0)}',
                 f'          <span class="work-badge">{escape(data["kategorie"][item["kategoria"]])}</span>',
@@ -230,7 +242,7 @@ def render_cards(data: dict) -> str:
                 f'      <p class="work-page-link"><a class="work-case-link" href="realizacje/{escape(item["id"])}/">Opis i wszystkie zdjęcia ({len(photos)})</a></p>',
                 '      <details class="work-details">',
                 '        <summary>Skrócony opis i podgląd galerii</summary>',
-                f'        <p class="work-description">{escape(item["opis"])}</p>',
+                f'        <p class="work-description">{escape(short_description(item))}</p>',
             ]
         )
         related_page = item.get("powiazanaStrona")
@@ -309,7 +321,7 @@ def render_runtime_data(data: dict) -> str:
         runtime[item["id"]] = {
             "tytul": item["tytul"],
             "miasto": item["miasto"],
-            "opis": item["opis"],
+            "opis": short_description(item),
             "kategoria": data["kategorie"][item["kategoria"]],
             "marka": item["marka"],
             "czas": item["czas"],
@@ -340,11 +352,11 @@ def render_homepage_cards(data: dict) -> str:
     for position, item in enumerate(items):
         photos = item["zdjecia"]
         cover = next(photo for photo in photos if photo["plik"] == item["okladka"])
-        count_label = f"{len(photos)} zdjęć" if len(photos) != 1 else "1 zdjęcie"
+        count_label = photo_count_label(len(photos))
         featured = " is-featured" if position == 0 else ""
         lines.extend([
             f'    <li class="work-card{featured}" id="realizacja-{escape(item["id"])}" data-kat="{escape(item["kategoria"])}" data-pomieszczenie="{escape(item["pomieszczenie"])}" data-realizacja="{escape(item["id"])}">',
-            f'      <a class="work-card-btn" href="realizacje/{escape(item["id"])}/" data-id="{escape(item["id"])}" aria-label="{escape(item["tytul"])} — {escape(item["miasto"])} — opis i {count_label}">',
+            f'      <a class="work-card-btn" href="realizacje/{escape(item["id"])}/" data-id="{escape(item["id"])}" aria-label="{escape(gallery_name(item))} — opis i {count_label}">',
             '        <span class="work-thumb">',
             f'          {picture(item, cover, cover=True, featured=position == 0)}',
             f'          <span class="work-badge">{escape(data["kategorie"][item["kategoria"]])}</span>',
@@ -389,8 +401,7 @@ def render_image_objects(data: dict) -> str:
             content_path = image_path(item, photo["plik"], 800, "jpg")
             thumbnail_path = image_path(item, photo["plik"], 400, "jpg")
             width, height = jpeg_size(ROOT / content_path)
-            graph.append(
-                {
+            image_object = {
                     "@type": "ImageObject",
                     "@id": image_id(item, photo),
                     "contentUrl": SITE_URL + content_path,
@@ -401,14 +412,15 @@ def render_image_objects(data: dict) -> str:
                     "name": photo["alt"],
                     "isPartOf": {"@id": gallery_id(item)},
                     "contentLocation": {"@type": "Place", "name": item["miasto"]},
-                    "datePublished": item["data"],
                     "creator": {"@type": "Organization", "name": "MebloFix Gliwice"},
                     "creditText": "MebloFix Gliwice",
                     "copyrightNotice": "MebloFix Gliwice",
                     "license": SITE_URL + "licencja-zdjec/",
                     "acquireLicensePage": SITE_URL + "licencja-zdjec/",
                 }
-            )
+            if item.get("data"):
+                image_object["datePublished"] = item["data"]
+            graph.append(image_object)
     payload = json.dumps({"@context": "https://schema.org", "@graph": graph}, ensure_ascii=False, indent=2)
     return f'<script type="application/ld+json">\n{payload}\n</script>'
 
@@ -465,8 +477,7 @@ def render_case_image_objects(item: dict, page_url: str) -> str:
         content_path = image_path(item, photo["plik"], 800, "jpg")
         thumbnail_path = image_path(item, photo["plik"], 400, "jpg")
         width, height = jpeg_size(ROOT / content_path)
-        graph.append(
-            {
+        image_object = {
                 "@type": "ImageObject",
                 "@id": page_url + "#zdjecie-" + photo["plik"],
                 "contentUrl": SITE_URL + content_path,
@@ -477,14 +488,15 @@ def render_case_image_objects(item: dict, page_url: str) -> str:
                 "name": photo["alt"],
                 "isPartOf": {"@id": gallery_url},
                 "contentLocation": {"@type": "Place", "name": item["miasto"]},
-                "datePublished": item["data"],
                 "creator": {"@type": "Organization", "name": "MebloFix Gliwice"},
                 "creditText": "MebloFix Gliwice",
                 "copyrightNotice": "MebloFix Gliwice",
                 "license": SITE_URL + "licencja-zdjec/",
                 "acquireLicensePage": SITE_URL + "licencja-zdjec/",
             }
-        )
+        if item.get("data"):
+            image_object["datePublished"] = item["data"]
+        graph.append(image_object)
     payload = json.dumps({"@context": "https://schema.org", "@graph": graph}, ensure_ascii=False, indent=2)
     return f'<script type="application/ld+json">\n{payload}\n</script>'
 
@@ -496,9 +508,11 @@ def render_case_page(data: dict, item: dict) -> str:
     slug = item["id"]
     page_url = f"{SITE_URL}realizacje/{slug}/"
     title = case_page_title(item)
-    description = f'{case_service_title(item)} w {item["miasto"]}. {item["opis"]}'
-    if len(description) > 158:
-        description = description[:155].rsplit(" ", 1)[0] + "…"
+    description = item.get("meta_description")
+    if not description:
+        description = f'{case_service_title(item)} w {item["miasto"]}. {item["opis"]}'
+        if len(description) > 158:
+            description = description[:155].rsplit(" ", 1)[0] + "…"
     cover_url = SITE_URL + image_path(item, cover["plik"], 1200, "jpg")
     breadcrumb = json.dumps(
         {
@@ -521,6 +535,25 @@ def render_case_page(data: dict, item: dict) -> str:
     if item.get("czas"):
         facts.append(item["czas"])
     facts_html = "".join(f'<span class="fact">{escape(fact)}</span>' for fact in facts)
+
+    scope_html = ""
+    scope_items = item.get("zakresPrac", [])
+    if scope_items:
+        scope_list = "".join(f"<li>{escape(scope_item)}</li>" for scope_item in scope_items)
+        excluded_items = item.get("pozaZakresem", [])
+        excluded_html = ""
+        if excluded_items:
+            excluded_list = "".join(f"<li>{escape(excluded_item)}</li>" for excluded_item in excluded_items)
+            excluded_html = f'<h3>Poza zakresem realizacji</h3><ul class="scope-list">{excluded_list}</ul>'
+        scope_html = (
+            '<section class="section section-muted"><div class="wrap">'
+            '<h2>Zakres realizacji</h2>'
+            f'<p class="section-intro">{escape(item["opis"])}</p>'
+            '<h3>Wykonane prace</h3>'
+            f'<ul class="scope-list">{scope_list}</ul>'
+            f'{excluded_html}'
+            '</div></section>'
+        )
 
     gallery = []
     for index, photo in enumerate(photos):
@@ -564,6 +597,8 @@ def render_case_page(data: dict, item: dict) -> str:
     related_links.append(city_pages.get(item["miasto"], ("../../#obszar", "Obszar działania MebloFix")))
     related_page = item.get("powiazanaStrona")
     if related_page:
+        related_links.append(("../../" + related_page["url"], related_page["etykieta"]))
+    for related_page in item.get("powiazaneStrony", []):
         related_links.append(("../../" + related_page["url"], related_page["etykieta"]))
     if item.get("marka") == "IKEA":
         related_links.append(("../../montaz-mebli-ikea-gliwice/", "Montaż mebli IKEA"))
@@ -632,8 +667,9 @@ def render_case_page(data: dict, item: dict) -> str:
 <nav class="breadcrumbs" aria-label="Okruszki"><ol class="wrap"><li><a href="../../">Strona główna</a></li><li><a href="../../#realizacje">Realizacje</a></li><li aria-current="page">{escape(item["tytul"])}</li></ol></nav>
 <main id="main-content" tabindex="-1">
   <article>
-    <header class="hero"><div class="wrap"><div class="eyebrow">Realizacja · {escape(item["miasto"])}</div><h1>{escape(item["tytul"])}</h1><p class="lead">{escape(item["opis"])}</p><div class="facts">{facts_html}</div></div></header>
-    <section class="section" id="galeria"><div class="wrap"><h2>Zdjęcia realizacji</h2><p class="section-intro">Galeria zawiera {len(photos)} zdjęć z tego zlecenia.</p><ul class="gallery">{"".join(gallery)}</ul></div></section>
+    <header class="hero"><div class="wrap"><div class="eyebrow">Realizacja · {escape(item["miasto"])}</div><h1>{escape(item["tytul"])}</h1><p class="lead">{escape(short_description(item))}</p><div class="facts">{facts_html}</div></div></header>
+    {scope_html}
+    <section class="section" id="galeria"><div class="wrap"><h2>Zdjęcia realizacji</h2><p class="section-intro">Galeria zawiera {photo_count_label(len(photos))} z tego zlecenia.</p><ul class="gallery">{"".join(gallery)}</ul></div></section>
     {comparisons_html}
     <section class="section"><div class="wrap"><h2>Podobny montaż</h2><p class="section-intro">Podeślij zdjęcia, instrukcję lub linki do produktów, aby otrzymać orientacyjną wycenę.</p><div class="links"><a class="cta" href="../../#kalkulator">Wyceń podobny montaż</a>{"".join(unique_links)}</div></div></section>
     {related_section}

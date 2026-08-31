@@ -32,8 +32,8 @@ def main() -> None:
 
     data = json.loads(DATA_PATH.read_text(encoding="utf-8"))
     items = data.get("realizacje", [])
-    require(len(items) == 6, f"Oczekiwano 6 realizacji, jest {len(items)}")
-    require(sum(len(item.get("zdjecia", [])) for item in items) == 36, "Oczekiwano 36 zdjęć logicznych")
+    require(len(items) == 8, f"Oczekiwano 8 realizacji, jest {len(items)}")
+    require(sum(len(item.get("zdjecia", [])) for item in items) == 44, "Oczekiwano 44 zdjęć logicznych")
     ids = [item.get("id") for item in items]
     require(all(ids) and len(ids) == len(set(ids)), "ID realizacji są puste lub nieunikalne")
     require(set(data.get("kolejnosc", [])) == set(ids), "Pole kolejności nie odpowiada realizacjom")
@@ -71,7 +71,7 @@ def main() -> None:
     html_path = args.html.resolve()
     document = html_path.read_text(encoding="utf-8")
     card_ids = re.findall(r'<li class="work-card[^>]*data-realizacja="([^"]+)"', document)
-    require(set(card_ids) == set(ids) and len(card_ids) == len(ids), "Homepage nie ma dokładnie sześciu kart")
+    require(set(card_ids) == set(ids) and len(card_ids) == len(ids), "Homepage nie ma dokładnie ośmiu kart")
     require('class="work-details"' not in document, "Homepage nadal zawiera rozwijane pełne opisy")
     require('class="work-gallery"' not in document, "Homepage nadal zawiera pełne galerie")
     require('id="works-data"' not in document, "Homepage nadal zawiera ciężki payload galerii")
@@ -89,8 +89,8 @@ def main() -> None:
         require(not (html_path.parent / "data" / "realizacje.json").exists(), "Źródło danych trafiło do dist")
         require(not (html_path.parent / "data" / "cennik.json").exists(), "Config cennika trafił do dist")
 
-    print("OK: źródło — 6 realizacji, 36 zdjęć i komplet wariantów")
-    print("OK: homepage — 6 lekkich kart bez pełnych opisów, galerii i payloadu zdjęć")
+    print("OK: źródło — 8 realizacji, 44 zdjęcia i komplet wariantów")
+    print("OK: homepage — 8 lekkich kart bez pełnych opisów, galerii i payloadu zdjęć")
 
 
 if __name__ == "__main__":

@@ -66,6 +66,11 @@ def main() -> None:
         )
         if item.get("title_seo"):
             require(title == item["title_seo"], f"{item['id']}: generator zmienił ręczne title_seo")
+        if item.get("meta_description"):
+            require(
+                description == item["meta_description"],
+                f"{item['id']}: generator zmienił ręczne meta_description",
+            )
         require(len(title) <= MAX_CASE_TITLE_LENGTH, f"{item['id']}: title ma {len(title)} znaków")
         title_base = title.split(" — ", 1)[0].strip()
         require(not title_base.endswith(("…", "...")), f"{item['id']}: title kończy się wielokropkiem")
@@ -78,6 +83,12 @@ def main() -> None:
         require(f'<link rel="canonical" href="{canonical}">' in source, f"{item['id']}: błędny canonical")
         require(f'<h1>{html.escape(item["tytul"])}</h1>' in source, f"{item['id']}: brak H1 ze źródła")
         require(html.escape(item["opis"]) in source, f"{item['id']}: brak pełnego opisu")
+        if item.get("opis_krotki"):
+            require(html.escape(item["opis_krotki"]) in source, f"{item['id']}: brak krótkiego opisu")
+        for scope_item in item.get("zakresPrac", []):
+            require(html.escape(scope_item) in source, f"{item['id']}: brak pozycji zakresu {scope_item}")
+        for excluded_item in item.get("pozaZakresem", []):
+            require(html.escape(excluded_item) in source, f"{item['id']}: brak wykluczenia {excluded_item}")
         require("Wyceń podobny montaż" in source, f"{item['id']}: brak CTA")
         require('"@type": "BreadcrumbList"' in source, f"{item['id']}: brak BreadcrumbList")
         require('<dialog class="case-lightbox"' in source, f"{item['id']}: brak dostępnego lightboxa")
