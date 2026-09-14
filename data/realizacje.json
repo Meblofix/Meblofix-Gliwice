@@ -4,6 +4,7 @@
     "na-wymiar": "Meble na wymiar"
   },
   "kolejnosc": [
+    "pokoj-nastolatki-zabudowa",
     "montaz-lozka-ikea-knurow",
     "montaz-kuchni-castorama-knurow",
     "kuchnia-ikea-pogrzebien",
@@ -14,6 +15,41 @@
     "kuchnia-obi-gliwice"
   ],
   "realizacje": [
+    {
+      "id": "pokoj-nastolatki-zabudowa",
+      "tytul": "Zabudowa pokoju nastolatki",
+      "title_seo": "Pokój nastolatki — Lokalizacja prywatna | MebloFix",
+      "meta_description": "Zabudowa pokoju nastolatki z biurkiem, komodą, szafą i blatem na parapecie. Zobacz zdjęcia z montażu oraz porównanie przed i po.",
+      "kategoria": "na-wymiar",
+      "miasto": "Lokalizacja prywatna",
+      "pomieszczenie": "pokoj-nastolatki",
+      "marka": null,
+      "data": "2026-09",
+      "czas": null,
+      "opis": "Realizacja obejmowała połączone biurko z komodą, blat poprowadzony również przez strefę parapetu oraz wysoką szafę. Białe fronty zestawiono z dekorem drewna i czarnymi uchwytami, dopasowując zabudowę do niewielkiego pokoju.",
+      "okladka": "06-pokoj-nastolatki-po",
+      "porownania": [
+        {
+          "nazwa": "Widok całego pokoju",
+          "przed": "01-pokoj-nastolatki-przed",
+          "po": "06-pokoj-nastolatki-po"
+        }
+      ],
+      "zdjecia": [
+        { "plik": "01-pokoj-nastolatki-przed", "alt": "Pusty pokój nastolatki przed wykonaniem zabudowy meblowej" },
+        { "plik": "02-przygotowanie-strefy-pod-oknem", "alt": "Strefa pod oknem przed wykonaniem biurka i zabudowy parapetu" },
+        { "plik": "03-przygotowanie-miejsca-pod-szafe", "alt": "Ściana obok łóżka przed montażem wysokiej szafy" },
+        { "plik": "04-montaz-biurka-i-komody", "alt": "Biurko z komodą i drewnianym blatem podczas montażu" },
+        { "plik": "05-montaz-szafy", "alt": "Wysoka szafa z otwartymi frontami podczas montażu" },
+        { "plik": "06-pokoj-nastolatki-po", "alt": "Gotowy pokój nastolatki z biurkiem, komodą, zabudowanym parapetem i szafą" },
+        { "plik": "07-biurko-z-komoda-po", "alt": "Gotowe biurko połączone z komodą i zabudową pod oknem" },
+        { "plik": "08-biurko-i-zabudowany-parapet", "alt": "Biurko, komoda oraz blat przechodzący w zabudowany parapet" },
+        { "plik": "09-biurko-i-komoda-drugie-ujecie", "alt": "Biurko z komodą, białymi frontami i blatem w dekorze drewna" },
+        { "plik": "10-szafa-i-lozko-po", "alt": "Wysoka szafa dopasowana do przestrzeni obok łóżka" },
+        { "plik": "11-zabudowany-parapet-i-lozko", "alt": "Drewniany blat na parapecie dopasowany do strefy przy łóżku" },
+        { "plik": "12-szafa-po", "alt": "Gotowa wysoka szafa z białymi frontami i czarnymi uchwytami" }
+      ]
+    },
     {
       "id": "montaz-lozka-ikea-knurow",
       "tytul": "Montaż łóżka IKEA z szufladami – Knurów",
