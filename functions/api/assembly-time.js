@@ -45,11 +45,23 @@ function officialSource(value, manufacturer, catalog) {
   } catch { return false; }
 }
 
+const MANUFACTURER_NAMES = new Map([
+  ['ikea', 'IKEA'], ['jysk', 'JYSK'], ['brw', 'Black Red White'], ['black red white', 'Black Red White']
+]);
+
+function manufacturerDeclarations(item) {
+  if (!item || typeof item !== 'object') return [];
+  return ['manufacturer', 'brand'].flatMap(field => {
+    const value = item[field];
+    if (value == null) return [];
+    const name = typeof value === 'string' ? value : value && typeof value === 'object' && !Array.isArray(value) ? value.name : '';
+    return [MANUFACTURER_NAMES.get(String(name ?? '').trim().toLowerCase()) || null];
+  });
+}
+
 function manufacturerName(item) {
-  const value = item?.manufacturer?.name || (typeof item?.manufacturer === 'string' ? item.manufacturer : '')
-    || item?.brand?.name || (typeof item?.brand === 'string' ? item.brand : '');
-  const normalized = String(value).trim().toLowerCase();
-  return ({ ikea: 'IKEA', jysk: 'JYSK', brw: 'Black Red White', 'black red white': 'Black Red White' })[normalized] || null;
+  const declarations = manufacturerDeclarations(item);
+  return declarations.length && declarations[0] && declarations.every(name => name === declarations[0]) ? declarations[0] : null;
 }
 
 export function resolveManufacturerTime(product, structuredProduct, finalUrl, { catalog = timeCatalog, now = Date.now() } = {}) {
@@ -60,11 +72,13 @@ export function resolveManufacturerTime(product, structuredProduct, finalUrl, { 
   if (entries.length > 1) return unavailable('conflicting_catalog');
   if (entries.length === 1) {
     const entry = entries[0];
+    // Brak obu pól jest dopuszczalny dla ręcznie sprawdzonej instrukcji.
+    // Każda obecna, lecz obca lub nierozpoznana deklaracja przeczy wpisowi.
+    if (manufacturerDeclarations(structuredProduct).some(name => name !== entry.manufacturer)) return unavailable('conflicting_manufacturer');
     const verifiedAt = Date.parse(entry.verifiedAt);
     const age = now - verifiedAt;
     const duration = parseAssemblyDuration(`${entry.minutesMin}-${entry.minutesMax}`, 'min');
     if (productKey(finalUrl) !== key || (structuredProduct?.url && productKey(structuredProduct.url) !== key)
-      || (structuredProduct && manufacturerName(structuredProduct) && manufacturerName(structuredProduct) !== entry.manufacturer)
       || (structuredProduct?.sku && String(structuredProduct.sku).replace(/[.\s]/g, '') !== String(entry.productId).replace(/[.\s]/g, ''))
       || !duration || !entry.productId || entry.model !== product.name || !String(entry.evidence || '').trim()
       || !officialSource(entry.sourceUrl, entry.manufacturer, catalog)
@@ -77,6 +91,7 @@ export function resolveManufacturerTime(product, structuredProduct, finalUrl, { 
       source: { url: entry.sourceUrl, kind: 'reviewed_instruction', checkedAt: entry.verifiedAt, evidence: entry.evidence } };
   }
   const item = structuredProduct;
+  if (manufacturerDeclarations(item).length && !manufacturerName(item)) return unavailable('conflicting_manufacturer');
   const manufacturer = manufacturerName(item);
   // Wybrany Product musi być przypisany do końcowego URL. Nie używamy opinii,
   // rekomendowanych produktów ani globalnego tekstu HTML.

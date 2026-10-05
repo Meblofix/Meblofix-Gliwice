@@ -119,6 +119,34 @@ test('wpis katalogu wymaga zgodności modelu, URL i producenta z bieżącym prod
   }
 });
 
+test('katalog odrzuca obcą, nierozpoznaną i sprzeczną deklarację producenta', () => {
+  for (const fields of [
+    { brand: 'Inny producent' },
+    { manufacturer: 'Inny producent', brand: 'IKEA' },
+    { manufacturer: 'IKEA', brand: 'JYSK' },
+    { manufacturer: 'IKEA', brand: 'Inny producent' }
+  ]) {
+    const structured = item({ manufacturer: undefined, brand: undefined, ...fields });
+    const result = resolveManufacturerTime(product(), structured, url, { catalog: reviewed([entry]), now });
+    assert.equal(result.status, 'unavailable', JSON.stringify(fields));
+    assert.equal(result.reason, 'conflicting_manufacturer', JSON.stringify(fields));
+    assert.equal(assemblyForProduct({ ...product(), manufacturerAssembly: result }, context).working, null);
+  }
+});
+
+test('katalog pozostaje dostępny, gdy strona nie deklaruje producenta ani marki', () => {
+  const structured = item({ manufacturer: undefined, brand: undefined });
+  const result = resolveManufacturerTime(product(), structured, url, { catalog: reviewed([entry]), now });
+  assert.equal(result.status, 'confirmed');
+  assert.equal(result.source.kind, 'reviewed_instruction');
+});
+
+test('sprzeczne dane producenta i marki nie potwierdzają czasu z samego JSON-LD', () => {
+  const result = resolveManufacturerTime(product(), item({ manufacturer: 'IKEA', brand: 'JYSK' }), url, { now });
+  assert.equal(result.status, 'unavailable');
+  assert.equal(result.reason, 'conflicting_manufacturer');
+});
+
 test('wpis katalogu wymaga poprawnej daty weryfikacji w UTC i prawidłowego URL produktu', () => {
   for (const verifiedAt of ['2026-10-04', '2026-10-04T12:00:00+02:00', '2026-02-30T12:00:00Z']) {
     assert.equal(resolveManufacturerTime(product(), null, url, { catalog: reviewed([{ ...entry, verifiedAt }]), now }).status, 'unavailable');

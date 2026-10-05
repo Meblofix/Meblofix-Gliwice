@@ -23,6 +23,9 @@ kosztu. Suma niepełna ma oznaczenie liczby potwierdzonych sztuk.
    `model` musi być dokładną nazwą produktu odczytaną przy bieżącej wycenie.
    Gdy strona udostępnia URL, SKU lub producenta w JSON-LD, te dane również
    muszą zgadzać się z wpisem katalogu.
+   Brak pól `manufacturer` i `brand` nie wyklucza zweryfikowanego wpisu.
+   Obecna, lecz nierozpoznana lub sprzeczna deklaracja blokuje taki wpis
+   i wymaga wyceny ręcznej.
    Brak dowodu, duplikat, przyszła data, wpis starszy niż 180 dni lub zmiana
    docelowego produktu przy przekierowaniu wyłączają ten wpis.
 
