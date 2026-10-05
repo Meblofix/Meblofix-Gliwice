@@ -1615,14 +1615,35 @@ test('redirect do prywatnego IP i downgrade do HTTP są odrzucane', async () => 
   } finally { restore(); }
 });
 
-test('body większe niż 32 KB jest odrzucane strumieniowo przez oba API', async () => {
+test('powiadomienie przyjmuje podpisany wynik z czasami i źródłami 10 produktów z długimi URL', async () => {
+  const deliveries = [];
+  const items = Array.from({ length: 10 }, (_, index) => ({
+    url: `https://www.ikea.com/pl/pl/p/test-times-${index}/?variant=${'x'.repeat(1800)}`,
+    quantity: 1
+  }));
+  const restore = installFetchMock({ products: Object.fromEntries(items.map(item => [item.url, PRODUCT_HTML('Szafa fixture', 1000)])), deliveries });
+  try {
+    const bindings = env();
+    const result = await calculate(body(items), bindings, 'test-ten-time-sources');
+    assert.equal(result.response.status, 200);
+    assert.equal(result.data.quote.manufacturer.confirmedUnits, 10);
+    assert.equal(result.data.quote.manufacturer.minutesMin, 1200);
+    assert.ok(result.data.notificationToken.length > 24_000);
+    const sent = await notify(result.data.notificationToken, bindings);
+    assert.equal(sent.response.status, 200);
+    assert.equal(sent.data.sent, true);
+    assert.equal(deliveries.length, 1);
+  } finally { restore(); }
+});
+
+test('body przekraczające limity API jest odrzucane strumieniowo', async () => {
   const oversized = JSON.stringify({ token: 'x'.repeat(33_000) });
   const productResponse = await calculateQuote({
     request: rawRequest('/api/quote-products', oversized),
     env: env()
   });
   const notificationResponse = await notifyQuote({
-    request: rawRequest('/api/quote-notification', oversized),
+    request: rawRequest('/api/quote-notification', JSON.stringify({ token: 'x'.repeat(129_000) })),
     env: env()
   });
   assert.equal(productResponse.status, 413);

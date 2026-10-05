@@ -50,6 +50,17 @@ test('zdarzenia przepuszczają tylko zamknięty zestaw właściwości bez PII', 
   assert.equal(runtime.window.MeblofixAnalytics.track('unknown_event', { productCount: 2 }), false);
 });
 
+test('ręczna wycena czasu przekazuje bezpieczną przyczynę bez kwot i linków', () => {
+  const runtime = analyticsRuntime();
+  runtime.window.MeblofixAnalytics.track('quote_individual', {
+    reason: 'assembly_time_unavailable', productCount: 1, hasExtraServices: false,
+    total: 1000, productUrl: 'https://example.com/private'
+  });
+  assert.deepEqual(plain(runtime.calls), [{ name: 'quote_individual', properties: {
+    reason: 'assembly_time_unavailable', productCount: 1, hasExtraServices: false
+  } }]);
+});
+
 test('onceKey blokuje duplikat tego samego zdarzenia', () => {
   const runtime = analyticsRuntime();
   const tracker = runtime.window.MeblofixAnalytics;
@@ -98,7 +109,7 @@ test('integracja formularzy i kalkulatora emituje konwersje dopiero w poprawnych
   const calculate = homepage.slice(homepage.indexOf('async function calculateFromLinks'), homepage.indexOf('async function sendCalculationNotice'));
   assert.equal((calculate.match(/track\('quote_started'/g) || []).length, 1);
   assert.equal((calculate.match(/track\('quote_success'/g) || []).length, 1);
-  assert.equal((calculate.match(/track\('quote_individual'/g) || []).length, 3);
+  assert.equal((calculate.match(/track\('quote_individual'/g) || []).length, 4);
   assert.ok(calculate.indexOf("if (!data.quote) throw") < calculate.indexOf("track('quote_success'"));
   assert.ok(calculate.indexOf('showIndividualQuote(data.individualQuote.message)') < calculate.indexOf("sendCalculationNotice(data.notificationToken, `individual:"));
   assert.ok(calculate.indexOf("showIndividualQuote('Nie udało się potwierdzić ceny wszystkich produktów") < calculate.indexOf("reason: 'price_not_confirmed'"));

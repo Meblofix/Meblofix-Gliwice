@@ -5239,7 +5239,11 @@
       }
       if (!data.quote) throw new Error('missing verified quote');
       const result = data.quote; lastCalculation = result; individualQuoteReady = false; calculationKey = JSON.stringify(requestData); setResult(result); quoteProductsStatus.textContent = result.requiresManualQuote ? 'Produkty rozpoznane. Czas lub zakres wymaga wyceny ręcznej.' : 'Produkty rozpoznane. Widełki czasu i kosztu wymagają potwierdzenia zakresu.';
-      window.MeblofixAnalytics?.track('quote_success', analyticsProperties, `quote:${analyticsAttempt}:success`);
+      if (result.requiresManualQuote) {
+        window.MeblofixAnalytics?.track('quote_individual', { ...analyticsProperties, reason: 'assembly_time_unavailable' }, `quote:${analyticsAttempt}:individual`);
+      } else {
+        window.MeblofixAnalytics?.track('quote_success', analyticsProperties, `quote:${analyticsAttempt}:success`);
+      }
       if (data.notificationToken) {
         await new Promise(resolve => requestAnimationFrame(() => resolve()));
         await sendCalculationNotice(data.notificationToken, `success:${calculationKey}`);

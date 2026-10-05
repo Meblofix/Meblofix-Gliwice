@@ -6,6 +6,7 @@ on:
       - 'functions/**'
       - 'data/**'
       - 'index.html'
+      - 'analytics.js'
       - 'js/**'
       - 'tests/**'
       - 'scripts/**'

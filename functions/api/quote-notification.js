@@ -1,8 +1,9 @@
 import { verifyQuoteToken } from './quote-products.js';
 import { QUOTE_SECURITY_LIMITS } from './quote-security-config.js';
 
-const MAX_REQUEST_BYTES = 32_000;
-const MAX_TOKEN_LENGTH = 24_000;
+// Podpisany wynik zawiera także źródła i czasy do 10 produktów.
+const MAX_REQUEST_BYTES = 128_000;
+const MAX_TOKEN_LENGTH = 120_000;
 const REJECTED_NOTIFICATION_MESSAGE = 'Nie udało się przyjąć zgłoszenia. Zadzwoń pod numer +48 784 878 197, aby przekazać szczegóły wyceny.';
 const memoryDeliveryRecords = new Map();
 const memoryRate = new Map();
