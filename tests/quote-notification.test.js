@@ -22,7 +22,9 @@ const ALLEGRO_VISIBLE_HTML = `<!doctype html><html><head><meta property="og:titl
   <footer>Numer oferty: 18281158355</footer>
 </body></html>`;
 const PRODUCT_HTML = (name, price) => `<!doctype html><html><head><script type="application/ld+json">${JSON.stringify({
-  '@type': 'Product', name, offers: { price, priceCurrency: 'PLN' }
+  '@type': 'Product', name, brand: { name: 'IKEA' }, additionalProperty: [
+    { name: 'Czas montażu', value: '120 min' }, { name: 'Liczba osób do montażu', value: 1 }
+  ], offers: { price, priceCurrency: 'PLN' }
 })}</script></head></html>`;
 
 class FakeKv {
@@ -126,7 +128,17 @@ function installFetchMock({
           headers: { 'content-type': 'text/html; charset=utf-8', ...(entry.headers || {}) }
         });
       }
-      return new Response(entry, { status: 200, headers: { 'content-type': 'text/html; charset=utf-8' } });
+      // Syntetyczna deklaracja dotyczy wyłącznie bieżącego produktu; cena nie wyznacza czasu.
+      const html = entry.replace(/(<script type="application\/ld\+json">)([\s\S]*?)(<\/script>)/g, (match, start, json, end) => {
+        const item = JSON.parse(json);
+        if (item.additionalProperty) {
+          item.url = url;
+          const host = new URL(url).hostname.replace(/^www\./, '');
+          item.brand = { name: host === 'brw.pl' ? 'Black Red White' : host === 'jysk.pl' ? 'JYSK' : 'IKEA' };
+        }
+        return start + JSON.stringify(item) + end;
+      });
+      return new Response(html, { status: 200, headers: { 'content-type': 'text/html; charset=utf-8' } });
     }
     throw new Error(`Nieprzechwycony request testowy: ${url}`);
   };
@@ -151,7 +163,7 @@ test('poprawna wycena jednego produktu wysyła dokładnie jedno powiadomienie', 
     const bindings = env();
     const result = await calculate(body([{ url, quantity: 1 }]), bindings, 'test-one');
     assert.equal(result.response.status, 200);
-    assert.equal(result.data.quote.total, 200);
+    assert.equal(result.data.quote.total, 300);
     assert.equal(deliveries.length, 0, 'obliczenie nie wysyła e-maila przed pokazaniem wyniku');
     const notification = await notify(result.data.notificationToken, bindings);
     assert.equal(notification.response.status, 200);
@@ -162,11 +174,11 @@ test('poprawna wycena jednego produktu wysyła dokładnie jedno powiadomienie', 
     assert.equal(deliveries[0]._subject, 'Nowa wycena z kalkulatora Meblofix');
     assert.ok(deliveries[0].data_i_godzina);
     assert.equal(deliveries[0].laczna_wartosc_produktow, '1000 zł');
-    assert.equal(deliveries[0].koszt_montazu, '200 zł');
+    assert.equal(deliveries[0].koszt_montazu, '250 zł–300 zł');
     assert.equal(deliveries[0].uslugi_dodatkowe, 'Nie wybrano');
     assert.equal(deliveries[0].laczny_koszt_uslug_dodatkowych, '0 zł');
     assert.equal(deliveries[0].koszt_dojazdu, '0 zł');
-    assert.equal(deliveries[0].laczna_orientacyjna_wycena, '200 zł');
+    assert.equal(deliveries[0].laczna_orientacyjna_wycena, '250 zł–300 zł');
     assert.equal(deliveries[0].rodzaj_mebla, 'Meble z paczek');
   } finally { restore(); }
 });
@@ -240,7 +252,7 @@ test('pole produktów zachowuje identyfikatory bez surowych protokołów i bez d
     assert.match(products, /Potwierdzona cena sztuki: 750 zł/);
     assert.match(products, /Identyfikator produktu: ikea\.com\/pl\/pl\/p\/metod-szafka-12345678\/\?utm_source=test/);
     assert.doesNotMatch(products, /https?:\/\//i);
-    assert.equal(products.split(reference).length - 1, 1);
+    assert.equal(products.split(reference).length - 1, 2, 'identyfikator produktu oraz źródło czasu');
   } finally { restore(); }
 });
 
@@ -257,8 +269,10 @@ test('Allegro potwierdza 1399 PLN tylko z sekcji właściwej oferty', async () =
     assert.equal(result.data.products[0].name, ALLEGRO_NAME);
     assert.equal(result.data.products[0].price, 1399);
     assert.equal(result.data.quote.furniture, 1399);
-    assert.equal(result.data.quote.installation, 279.8);
-    assert.equal(result.data.quote.total, 279.8);
+    assert.equal(result.data.quote.installation, 585);
+    assert.equal(result.data.quote.installationMin, 315);
+    assert.equal(result.data.products[0].assembly.manufacturer.status, 'unavailable');
+    assert.equal(result.data.quote.total, 585);
     assert.equal(requests.length, 1);
     assert.equal(requests[0].init.redirect, 'manual');
     assert.match(requests[0].init.headers['User-Agent'], /Mozilla\/5\.0/);
@@ -740,7 +754,7 @@ test('dane podane przed wyceną trafiają do powiadomienia', async () => {
     assert.equal(deliveries[0].dodatkowe_informacje, 'Mieszkanie na trzecim piętrze.');
     assert.equal(deliveries[0].miejscowosc, 'Zabrze');
     assert.equal(deliveries[0].odleglosc_od_gliwic_km, '12');
-    assert.equal(deliveries[0].laczna_orientacyjna_wycena, '276 zł');
+    assert.equal(deliveries[0].laczna_orientacyjna_wycena, '286 zł–336 zł');
   } finally { restore(); }
 });
 
@@ -833,6 +847,8 @@ test('NOTIFICATION_DRY_RUN przechodzi pełną logikę bez próby wysyłki', asyn
       'produkty',
       'laczna_wartosc_produktow',
       'koszt_montazu',
+      'suma_czasu_producenta',
+      'czas_roboczy',
       'uslugi_dodatkowe',
       'laczny_koszt_uslug_dodatkowych',
       'koszt_dojazdu',
@@ -977,8 +993,8 @@ test('frontend nie może wskazać endpointu ani zmienić podpisanych kwot', asyn
     assert.equal(notification.response.status, 200);
     assert.equal(deliveries.length, 1);
     assert.equal(deliveries[0].laczna_wartosc_produktow, '1000 zł');
-    assert.equal(deliveries[0].koszt_montazu, '200 zł');
-    assert.equal(deliveries[0].laczna_orientacyjna_wycena, '200 zł');
+    assert.equal(deliveries[0].koszt_montazu, '250 zł–300 zł');
+    assert.equal(deliveries[0].laczna_orientacyjna_wycena, '250 zł–300 zł');
   } finally { restore(); }
 });
 
@@ -1017,7 +1033,7 @@ test('jedna usługa dodatkowa jest liczona według tabeli backendu', async () =>
     assert.equal(signed.quote.extraServices[0].unitPrice, 100);
     assert.equal(signed.quote.extraServices[0].value, 100);
     assert.equal(result.data.quote.extraServicesTotal, 100);
-    assert.equal(result.data.quote.total, 300);
+    assert.equal(result.data.quote.total, 400);
   } finally { restore(); }
 });
 
@@ -1046,7 +1062,7 @@ test('kilka usług i ilość większa niż 1 sumują się po stronie backendu', 
       ['hood_install', 1, 100, 100]
     ]);
     assert.equal(result.data.quote.extraServicesTotal, 300);
-    assert.equal(result.data.quote.total, 500);
+    assert.equal(result.data.quote.total, 600);
   } finally { restore(); }
 });
 
@@ -1076,7 +1092,7 @@ test('wszystkie zatwierdzone serviceId mają właściwe stawki backendowe', asyn
       hood_install: 100
     });
     assert.equal(result.data.quote.extraServicesTotal, 540);
-    assert.equal(result.data.quote.total, 940);
+    assert.equal(result.data.quote.total, 840);
   } finally { restore(); }
 });
 
@@ -1126,7 +1142,7 @@ test('kwoty usług i sumy przesłane przez frontend nie wpływają na wycenę', 
       total: 1
     }), env(), 'test-price-injection');
     assert.equal(result.response.status, 200);
-    assert.equal(result.data.quote.installation, 160);
+    assert.equal(result.data.quote.installation, 300);
     assert.equal('unitPrice' in result.data.quote.extraServices[0], false);
     assert.equal('value' in result.data.quote.extraServices[0], false);
     const signed = await tokenPayload(result.data.notificationToken, env());
@@ -1134,7 +1150,7 @@ test('kwoty usług i sumy przesłane przez frontend nie wpływają na wycenę', 
     assert.equal(signed.quote.extraServices[0].value, 100);
     assert.equal(result.data.quote.extraServicesTotal, 100);
     assert.equal(result.data.quote.travel, 0);
-    assert.equal(result.data.quote.total, 260);
+    assert.equal(result.data.quote.total, 400);
   } finally { restore(); }
 });
 
@@ -1162,12 +1178,12 @@ test('e-mail właściciela zawiera wszystkie usługi, ilości i wewnętrzne ceny
     assert.match(deliveries[0].uslugi_dodatkowe, /Podłączenie zmywarki/);
     assert.match(deliveries[0].uslugi_dodatkowe, /Cena jednostkowa: 80 zł/);
     assert.equal(deliveries[0].laczny_koszt_uslug_dodatkowych, '280 zł');
-    assert.equal(deliveries[0].koszt_montazu, '300 zł');
+    assert.equal(deliveries[0].koszt_montazu, '250 zł–300 zł');
     const expectedTravel = 10
       * pricingConfig.publicRates.travel.roundTripMultiplier
       * pricingConfig.publicRates.travel.outsideGliwicePerKilometer;
     assert.equal(deliveries[0].koszt_dojazdu, `${expectedTravel} zł`);
-    assert.equal(deliveries[0].laczna_orientacyjna_wycena, '610 zł');
+    assert.equal(deliveries[0].laczna_orientacyjna_wycena, '560 zł–610 zł');
     assert.equal(deliveries[0].identyfikator_wyceny, result.data.quoteId);
   } finally { restore(); }
 });
@@ -1494,7 +1510,7 @@ test('brak sekretu nie usuwa poprawnej wyceny, ale nie tworzy tokenu', async () 
     }, 'test-no-secret');
     assert.equal(result.response.status, 200);
     assert.equal(result.data.allConfirmed, true);
-    assert.equal(result.data.quote.total, 150);
+    assert.equal(result.data.quote.total, 300);
     assert.equal(result.data.notificationToken, null);
     assert.equal(deliveries.length, 0);
   } finally { restore(); }
@@ -1599,14 +1615,35 @@ test('redirect do prywatnego IP i downgrade do HTTP są odrzucane', async () => 
   } finally { restore(); }
 });
 
-test('body większe niż 32 KB jest odrzucane strumieniowo przez oba API', async () => {
+test('powiadomienie przyjmuje podpisany wynik z czasami i źródłami 10 produktów z długimi URL', async () => {
+  const deliveries = [];
+  const items = Array.from({ length: 10 }, (_, index) => ({
+    url: `https://www.ikea.com/pl/pl/p/test-times-${index}/?variant=${'x'.repeat(1800)}`,
+    quantity: 1
+  }));
+  const restore = installFetchMock({ products: Object.fromEntries(items.map(item => [item.url, PRODUCT_HTML('Szafa fixture', 1000)])), deliveries });
+  try {
+    const bindings = env();
+    const result = await calculate(body(items), bindings, 'test-ten-time-sources');
+    assert.equal(result.response.status, 200);
+    assert.equal(result.data.quote.manufacturer.confirmedUnits, 10);
+    assert.equal(result.data.quote.manufacturer.minutesMin, 1200);
+    assert.ok(result.data.notificationToken.length > 24_000);
+    const sent = await notify(result.data.notificationToken, bindings);
+    assert.equal(sent.response.status, 200);
+    assert.equal(sent.data.sent, true);
+    assert.equal(deliveries.length, 1);
+  } finally { restore(); }
+});
+
+test('body przekraczające limity API jest odrzucane strumieniowo', async () => {
   const oversized = JSON.stringify({ token: 'x'.repeat(33_000) });
   const productResponse = await calculateQuote({
     request: rawRequest('/api/quote-products', oversized),
     env: env()
   });
   const notificationResponse = await notifyQuote({
-    request: rawRequest('/api/quote-notification', oversized),
+    request: rawRequest('/api/quote-notification', JSON.stringify({ token: 'x'.repeat(129_000) })),
     env: env()
   });
   assert.equal(productResponse.status, 413);

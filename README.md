@@ -28,7 +28,7 @@ limity, deduplikację i budowę pól powiadomienia, ale nie wykonuje żądania d
 Formspree. Odpowiedź zawiera wyłącznie nazwy pól, bez ich wartości. Nie używaj
 tej zmiennej w produkcji.
 
-Projekt przypina `wrangler` w wersji `4.120.0` w `devDependencies` i
+Projekt przypina `wrangler` w wersji `4.147.0` w `devDependencies` i
 `package-lock.json`. Po `npm ci` zarówno build, lokalny podgląd, jak i deploy
 powinny korzystać z lokalnej wersji przez `npx --no-install wrangler ...`.
 Artefakt z `bash scripts/build-cloudflare.sh` można wdrożyć bez przepakowania:
@@ -99,7 +99,7 @@ npx --no-install wrangler pages deploy dist \
   --commit-hash="$(git rev-parse HEAD)"
 ```
 
-Ręczny deploy również korzysta z lokalnego `wrangler@4.120.0`. Nie zmienia DNS,
+Ręczny deploy również korzysta z lokalnego `wrangler@4.147.0`. Nie zmienia DNS,
 domeny ani konfiguracji istniejących sekretów i KV projektu Pages.
 
 ## Jak sprawdzać ruch Meblofix
@@ -145,6 +145,14 @@ produktów, informację o usługach dodatkowych, rodzaj formularza, bezpieczny
 identyfikator realizacji, numer porównania albo kod przyczyny fallbacku. Nie są
 wysyłane imiona, telefony, e-maile, treści formularzy, linki produktów, tokeny,
 kwoty ani identyfikatory wycen.
+
+## Kalkulator czasu montażu
+
+Kalkulator wycenia montaż według czasu i stawki ekipy. Pokazuje źródło czasu
+producenta, sumę wszystkich sztuk, oddzielny szacunek roboczy oraz widełki
+ceny. Niepotwierdzone dane dają jawny szacunek kategorii albo wycenę ręczną.
+Zasady dowodów, ograniczenia odczytu i sposób dodawania zweryfikowanych
+instrukcji opisuje [dokumentacja kalkulatora](docs/assembly-calculator.md).
 
 ## Powiadomienia automatycznej wyceny
 

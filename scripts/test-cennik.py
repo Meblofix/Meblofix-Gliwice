@@ -83,6 +83,16 @@ require("../../data/cennik.json" in backend, "Kalkulator nie importuje wspólneg
 require("minimumJob: 150" not in backend and "travelPerKm: 1.5" not in backend, "Kalkulator nadal hardcoduje reguły")
 require("maximumDistanceOneWayKilometers" in backend and "distanceInput > 500" not in backend, "Limit odległości backendu nie pochodzi z configu")
 
+require("installationRate" not in config["calculator"], "Powrót procentu ceny w konfiguracji kalkulatora")
+require("installationRate" not in backend and "furniture *" not in backend, "Powrót wyceny procentowej w backendzie")
+assembly_backend = (ROOT / "functions" / "api" / "assembly-time.js").read_text(encoding="utf-8")
+require("hourlyOneInstaller" in assembly_backend and "hourlyTwoInstallers" in assembly_backend, "Brak godzinowych stawek ekipy")
+require("manufacturerTotal" in assembly_backend and "product.quantity" in assembly_backend, "Brak sumy czasu wszystkich sztuk")
+require("requiresManualQuote" in assembly_backend, "Brak bezpiecznej wyceny ręcznej")
+calculator_source = (ROOT / "index.html").read_text(encoding="utf-8")
+for field in ("quoteManufacturerTime", "quoteWorkingTime", "Źródło czasu producenta"):
+    require(field in calculator_source, f"Kalkulator nie pokazuje czasu/źródła: {field}")
+
 for html_path in DIST.rglob("*.html"):
     require("[[" not in html_path.read_text(encoding="utf-8"), f"Niewypełniony marker w {html_path.relative_to(DIST)}")
 

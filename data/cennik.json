@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "currency": "PLN",
   "publicRates": {
     "minimumJob": 150,
@@ -34,6 +34,54 @@
     ]
   },
   "calculator": {
-    "installationRate": 0.2
+    "assembly": {
+      "catalogMaxAgeDays": 180,
+      "manufacturerFactorMin": 1,
+      "manufacturerFactorMax": 1.25,
+      "perItemHandlingMinutes": 15,
+      "jobSetupMinutes": 15,
+      "fallbackProfiles": {
+        "nightstand": {
+          "minutesMin": 30,
+          "minutesMax": 60,
+          "people": 1
+        },
+        "wardrobe": {
+          "minutesMin": 180,
+          "minutesMax": 360,
+          "people": 2
+        },
+        "bed": {
+          "minutesMin": 90,
+          "minutesMax": 180,
+          "people": 2
+        },
+        "chest": {
+          "minutesMin": 120,
+          "minutesMax": 240,
+          "people": 1
+        },
+        "shelf": {
+          "minutesMin": 60,
+          "minutesMax": 120,
+          "people": 1
+        },
+        "desk": {
+          "minutesMin": 60,
+          "minutesMax": 120,
+          "people": 1
+        },
+        "table": {
+          "minutesMin": 30,
+          "minutesMax": 60,
+          "people": 1
+        },
+        "chair": {
+          "minutesMin": 20,
+          "minutesMax": 45,
+          "people": 1
+        }
+      }
+    }
   }
 }

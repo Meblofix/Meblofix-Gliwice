@@ -1,8 +1,9 @@
 import { verifyQuoteToken } from './quote-products.js';
 import { QUOTE_SECURITY_LIMITS } from './quote-security-config.js';
 
-const MAX_REQUEST_BYTES = 32_000;
-const MAX_TOKEN_LENGTH = 24_000;
+// Podpisany wynik zawiera także źródła i czasy do 10 produktów.
+const MAX_REQUEST_BYTES = 128_000;
+const MAX_TOKEN_LENGTH = 120_000;
 const REJECTED_NOTIFICATION_MESSAGE = 'Nie udało się przyjąć zgłoszenia. Zadzwoń pod numer +48 784 878 197, aby przekazać szczegóły wyceny.';
 const memoryDeliveryRecords = new Map();
 const memoryRate = new Map();
@@ -175,6 +176,28 @@ function productStore(product) {
   return withoutUrlProtocols(product.store || 'Inny sklep');
 }
 
+function timeRange(min, max) {
+  if (!Number.isFinite(min) || !Number.isFinite(max)) return 'brak potwierdzonych danych';
+  return min === max ? `${min} min` : `${min}–${max} min`;
+}
+
+function costRange(min, max) {
+  if (!Number.isFinite(min) || !Number.isFinite(max)) return 'wycena ręczna';
+  return min === max ? money(min) : `${money(min)}–${money(max)}`;
+}
+
+function assemblyLines(product) {
+  const assembly = product.assembly;
+  if (!assembly) return 'Czas montażu: brak danych (starszy wynik)';
+  const time = assembly.manufacturer;
+  return [
+    time.status === 'confirmed' ? `Czas producenta / szt.: ${timeRange(time.minutesMin, time.minutesMax)}; osoby: ${time.people ?? 'niepodane'}` : 'Czas producenta: niepotwierdzony',
+    `Suma producenta dla pozycji: ${timeRange(assembly.manufacturerTotal?.minutesMin, assembly.manufacturerTotal?.minutesMax)}`,
+    ...(time.source ? [`Źródło czasu: ${productReference(time.source.url)}; weryfikacja: ${time.source.checkedAt}`] : []),
+    assembly.working ? `Szacunek roboczy Meblofix dla pozycji: ${timeRange(assembly.working.totalMinutesMin, assembly.working.totalMinutesMax)}; ekipa: ${assembly.working.people}; podstawa: ${assembly.working.basis}` : 'Czas roboczy: wymaga ręcznej weryfikacji'
+  ].join('\n');
+}
+
 function productLines(products) {
   return products.map((product, index) => [
     `${index + 1}. Sklep: ${productStore(product)}`,
@@ -182,6 +205,7 @@ function productLines(products) {
     `Ilość: ${product.quantity}`,
     `Potwierdzona cena sztuki: ${money(product.price)}`,
     `Wartość pozycji: ${money(product.value)}`,
+    assemblyLines(product),
     `Identyfikator produktu: ${productReference(product.url)}`
   ].join('\n')).join('\n\n');
 }
@@ -235,17 +259,19 @@ function attemptExtraServiceLines(services) {
 export function automaticNotificationFields(payload) {
   const { quote, context } = payload;
   const fields = new FormData();
-  setMailField(fields, '_subject', 'Nowa wycena z kalkulatora Meblofix');
-  setMailField(fields, 'typ_zdarzenia', 'Automatyczna wycena');
+  setMailField(fields, '_subject', quote.requiresManualQuote ? 'Produkty z kalkulatora Meblofix — potrzebna wycena ręczna' : 'Nowa wycena z kalkulatora Meblofix');
+  setMailField(fields, 'typ_zdarzenia', quote.requiresManualQuote ? 'Analiza produktów — wycena ręczna' : 'Automatyczna wycena czasowa');
   setMailField(fields, 'data_i_godzina', polishDate(payload.issuedAt));
   setMailField(fields, 'identyfikator_wyceny', payload.quoteId);
   setMailField(fields, 'produkty', productLines(quote.products));
   setMailField(fields, 'laczna_wartosc_produktow', money(quote.furniture));
-  setMailField(fields, 'koszt_montazu', money(quote.installation));
+  setMailField(fields, 'koszt_montazu', quote.pricingBasis ? costRange(quote.installationMin, quote.installationMax) : money(quote.installation));
+  setMailField(fields, 'suma_czasu_producenta', `${timeRange(quote.manufacturer?.minutesMin, quote.manufacturer?.minutesMax)}; ${quote.manufacturer?.complete ? 'pełna' : 'częściowa lub brak danych'}`);
+  setMailField(fields, 'czas_roboczy', `${timeRange(quote.working?.minutesMin, quote.working?.minutesMax)}; ekipa: ${quote.working?.people ?? 'do ustalenia'}`);
   setMailField(fields, 'uslugi_dodatkowe', extraServiceLines(quote.extraServices));
   setMailField(fields, 'laczny_koszt_uslug_dodatkowych', money(quote.extraServicesTotal || 0));
   setMailField(fields, 'koszt_dojazdu', money(quote.travel));
-  setMailField(fields, 'laczna_orientacyjna_wycena', money(quote.total));
+  setMailField(fields, 'laczna_orientacyjna_wycena', quote.pricingBasis ? costRange(quote.totalMin, quote.totalMax) : money(quote.total));
   setMailField(fields, 'miejscowosc', context.city, 80);
   setMailField(fields, 'odleglosc_od_gliwic_km', String(context.distance), 32);
   setMailField(fields, 'rodzaj_mebla', context.furnitureType, 80);
@@ -253,7 +279,7 @@ export function automaticNotificationFields(payload) {
   setMailField(fields, 'imie', context.contact.name || 'Nie podano', 80);
   setMailField(fields, 'telefon', context.contact.phone || 'Nie podano', 20);
   setMailField(fields, 'email_klienta', context.contact.email || 'Nie podano', 254);
-  setMailField(fields, 'dane_techniczne', 'Montaż: 20% wartości produktów, minimum techniczne 150 zł. Dojazd: odległość w jedną stronę × 2 × 1,50 zł. Kwoty obliczone i podpisane po stronie serwera.');
+  setMailField(fields, 'dane_techniczne', quote.pricingBasis ? `Montaż: czas roboczy × stawka ekipy ${quote.working ? money(quote.working.hourlyRate) + '/h' : '(do ustalenia)'}, minimum z cennika. Czas roboczy jest szacunkiem Meblofix, a czas producenta wymaga źródła. Usługi dodatkowe i dojazd liczone osobno. Ich czas nie jest ujęty w czasie montażu brył. Kwoty podpisane po stronie serwera.` : 'Starsza wycena — brak danych o czasie montażu.');
   return fields;
 }
 

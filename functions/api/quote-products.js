@@ -1,4 +1,5 @@
 import pricingConfig from '../../data/cennik.json' with { type: 'json' };
+import { productKey, resolveManufacturerTime, assemblyForProduct, calculateAssemblyQuote } from './assembly-time.js';
 import { QUOTE_SECURITY_LIMITS } from './quote-security-config.js';
 
 const MAX_ITEMS = 10;
@@ -9,8 +10,6 @@ const MAX_REDIRECTS = 3;
 const MAX_DISTANCE_KM = pricingConfig.serviceArea.maximumDistanceOneWayKilometers;
 export const TOKEN_LIFETIME_MS = QUOTE_SECURITY_LIMITS.quoteTokenLifetimeMs;
 const QUOTE_RULES = Object.freeze({
-  minimumJob: pricingConfig.publicRates.minimumJob,
-  installationRate: pricingConfig.calculator.installationRate,
   travelPerKm: pricingConfig.publicRates.travel.outsideGliwicePerKilometer,
   roundTripMultiplier: pricingConfig.publicRates.travel.roundTripMultiplier
 });
@@ -229,14 +228,16 @@ function flatten(value) {
   return [];
 }
 
-function productFromJsonLd(html, offerId = null) {
+function productFromJsonLd(html, offerId = null, finalUrl = null) {
   const scripts = [...html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)];
+  const candidates = [];
   for (const match of scripts) {
     try {
       const root = JSON.parse(match[1].trim());
       for (const item of flatten(root)) {
         const type = Array.isArray(item['@type']) ? item['@type'] : [item['@type']];
         if (!type.some(entry => String(entry).toLowerCase() === 'product')) continue;
+        if (!offerId && item.url && finalUrl && productKey(item.url) !== productKey(finalUrl)) continue;
         const offers = Array.isArray(item.offers) ? item.offers : [item.offers];
         for (const offer of offers) {
           if (!offer || typeof offer !== 'object' || !jsonLdMatchesOffer(item, offer, offerId)) continue;
@@ -245,12 +246,20 @@ function productFromJsonLd(html, offerId = null) {
           if (price == null || currency !== 'PLN') continue;
           const name = cleanText(decodeHtml(item.name), 240);
           if (!name) continue;
-          return { name, price, currency };
+          candidates.push({ name, price, currency, structuredProduct: item });
         }
       }
     } catch { /* Pomijamy niepoprawny blok JSON-LD. */ }
   }
-  return null;
+  const bound = candidates.filter(product => productKey(product.structuredProduct.url) === productKey(finalUrl));
+  const selected = bound.length ? bound : candidates;
+  if (!selected.length || new Set(selected.map(product => `${product.name}|${product.price}`)).size !== 1) return null;
+  const result = selected[0];
+  // Sprzeczne deklaracje w kilku blokach Product nie mogą potwierdzać czasu.
+  if (new Set(selected.map(product => JSON.stringify([product.structuredProduct.additionalProperty, product.structuredProduct.manufacturer, product.structuredProduct.brand]))).size > 1) {
+    return { ...result, structuredProduct: { assemblyConflict: true } };
+  }
+  return result;
 }
 
 function productFromMeta(html, offerId = null) {
@@ -360,10 +369,12 @@ async function resolveProduct(rawUrl) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
-    const { html } = await fetchProductHtml(url, controller.signal);
-    const product = productFromJsonLd(html, offerId) || productFromMeta(html, offerId) || (isAllegro ? allegroProductFromHtml(html, offerId) : null);
+    const { html, finalUrl } = await fetchProductHtml(url, controller.signal);
+    const product = productFromJsonLd(html, offerId, finalUrl) || productFromMeta(html, offerId) || (isAllegro ? allegroProductFromHtml(html, offerId) : null);
     if (!product) return { url: url.toString(), error: 'Nie udało się automatycznie potwierdzić ceny tego produktu.' };
-    return { url: url.toString(), ...(isAllegro ? { store: 'Allegro', offerId } : {}), ...product };
+    const { structuredProduct, ...publicProduct } = product;
+    const resolved = { url: url.toString(), ...(isAllegro ? { store: 'Allegro', offerId } : {}), ...publicProduct };
+    return { ...resolved, manufacturerAssembly: resolveManufacturerTime(resolved, structuredProduct, finalUrl) };
   } catch (error) {
     return { url: url.toString(), error: error.name === 'AbortError' ? 'Przekroczono czas oczekiwania.' : 'Strona produktu jest niedostępna lub cena jest niejednoznaczna.' };
   } finally { clearTimeout(timer); }
@@ -544,6 +555,10 @@ export async function onRequestPost({ request, env }) {
       quantity: items[index].quantity,
       ...(product.price ? { value: roundMoney(product.price * items[index].quantity) } : {})
     }));
+    for (const product of products) {
+      if (product.manufacturerAssembly) product.assembly = assemblyForProduct(product, context);
+      delete product.manufacturerAssembly;
+    }
     const allConfirmed = products.every(product => !product.error && Number.isFinite(product.price));
     const issuedAt = Date.now();
     const clientIp = request.headers.get('cf-connecting-ip') || 'unknown';
@@ -609,18 +624,20 @@ export async function onRequestPost({ request, env }) {
     }
 
     const furniture = roundMoney(products.reduce((sum, product) => sum + product.value, 0));
-    const installation = Math.max(QUOTE_RULES.minimumJob, roundMoney(furniture * QUOTE_RULES.installationRate));
+    const assemblyQuote = calculateAssemblyQuote(products, context);
     const extraServicesTotal = extraServices.reduce((sum, service) => sum + service.value, 0);
     const travel = roundMoney(context.distance * QUOTE_RULES.roundTripMultiplier * QUOTE_RULES.travelPerKm);
     const quote = {
       products,
       furniture,
-      installation,
+      ...assemblyQuote,
       extraServices,
       extraServicesTotal,
       distance: context.distance,
       travel,
-      total: roundMoney(installation + extraServicesTotal + travel)
+      total: assemblyQuote.requiresManualQuote ? null : roundMoney(assemblyQuote.installationMax + extraServicesTotal + travel),
+      totalMin: assemblyQuote.requiresManualQuote ? null : roundMoney(assemblyQuote.installationMin + extraServicesTotal + travel),
+      totalMax: assemblyQuote.requiresManualQuote ? null : roundMoney(assemblyQuote.installationMax + extraServicesTotal + travel)
     };
     const clientQuote = {
       ...quote,

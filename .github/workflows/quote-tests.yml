@@ -1,0 +1,33 @@
+name: Test kalkulatora montażu
+
+on:
+  pull_request:
+    paths:
+      - 'functions/**'
+      - 'data/**'
+      - 'index.html'
+      - 'analytics.js'
+      - 'js/**'
+      - 'tests/**'
+      - 'scripts/**'
+      - 'package*.json'
+      - '.github/workflows/quote-tests.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  quote:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run test:quote
+      - run: npm run build:cloudflare
+      - run: bash scripts/check-cloudflare-dist.sh
+      - run: git diff --check
