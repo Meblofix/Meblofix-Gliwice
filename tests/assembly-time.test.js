@@ -308,6 +308,7 @@ test('renderer pokazuje źródło, ilości, sumę częściową, szacunek i brak 
   sandbox.setResult(data);
   assert.match(bindings.quoteWorkingTime.textContent, /2 monterów/);
   assert.match(bindings.quoteProductResults.children[0].children[1].textContent, /Wszystkie 2 szt.: 4 h/);
+  assert.match(bindings.quoteProductResults.children[0].children.at(-1).textContent, /ekipa: 2 monterów\.$/);
   assert.equal(bindings.quoteProductResults.children[0].children[2].href, url);
   const manual = { ...data, requiresManualQuote: true, working: null, totalMin: null, totalMax: null, installationMin: null, installationMax: null, manufacturer: { ...data.manufacturer, complete: false, totalUnits: 3 } };
   sandbox.setResult(manual);
@@ -317,6 +318,14 @@ test('renderer pokazuje źródło, ilości, sumę częściową, szacunek i brak 
   sandbox.setResult({ ...calculateAssemblyQuote([single], context), products: [single], travel: 0, extraServicesTotal: 0,
     totalMin: 150, totalMax: 150 });
   assert.match(bindings.quoteWorkingTime.textContent, /1 monter$/);
+  assert.match(bindings.quoteProductResults.children[0].children.at(-1).textContent, /ekipa: 1 monter\.$/);
+  for (const [people, expected] of [[1, '1 osoba'], [2, '2 osoby'], [3, '3 osoby'], [4, '4 osoby'], [5, '5 osób'], [10, '10 osób'], [null, 'liczba osób niepodana']]) {
+    const properties = [{ name: 'Czas montażu', value: '2 h' }];
+    if (people !== null) properties.push({ name: 'Liczba osób do montażu', value: people });
+    const declared = assembled({}, item({ additionalProperty: properties }));
+    sandbox.setResult({ ...calculateAssemblyQuote([declared], context), products: [declared], travel: 0, extraServicesTotal: 0 });
+    assert.match(bindings.quoteProductResults.children[0].children[1].textContent, new RegExp(`; ${expected}\\.`));
+  }
   sandbox.setResult(null);
   assert.equal(bindings.quoteWorkingTime.textContent, '—');
   assert.equal(bindings.quoteProductResults.children.length, 0);

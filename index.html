@@ -5143,6 +5143,10 @@
     if (!Number.isFinite(min) || !Number.isFinite(max)) return 'Wycena ręczna';
     return min === max ? money(min) : `${money(min)} – ${money(max)}`;
   }
+  function manufacturerPeopleLabel(people) {
+    if (!Number.isInteger(people) || people < 1) return 'liczba osób niepodana';
+    return `${people} ${people === 1 ? 'osoba' : people <= 4 ? 'osoby' : 'osób'}`;
+  }
   function setResult(result) {
     if (!result) {
       quoteManufacturerTime.textContent = quoteWorkingTime.textContent = quoteWorkCost.textContent = quoteExtraServicesCost.textContent = quoteTravelCost.textContent = quoteTotalCost.textContent = '—';
@@ -5168,7 +5172,7 @@
       const assembly = product.assembly, time = assembly.manufacturer;
       const declared = document.createElement('p');
       declared.textContent = time.status === 'confirmed'
-        ? `Producent (${time.manufacturer}), 1 szt.: ${timeRange(time.minutesMin, time.minutesMax)}; ${time.people ? `${time.people} osób` : 'liczba osób niepodana'}. Wszystkie ${product.quantity} szt.: ${timeRange(assembly.manufacturerTotal.minutesMin, assembly.manufacturerTotal.minutesMax)}.`
+        ? `Producent (${time.manufacturer}), 1 szt.: ${timeRange(time.minutesMin, time.minutesMax)}; ${manufacturerPeopleLabel(time.people)}. Wszystkie ${product.quantity} szt.: ${timeRange(assembly.manufacturerTotal.minutesMin, assembly.manufacturerTotal.minutesMax)}.`
         : 'Czas według producenta: nie udało się wiarygodnie potwierdzić w dostępnych danych.';
       li.append(declared);
       if (time.source) {
@@ -5177,7 +5181,7 @@
       }
       const work = document.createElement('p');
       work.textContent = assembly.working
-        ? `Szacunek roboczy Meblofix (${assembly.working.basis === 'category_estimate' ? 'widełki kategorii, do potwierdzenia' : 'czas producenta z zapasem'}): ${timeRange(assembly.working.minutesMin, assembly.working.minutesMax)} / szt.; wszystkie szt.: ${timeRange(assembly.working.totalMinutesMin, assembly.working.totalMinutesMax)}; ekipa ${assembly.working.people} osób.`
+        ? `Szacunek roboczy Meblofix (${assembly.working.basis === 'category_estimate' ? 'widełki kategorii, do potwierdzenia' : 'czas producenta z zapasem'}): ${timeRange(assembly.working.minutesMin, assembly.working.minutesMax)} / szt.; wszystkie szt.: ${timeRange(assembly.working.totalMinutesMin, assembly.working.totalMinutesMax)}; ekipa: ${assembly.working.people} ${assembly.working.people === 1 ? 'monter' : 'monterów'}.`
         : 'Czas roboczy: do ustalenia po sprawdzeniu instrukcji i zakresu.';
       li.append(work); return li;
     }));
