@@ -1770,6 +1770,8 @@
   .quote-product-list { margin: .75rem 0 0; padding-left: 1.1rem; color: var(--cream); }
   .quote-product-list li { margin: .75rem 0; overflow-wrap: anywhere; }
   .quote-product-list p { margin: .4rem 0; font-size: .85rem; line-height: 1.55; }
+  .quote-product-list a:not(.quote-individual-button) { color: var(--orange-light); }
+  .quote-product-list a:not(.quote-individual-button):focus-visible { outline: 2px solid var(--cream); outline-offset: 3px; }
   .quote-individual-link { color: var(--orange-light); }
   .quote-individual-button { display: inline-flex; align-items: center; justify-content: center; min-height: 2.75rem; padding: .7rem 1rem; border: 1px solid var(--orange-light); border-radius: 4px; background: var(--orange-btn); color: var(--white); font-weight: 700; text-decoration: none; }
   .quote-individual-button:focus-visible { outline: 2px solid var(--cream); outline-offset: 3px; }
@@ -4298,7 +4300,7 @@
 
       <aside class="quote-result" aria-labelledby="quoteResultTitle">
         <div class="quote-result-head">
-          <span class="quote-result-kicker">Aktualizuje się automatycznie</span>
+          <span class="quote-result-kicker">Wynik po przeliczeniu</span>
           <h3 class="quote-result-title" id="quoteResultTitle">Orientacyjny koszt montażu</h3>
         </div>
         <div class="quote-result-lines" id="quotePriceLive" role="status" aria-live="polite" aria-atomic="true">
@@ -5070,6 +5072,7 @@
   let individualQuoteReady = false;
   let calculationKey = '';
   let calculationNoticeKey = '';
+  let quoteRevision = 0;
   let quoteAnalyticsAttempt = 0;
   let lastQuoteStartedAt = 0;
   let distanceCityKey = '';
@@ -5102,8 +5105,8 @@
     const row = document.createElement('div'); row.className = 'quote-product-row';
     const index = quoteProducts.children.length + 1;
     row.innerHTML = `<label class="quote-sr-only" for="quoteLink${index}">Link do produktu ${index}</label><input type="url" id="quoteLink${index}" name="link_produktu_${index}" maxlength="2048" placeholder="https://..." inputmode="url" autocomplete="url"><label class="quote-sr-only" for="quoteQty${index}">Ilość ${index}</label><input type="number" id="quoteQty${index}" name="ilosc_${index}" min="1" max="100" step="1" value="1" aria-label="Ilość produktu ${index}"><button type="button" class="quote-product-remove" aria-label="Usuń link ${index}">Usuń</button>`;
-    row.querySelector('.quote-product-remove').addEventListener('click', () => { row.remove(); renumberRows(); });
-    quoteProducts.append(row); renumberRows();
+    row.querySelector('.quote-product-remove').addEventListener('click', () => { row.remove(); renumberRows(); invalidateQuoteAfterInputChange(); });
+    quoteProducts.append(row); renumberRows(); invalidateQuoteAfterInputChange();
   }
   function renumberRows() { quoteAddLink.disabled = quoteProducts.children.length >= QUOTE_MAX_LINKS; quoteProductsStatus.textContent = `${quoteProducts.children.length}/${QUOTE_MAX_LINKS} linków dodanych. Każdy produkt musi mieć jednoznacznie odczytaną cenę.`; }
   function rows() { return [...quoteProducts.querySelectorAll('.quote-product-row')].map(row => ({ url: row.querySelector('input[type="url"]').value.trim(), quantity: Number(row.querySelector('input[type="number"]').value) || 0 })); }
@@ -5114,10 +5117,14 @@
       return [{ serviceId: checkbox.dataset.serviceId, quantity: Number(row.querySelector('[data-service-quantity]').textContent) }];
     });
   }
-  function invalidateQuoteAfterServiceChange() {
-    if (!lastCalculation && !individualQuoteReady) return;
+  function invalidateQuoteAfterInputChange() {
+    quoteRevision += 1;
+    if (!lastCalculation && !individualQuoteReady) {
+      if (quoteCalculate.disabled) quoteProductsStatus.textContent = 'Zmieniono dane wyceny. Przelicz ponownie po zakończeniu analizy linków.';
+      return;
+    }
     lastCalculation = null; individualQuoteReady = false; calculationKey = ''; calculationNoticeKey = ''; setResult(null);
-    quoteProductsStatus.textContent = 'Zmieniono usługi dodatkowe. Kliknij „PRZELICZ WYCENĘ”, aby zaktualizować wynik.';
+    quoteProductsStatus.textContent = 'Zmieniono dane wyceny. Kliknij „PRZELICZ WYCENĘ”, aby zaktualizować wynik.';
   }
   function syncExtraService(row) {
     const checkbox = row.querySelector('input[data-service-id]');
@@ -5145,14 +5152,14 @@
     const manufacturer = result.manufacturer;
     quoteManufacturerTime.textContent = timeRange(manufacturer.minutesMin, manufacturer.minutesMax);
     if (!manufacturer.complete && manufacturer.confirmedUnits) quoteManufacturerTime.textContent += ` (częściowa: ${manufacturer.confirmedUnits}/${manufacturer.totalUnits} szt.)`;
-    quoteWorkingTime.textContent = result.working ? `${timeRange(result.working.minutesMin, result.working.minutesMax)}; ${result.working.people} monterów` : 'Do ustalenia';
+    quoteWorkingTime.textContent = result.working ? `${timeRange(result.working.minutesMin, result.working.minutesMax)}; ${result.working.people} ${result.working.people === 1 ? 'monter' : 'monterów'}` : 'Do ustalenia';
     quoteWorkCost.textContent = costRange(result.installationMin, result.installationMax);
     quoteExtraServicesCost.textContent = money(result.extraServicesTotal || 0);
     quoteTravelCost.textContent = money(result.travel);
     quoteTotalCost.textContent = costRange(result.totalMin, result.totalMax);
     quoteTimeExplanation.textContent = result.requiresManualQuote
       ? 'Nie ma danych pozwalających oszacować całe zlecenie. Prześlij informacje do wyceny ręcznej; nie podajemy kwoty za niepełny zakres.'
-      : `Wstępny szacunek Meblofix, do potwierdzenia: czas roboczy × ${money(result.working.hourlyRate)}/h za ekipę. Uwzględnia przygotowanie i obsługę paczek. Suma deklaracji producenta dotyczy kolejnego montażu brył; nie jest sumą roboczogodzin. Usługi dodatkowe są liczone osobno i ich czas nie jest ujęty w czasie montażu brył.`;
+      : `Wstępny szacunek Meblofix, do potwierdzenia: czas roboczy × ${money(result.working.hourlyRate)}/h za ekipę. Uwzględnia przygotowanie i obsługę paczek. Suma deklaracji producenta dotyczy montażu wszystkich sztuk; nie jest sumą roboczogodzin. Usługi dodatkowe są liczone osobno i ich czas nie jest ujęty w czasie montażu brył.`;
     quoteTravelExplanation.textContent = result.travel ? `Orientacyjny koszt dojazdu dla podanej odległości: ${money(result.travel)}.` : 'Dojazd na terenie Gliwic: bez dodatkowej opłaty.';
     quoteProductResults.replaceChildren(...result.products.map(product => {
       const li = document.createElement('li'); const link = document.createElement('a');
@@ -5215,15 +5222,18 @@
       details: quoteDetailsField.value.trim(),
       contact: { name: quoteNameField.value.trim(), phone: quotePhoneField.value.trim(), email: quoteEmailField.value.trim() }
     };
+    const requestRevision = quoteRevision;
     quoteCalculate.disabled = true; quoteCalculate.textContent = 'Analizuję linki…'; quoteProductsStatus.textContent = 'Analizuję linki…';
     try {
       const response = await fetch('/api/quote-products', { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(requestData) });
       const data = await response.json(); if (!response.ok || !Array.isArray(data.products)) throw new Error('product lookup failed');
+      if (requestRevision !== quoteRevision) return;
       if (data.individualQuote) {
         showIndividualQuote(data.individualQuote.message);
         window.MeblofixAnalytics?.track('quote_individual', { ...analyticsProperties, reason: data.individualQuote.reason }, `quote:${analyticsAttempt}:individual`);
         if (data.notificationToken) {
           await new Promise(resolve => requestAnimationFrame(() => resolve()));
+          if (requestRevision !== quoteRevision) return;
           await sendCalculationNotice(data.notificationToken, `individual:${JSON.stringify(requestData)}`);
         }
         return;
@@ -5233,6 +5243,7 @@
         window.MeblofixAnalytics?.track('quote_individual', { ...analyticsProperties, reason: 'price_not_confirmed' }, `quote:${analyticsAttempt}:individual`);
         if (data.notificationToken) {
           await new Promise(resolve => requestAnimationFrame(() => resolve()));
+          if (requestRevision !== quoteRevision) return;
           await sendCalculationNotice(data.notificationToken, `failure:${JSON.stringify(requestData)}`);
         }
         return;
@@ -5246,11 +5257,13 @@
       }
       if (data.notificationToken) {
         await new Promise(resolve => requestAnimationFrame(() => resolve()));
+        if (requestRevision !== quoteRevision) return;
         await sendCalculationNotice(data.notificationToken, `success:${calculationKey}`);
       } else {
         console.warn('Powiadomienie o wycenie nie jest skonfigurowane. Wynik kalkulacji pozostaje dostępny.');
       }
     } catch {
+      if (requestRevision !== quoteRevision) return;
       showIndividualQuote('Nie udało się automatycznie potwierdzić ceny. To zlecenie wymaga indywidualnej wyceny.');
       window.MeblofixAnalytics?.track('quote_individual', { ...analyticsProperties, reason: 'request_failed' }, `quote:${analyticsAttempt}:individual`);
     }
@@ -5289,15 +5302,22 @@
   }
   document.querySelectorAll('[data-extra-service]').forEach(row => {
     const checkbox = row.querySelector('input[data-service-id]');
-    checkbox.addEventListener('change', () => { syncExtraService(row); invalidateQuoteAfterServiceChange(); });
+    checkbox.addEventListener('change', () => { syncExtraService(row); invalidateQuoteAfterInputChange(); });
     row.querySelectorAll('[data-quantity-change]').forEach(button => button.addEventListener('click', () => {
       const output = row.querySelector('[data-service-quantity]');
       output.textContent = String(Math.min(10, Math.max(1, Number(output.textContent) + Number(button.dataset.quantityChange))));
-      syncExtraService(row); invalidateQuoteAfterServiceChange();
+      syncExtraService(row); invalidateQuoteAfterInputChange();
     }));
     syncExtraService(row);
   });
-  quoteAddLink.addEventListener('click', addProductRow); quoteCalculate.addEventListener('click', calculateFromLinks); quoteCityField.addEventListener('input', syncDistance); syncDistance(); addProductRow();
+  quoteAddLink.addEventListener('click', addProductRow);
+  quoteProducts.addEventListener('input', invalidateQuoteAfterInputChange);
+  quoteServiceField.addEventListener('change', invalidateQuoteAfterInputChange);
+  quoteCityField.addEventListener('input', () => { syncDistance(); invalidateQuoteAfterInputChange(); });
+  quoteDistanceField.addEventListener('input', invalidateQuoteAfterInputChange);
+  quoteDetailsField.addEventListener('input', invalidateQuoteAfterInputChange);
+  quoteCalculate.addEventListener('click', calculateFromLinks);
+  syncDistance(); addProductRow();
 
   function createStarIcon(filled) {
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');

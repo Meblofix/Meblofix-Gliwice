@@ -109,6 +109,23 @@ test('wpis katalogu nie zastępuje innego SKU odczytanego z aktualnej strony', (
   assert.equal(resolveManufacturerTime(product(), item({ sku: '87654321' }), url, { catalog: reviewed([entry]), now }).status, 'unavailable');
 });
 
+test('wpis katalogu wymaga zgodności modelu, URL i producenta z bieżącym produktem', () => {
+  for (const [currentProduct, structured] of [
+    [product({ name: 'Inna szafa' }), null],
+    [product(), item({ url: url.replace('12345678', '87654321') })],
+    [product(), item({ brand: { name: 'JYSK' } })]
+  ]) {
+    assert.equal(resolveManufacturerTime(currentProduct, structured, url, { catalog: reviewed([entry]), now }).status, 'unavailable');
+  }
+});
+
+test('wpis katalogu wymaga poprawnej daty weryfikacji w UTC i prawidłowego URL produktu', () => {
+  for (const verifiedAt of ['2026-10-04', '2026-10-04T12:00:00+02:00', '2026-02-30T12:00:00Z']) {
+    assert.equal(resolveManufacturerTime(product(), null, url, { catalog: reviewed([{ ...entry, verifiedAt }]), now }).status, 'unavailable');
+  }
+  assert.equal(resolveManufacturerTime(product({ url: 'invalid' }), null, 'invalid', { catalog: reviewed([{ ...entry, productUrl: 'invalid' }]), now }).status, 'unavailable');
+});
+
 test('pięć sztuk ma pełną sumę i nie jest liczone jako cztery', () => {
   const result = calculateAssemblyQuote([assembled({ quantity: 5 })], context);
   assert.deepEqual(result.manufacturer, { complete: true, confirmedUnits: 5, totalUnits: 5, minutesMin: 600, minutesMax: 600 });
@@ -268,6 +285,10 @@ test('renderer pokazuje źródło, ilości, sumę częściową, szacunek i brak 
   sandbox.setResult(manual);
   assert.match(bindings.quoteManufacturerTime.textContent, /częściowa: 2\/3/);
   assert.equal(bindings.quoteTotalCost.textContent, 'Wycena ręczna');
+  const single = assembled({ name: 'Krzesło fixture' }, null);
+  sandbox.setResult({ ...calculateAssemblyQuote([single], context), products: [single], travel: 0, extraServicesTotal: 0,
+    totalMin: 150, totalMax: 150 });
+  assert.match(bindings.quoteWorkingTime.textContent, /1 monter$/);
   sandbox.setResult(null);
   assert.equal(bindings.quoteWorkingTime.textContent, '—');
   assert.equal(bindings.quoteProductResults.children.length, 0);

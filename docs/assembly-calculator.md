@@ -20,6 +20,9 @@ kosztu. Suma niepełna ma oznaczenie liczby potwierdzonych sztuk.
    `productUrl`, `productId`, `model`, `manufacturer`, `sourceUrl`, `verifiedAt`
    (ISO UTC), `evidence` (odczytany fragment lub opis strony/piktogramu),
    `minutesMin`, `minutesMax` i `people` (liczba całkowita 1–10 albo null, gdy nie podano).
+   `model` musi być dokładną nazwą produktu odczytaną przy bieżącej wycenie.
+   Gdy strona udostępnia URL, SKU lub producenta w JSON-LD, te dane również
+   muszą zgadzać się z wpisem katalogu.
    Brak dowodu, duplikat, przyszła data, wpis starszy niż 180 dni lub zmiana
    docelowego produktu przy przekierowaniu wyłączają ten wpis.
 
@@ -91,6 +94,9 @@ szacunek roboczy. `quote.working` podaje minuty, skład ekipy i stawkę.
 `installationMin/Max` i `totalMin/Max` są granicami wyniku. Dotychczasowe
 `installation` i `total` zachowują górną granicę dla zgodności kontraktu;
 interfejs i powiadomienia pokazują obie granice.
+Zmiana linku, ilości, rodzaju mebla, lokalizacji, szczegółów lub usług
+dodatkowych unieważnia widoczny wynik. Odpowiedź rozpoczętej wcześniej
+analizy nie może przywrócić kwoty dla już zmienionych danych.
 
 Dla wyceny ręcznej `requiresManualQuote=true`, `pricingBasis=manual`,
 `working`, kwoty robocizny i kwoty końcowe są null. `allConfirmed` nadal

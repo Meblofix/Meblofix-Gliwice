@@ -55,6 +55,7 @@ function manufacturerName(item) {
 export function resolveManufacturerTime(product, structuredProduct, finalUrl, { catalog = timeCatalog, now = Date.now() } = {}) {
   if (structuredProduct?.assemblyConflict) return unavailable('conflicting_product_data');
   const key = productKey(product.url);
+  if (!key) return unavailable('invalid_product_url');
   const entries = catalog.products.filter(entry => productKey(entry.productUrl) === key);
   if (entries.length > 1) return unavailable('conflicting_catalog');
   if (entries.length === 1) {
@@ -62,9 +63,14 @@ export function resolveManufacturerTime(product, structuredProduct, finalUrl, { 
     const verifiedAt = Date.parse(entry.verifiedAt);
     const age = now - verifiedAt;
     const duration = parseAssemblyDuration(`${entry.minutesMin}-${entry.minutesMax}`, 'min');
-    if (productKey(finalUrl) !== key || (structuredProduct?.sku && String(structuredProduct.sku).replace(/[.\s]/g, '') !== String(entry.productId).replace(/[.\s]/g, '')) || !duration || !entry.productId || !entry.model || !entry.evidence
+    if (productKey(finalUrl) !== key || (structuredProduct?.url && productKey(structuredProduct.url) !== key)
+      || (structuredProduct && manufacturerName(structuredProduct) && manufacturerName(structuredProduct) !== entry.manufacturer)
+      || (structuredProduct?.sku && String(structuredProduct.sku).replace(/[.\s]/g, '') !== String(entry.productId).replace(/[.\s]/g, ''))
+      || !duration || !entry.productId || entry.model !== product.name || !String(entry.evidence || '').trim()
       || !officialSource(entry.sourceUrl, entry.manufacturer, catalog)
-      || !Number.isFinite(verifiedAt) || age < 0 || age > pricingConfig.calculator.assembly.catalogMaxAgeDays * 86400000
+      || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(entry.verifiedAt)
+      || !Number.isFinite(verifiedAt) || new Date(verifiedAt).toISOString().slice(0, 19) !== entry.verifiedAt.slice(0, 19)
+      || age < 0 || age > pricingConfig.calculator.assembly.catalogMaxAgeDays * 86400000
       || !(entry.people === null || Number.isInteger(entry.people) && entry.people >= 1 && entry.people <= 10)) return unavailable('unverified_catalog');
     return { status: 'confirmed', ...duration, people: entry.people, manufacturer: entry.manufacturer,
       productId: entry.productId, model: entry.model,
