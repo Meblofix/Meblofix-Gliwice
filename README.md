@@ -146,6 +146,14 @@ identyfikator realizacji, numer porównania albo kod przyczyny fallbacku. Nie s�
 wysyłane imiona, telefony, e-maile, treści formularzy, linki produktów, tokeny,
 kwoty ani identyfikatory wycen.
 
+## Kalkulator czasu montażu
+
+Kalkulator wycenia montaż według czasu i stawki ekipy. Pokazuje źródło czasu
+producenta, sumę wszystkich sztuk, oddzielny szacunek roboczy oraz widełki
+ceny. Niepotwierdzone dane dają jawny szacunek kategorii albo wycenę ręczną.
+Zasady dowodów, ograniczenia odczytu i sposób dodawania zweryfikowanych
+instrukcji opisuje [dokumentacja kalkulatora](docs/assembly-calculator.md).
+
 ## Powiadomienia automatycznej wyceny
 
 Cloudflare Pages musi mieć skonfigurowane:

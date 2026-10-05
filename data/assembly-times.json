@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "manufacturers": {
+    "IKEA": ["www.ikea.com", "ikea.com", "www.ikea.pl", "ikea.pl"],
+    "Black Red White": ["www.brw.pl", "brw.pl"],
+    "JYSK": ["www.jysk.pl", "jysk.pl"]
+  },
+  "products": []
+}

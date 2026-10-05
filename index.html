@@ -1451,6 +1451,7 @@
 
   .quote-result-line {
     display: flex;
+    flex-wrap: wrap;
     align-items: baseline;
     justify-content: space-between;
     gap: 1rem;
@@ -1460,7 +1461,12 @@
   }
 
   .quote-result-line output {
-    flex: 0 0 auto;
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 100%;
+    margin-left: auto;
+    text-align: right;
+    overflow-wrap: anywhere;
     color: var(--cream);
     font-weight: 600;
   }
@@ -1762,7 +1768,8 @@
   }
   .quote-calculate:disabled { opacity: .72; cursor: wait; transform: none; }
   .quote-product-list { margin: .75rem 0 0; padding-left: 1.1rem; color: var(--cream); }
-  .quote-product-list li { margin: .35rem 0; }
+  .quote-product-list li { margin: .75rem 0; overflow-wrap: anywhere; }
+  .quote-product-list p { margin: .4rem 0; font-size: .85rem; line-height: 1.55; }
   .quote-individual-link { color: var(--orange-light); }
   .quote-individual-button { display: inline-flex; align-items: center; justify-content: center; min-height: 2.75rem; padding: .7rem 1rem; border: 1px solid var(--orange-light); border-radius: 4px; background: var(--orange-btn); color: var(--white); font-weight: 700; text-decoration: none; }
   .quote-individual-button:focus-visible { outline: 2px solid var(--cream); outline-offset: 3px; }
@@ -4296,6 +4303,14 @@
         </div>
         <div class="quote-result-lines" id="quotePriceLive" role="status" aria-live="polite" aria-atomic="true">
           <div class="quote-result-line">
+            <span>Suma czasu producenta</span>
+            <output id="quoteManufacturerTime">—</output>
+          </div>
+          <div class="quote-result-line">
+            <span>Planowany czas roboczy</span>
+            <output id="quoteWorkingTime">—</output>
+          </div>
+          <div class="quote-result-line">
             <span>Koszt montażu</span>
             <output id="quoteWorkCost">—</output>
           </div>
@@ -4312,6 +4327,7 @@
             <output id="quoteTotalCost">—</output>
           </div>
         </div>
+        <p class="quote-travel-note" id="quoteTimeExplanation">Czas producenta pokazujemy tylko ze zweryfikowanym źródłem. Czas roboczy jest szacunkiem Meblofix.</p>
         <p class="quote-travel-note" id="quoteTravelExplanation">Dojazd na terenie Gliwic: bez dodatkowej opłaty.</p>
           <p class="quote-disclaimer">Wycena ma charakter orientacyjny. Ostateczna cena może ulec zmianie po weryfikacji zakresu prac.</p>
         <ul class="quote-product-list" id="quoteProductResults" aria-live="polite"></ul>
@@ -5030,6 +5046,9 @@
   const quoteDistanceFieldWrap = document.getElementById('quoteDistanceFieldWrap');
   const quoteDistanceField = document.getElementById('quoteDistance');
   const quoteDistanceMapLink = document.getElementById('quoteDistanceMapLink');
+  const quoteManufacturerTime = document.getElementById('quoteManufacturerTime');
+  const quoteWorkingTime = document.getElementById('quoteWorkingTime');
+  const quoteTimeExplanation = document.getElementById('quoteTimeExplanation');
   const quoteWorkCost = document.getElementById('quoteWorkCost');
   const quoteExtraServicesCost = document.getElementById('quoteExtraServicesCost');
   const quoteTravelCost = document.getElementById('quoteTravelCost');
@@ -5108,11 +5127,56 @@
     quantity.querySelector('[data-quantity-change="-1"]').disabled = Number(output.textContent) <= 1;
     quantity.querySelector('[data-quantity-change="1"]').disabled = Number(output.textContent) >= 10;
   }
+  function timeRange(min, max) {
+    if (!Number.isFinite(min) || !Number.isFinite(max)) return 'Brak potwierdzonych danych';
+    const label = minutes => { const hours = Math.floor(minutes / 60), rest = minutes % 60; return [hours ? `${hours} h` : '', rest ? `${rest} min` : ''].filter(Boolean).join(' ') || '0 min'; };
+    return min === max ? label(min) : `${label(min)} – ${label(max)}`;
+  }
+  function costRange(min, max) {
+    if (!Number.isFinite(min) || !Number.isFinite(max)) return 'Wycena ręczna';
+    return min === max ? money(min) : `${money(min)} – ${money(max)}`;
+  }
   function setResult(result) {
-    if (!result) { quoteWorkCost.textContent = quoteExtraServicesCost.textContent = quoteTravelCost.textContent = quoteTotalCost.textContent = '—'; quoteProductResults.replaceChildren(); return; }
-    quoteWorkCost.textContent = money(result.installation); quoteExtraServicesCost.textContent = money(result.extraServicesTotal || 0); quoteTravelCost.textContent = money(result.travel); quoteTotalCost.textContent = money(result.total);
+    if (!result) {
+      quoteManufacturerTime.textContent = quoteWorkingTime.textContent = quoteWorkCost.textContent = quoteExtraServicesCost.textContent = quoteTravelCost.textContent = quoteTotalCost.textContent = '—';
+      quoteTimeExplanation.textContent = 'Czas producenta pokazujemy tylko ze zweryfikowanym źródłem. Czas roboczy jest szacunkiem Meblofix.';
+      quoteProductResults.replaceChildren(); return;
+    }
+    const manufacturer = result.manufacturer;
+    quoteManufacturerTime.textContent = timeRange(manufacturer.minutesMin, manufacturer.minutesMax);
+    if (!manufacturer.complete && manufacturer.confirmedUnits) quoteManufacturerTime.textContent += ` (częściowa: ${manufacturer.confirmedUnits}/${manufacturer.totalUnits} szt.)`;
+    quoteWorkingTime.textContent = result.working ? `${timeRange(result.working.minutesMin, result.working.minutesMax)}; ${result.working.people} monterów` : 'Do ustalenia';
+    quoteWorkCost.textContent = costRange(result.installationMin, result.installationMax);
+    quoteExtraServicesCost.textContent = money(result.extraServicesTotal || 0);
+    quoteTravelCost.textContent = money(result.travel);
+    quoteTotalCost.textContent = costRange(result.totalMin, result.totalMax);
+    quoteTimeExplanation.textContent = result.requiresManualQuote
+      ? 'Nie ma danych pozwalających oszacować całe zlecenie. Prześlij informacje do wyceny ręcznej; nie podajemy kwoty za niepełny zakres.'
+      : `Wstępny szacunek Meblofix, do potwierdzenia: czas roboczy × ${money(result.working.hourlyRate)}/h za ekipę. Uwzględnia przygotowanie i obsługę paczek. Suma deklaracji producenta dotyczy kolejnego montażu brył; nie jest sumą roboczogodzin. Usługi dodatkowe są liczone osobno i ich czas nie jest ujęty w czasie montażu brył.`;
     quoteTravelExplanation.textContent = result.travel ? `Orientacyjny koszt dojazdu dla podanej odległości: ${money(result.travel)}.` : 'Dojazd na terenie Gliwic: bez dodatkowej opłaty.';
-    quoteProductResults.replaceChildren(...result.products.map(product => { const li = document.createElement('li'); const link = document.createElement('a'); link.href = product.url; link.target = '_blank'; link.rel = 'noopener noreferrer'; link.textContent = `${product.name} — ${money(product.price)} × ${product.quantity} = ${money(product.value)}`; li.append(link); return li; }));
+    quoteProductResults.replaceChildren(...result.products.map(product => {
+      const li = document.createElement('li'); const link = document.createElement('a');
+      link.href = product.url; link.target = '_blank'; link.rel = 'noopener noreferrer';
+      link.textContent = `${product.name} — ${money(product.price)} × ${product.quantity} = ${money(product.value)}`; li.append(link);
+      const assembly = product.assembly, time = assembly.manufacturer;
+      const declared = document.createElement('p');
+      declared.textContent = time.status === 'confirmed'
+        ? `Producent (${time.manufacturer}), 1 szt.: ${timeRange(time.minutesMin, time.minutesMax)}; ${time.people ? `${time.people} osób` : 'liczba osób niepodana'}. Wszystkie ${product.quantity} szt.: ${timeRange(assembly.manufacturerTotal.minutesMin, assembly.manufacturerTotal.minutesMax)}.`
+        : 'Czas według producenta: nie udało się wiarygodnie potwierdzić w dostępnych danych.';
+      li.append(declared);
+      if (time.source) {
+        const source = document.createElement('a'); source.href = time.source.url; source.target = '_blank'; source.rel = 'noopener noreferrer'; source.textContent = 'Źródło czasu producenta'; li.append(source);
+        const checked = document.createElement('p'); checked.textContent = `Odczyt / weryfikacja: ${new Date(time.source.checkedAt).toLocaleDateString('pl-PL')}. ${time.source.evidence}`; li.append(checked);
+      }
+      const work = document.createElement('p');
+      work.textContent = assembly.working
+        ? `Szacunek roboczy Meblofix (${assembly.working.basis === 'category_estimate' ? 'widełki kategorii, do potwierdzenia' : 'czas producenta z zapasem'}): ${timeRange(assembly.working.minutesMin, assembly.working.minutesMax)} / szt.; wszystkie szt.: ${timeRange(assembly.working.totalMinutesMin, assembly.working.totalMinutesMax)}; ekipa ${assembly.working.people} osób.`
+        : 'Czas roboczy: do ustalenia po sprawdzeniu instrukcji i zakresu.';
+      li.append(work); return li;
+    }));
+    if (result.requiresManualQuote) {
+      const li = document.createElement('li'); const link = document.createElement('a'); link.className = 'quote-individual-button'; link.href = '#quoteContact'; link.textContent = 'Przejdź do danych kontaktowych'; li.append(link); quoteProductResults.append(li);
+    }
   }
   function showIndividualQuote(message) {
     lastCalculation = null; individualQuoteReady = true; setResult(null); quoteProductsStatus.textContent = message;
@@ -5174,7 +5238,7 @@
         return;
       }
       if (!data.quote) throw new Error('missing verified quote');
-      const result = data.quote; lastCalculation = result; individualQuoteReady = false; calculationKey = JSON.stringify(requestData); setResult(result); quoteProductsStatus.textContent = 'Ceny produktów potwierdzone. Wynik jest orientacyjny.';
+      const result = data.quote; lastCalculation = result; individualQuoteReady = false; calculationKey = JSON.stringify(requestData); setResult(result); quoteProductsStatus.textContent = result.requiresManualQuote ? 'Produkty rozpoznane. Czas lub zakres wymaga wyceny ręcznej.' : 'Produkty rozpoznane. Widełki czasu i kosztu wymagają potwierdzenia zakresu.';
       window.MeblofixAnalytics?.track('quote_success', analyticsProperties, `quote:${analyticsAttempt}:success`);
       if (data.notificationToken) {
         await new Promise(resolve => requestAnimationFrame(() => resolve()));
