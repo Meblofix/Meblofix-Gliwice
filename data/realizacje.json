@@ -139,27 +139,29 @@
     {
       "id": "montaz-mebli-knurow",
       "tytul": "Montaż mebli kupionych online – Knurów",
-      "meta_description": "Montaż mebli kupionych online w Knurowie: dwie szafy, komoda i niska szafka. Czas pracy: 10 godzin. Zobacz zdjęcia realizacji.",
+      "meta_description": "Montaż dwóch witryn, szafy, komody i szafki RTV w Knurowie. Meble kupione online, czas pracy: 10 godzin. Zobacz realizację.",
       "kategoria": "sieciowe",
       "miasto": "Knurów",
       "pomieszczenie": "pokoj",
       "marka": null,
       "data": null,
       "czas": "10 godzin",
-      "opis_krotki": "Montaż gotowych mebli kupionych przez internet w Knurowie: dwóch szaf, komody i niskiej szafki. Czas pracy: 10 godzin.",
-      "opis": "W Knurowie zmontowałem gotowe meble kupione przez internet: dwie szafy, komodę z szufladami i niską szafkę. Zdjęcia pokazują meble po zakończeniu montażu. Prace zajęły 10 godzin.",
+      "opis_krotki": "Montaż gotowych mebli kupionych przez internet w Knurowie: witryny podwójnej i pojedynczej, szafy, komody oraz szafki RTV. Czas pracy: 10 godzin.",
+      "opis": "W Knurowie zmontowałem gotowe meble kupione przez internet: podwójną i pojedynczą witrynę, szafę, komodę z szufladami oraz szafkę RTV. Zdjęcia pokazują meble po zakończeniu montażu. Prace zajęły 10 godzin.",
       "zakresPrac": [
-        "montaż dwóch szaf",
+        "montaż podwójnej witryny",
+        "montaż pojedynczej witryny",
+        "montaż szafy",
         "montaż komody z szufladami",
-        "montaż niskiej szafki"
+        "montaż szafki RTV"
       ],
-      "okladka": "montaz-mebli-knurow-niska-szafka-01",
+      "okladka": "montaz-mebli-knurow-szafka-rtv-01",
       "zdjecia": [
-        { "plik": "montaz-mebli-knurow-szafa-przeszklona", "alt": "Szafa z przeszklonymi drzwiami i szufladami po montażu w Knurowie" },
-        { "plik": "montaz-mebli-knurow-szafa-dwudrzwiowa", "alt": "Dwudrzwiowa szafa w jasnym dekorze po montażu w Knurowie" },
-        { "plik": "montaz-mebli-knurow-niska-szafka-01", "alt": "Niska szafka z otwartą półką i drzwiczkami po montażu w Knurowie" },
-        { "plik": "montaz-mebli-knurow-niska-szafka-02", "alt": "Niska szafka ustawiona obok szafki pod telewizorem w Knurowie" },
-        { "plik": "montaz-mebli-knurow-dwie-szafy", "alt": "Dwie szafy ustawione obok siebie po montażu w Knurowie" },
+        { "plik": "montaz-mebli-knurow-witryny", "alt": "Pojedyncza i podwójna witryna z przeszklonymi frontami po montażu w Knurowie" },
+        { "plik": "montaz-mebli-knurow-szafa", "alt": "Szafa z pełnymi drzwiami i dolną szufladą po montażu w Knurowie" },
+        { "plik": "montaz-mebli-knurow-szafka-rtv-01", "alt": "Szafka RTV z otwartą półką i drzwiczkami po montażu w Knurowie" },
+        { "plik": "montaz-mebli-knurow-szafka-rtv-02", "alt": "Szafka RTV ustawiona obok telewizora po montażu w Knurowie" },
+        { "plik": "montaz-mebli-knurow-witryny-i-szafa", "alt": "Pojedyncza i podwójna witryna oraz szafa po montażu w Knurowie" },
         { "plik": "montaz-mebli-knurow-komoda", "alt": "Komoda z szufladami po montażu w Knurowie" }
       ]
     },
