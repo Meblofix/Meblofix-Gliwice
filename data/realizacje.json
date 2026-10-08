@@ -1,12 +1,13 @@
 {
   "kategorie": {
-    "sieciowe": "Montaż mebli sieciowych",
+    "sieciowe": "Montaż gotowych mebli",
     "na-wymiar": "Meble na wymiar"
   },
   "kolejnosc": [
     "pokoj-nastolatki-zabudowa",
     "montaz-lozka-ikea-knurow",
     "montaz-kuchni-castorama-knurow",
+    "montaz-mebli-knurow",
     "kuchnia-ikea-pogrzebien",
     "kuchnia-kedzierzyn",
     "zabudowa-wneki-jastrzebie",
@@ -133,6 +134,33 @@
         { "plik": "montaz-kuchni-castorama-knurow-dolne-01", "alt": "Gotowa dolna zabudowa kuchenna Castorama w Knurowie" },
         { "plik": "montaz-kuchni-castorama-knurow-szuflady-01", "alt": "Mała szafka z szufladami przy lodówce – montaż kuchni Castorama w Knurowie" },
         { "plik": "montaz-kuchni-castorama-knurow-01", "alt": "Gotowa mała kuchnia Castorama po montażu w Knurowie" }
+      ]
+    },
+    {
+      "id": "montaz-mebli-knurow",
+      "tytul": "Montaż mebli kupionych online – Knurów",
+      "meta_description": "Montaż mebli kupionych online w Knurowie: dwie szafy, komoda i niska szafka. Czas pracy: 10 godzin. Zobacz zdjęcia realizacji.",
+      "kategoria": "sieciowe",
+      "miasto": "Knurów",
+      "pomieszczenie": "pokoj",
+      "marka": null,
+      "data": null,
+      "czas": "10 godzin",
+      "opis_krotki": "Montaż gotowych mebli kupionych przez internet w Knurowie: dwóch szaf, komody i niskiej szafki. Czas pracy: 10 godzin.",
+      "opis": "W Knurowie zmontowałem gotowe meble kupione przez internet: dwie szafy, komodę z szufladami i niską szafkę. Zdjęcia pokazują meble po zakończeniu montażu. Prace zajęły 10 godzin.",
+      "zakresPrac": [
+        "montaż dwóch szaf",
+        "montaż komody z szufladami",
+        "montaż niskiej szafki"
+      ],
+      "okladka": "montaz-mebli-knurow-niska-szafka-01",
+      "zdjecia": [
+        { "plik": "montaz-mebli-knurow-szafa-przeszklona", "alt": "Szafa z przeszklonymi drzwiami i szufladami po montażu w Knurowie" },
+        { "plik": "montaz-mebli-knurow-szafa-dwudrzwiowa", "alt": "Dwudrzwiowa szafa w jasnym dekorze po montażu w Knurowie" },
+        { "plik": "montaz-mebli-knurow-niska-szafka-01", "alt": "Niska szafka z otwartą półką i drzwiczkami po montażu w Knurowie" },
+        { "plik": "montaz-mebli-knurow-niska-szafka-02", "alt": "Niska szafka ustawiona obok szafki pod telewizorem w Knurowie" },
+        { "plik": "montaz-mebli-knurow-dwie-szafy", "alt": "Dwie szafy ustawione obok siebie po montażu w Knurowie" },
+        { "plik": "montaz-mebli-knurow-komoda", "alt": "Komoda z szufladami po montażu w Knurowie" }
       ]
     },
     {

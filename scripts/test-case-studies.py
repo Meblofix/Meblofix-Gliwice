@@ -83,6 +83,8 @@ def main() -> None:
         require(f'<link rel="canonical" href="{canonical}">' in source, f"{item['id']}: błędny canonical")
         require(f'<h1>{html.escape(item["tytul"])}</h1>' in source, f"{item['id']}: brak H1 ze źródła")
         require(html.escape(item["opis"]) in source, f"{item['id']}: brak pełnego opisu")
+        if item.get("czas"):
+            require(html.escape(item["czas"]) in source, f"{item['id']}: brak czasu pracy")
         if item.get("opis_krotki"):
             require(html.escape(item["opis_krotki"]) in source, f"{item['id']}: brak krótkiego opisu")
         for scope_item in item.get("zakresPrac", []):
